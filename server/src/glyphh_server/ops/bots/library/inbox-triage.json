@@ -10,6 +10,8 @@
     "digest": "---\nname: digest\ndescription: How a digest is written\n---\n\nOne line per email: sender, what they want, a suggested reply. Most urgent first. No preamble.\n"
   },
   "spec": {
+    "takes": "the email address the digest is sent to",
+    "try": "you@example.com",
     "touches": "sends",
     "seed": {"personality": ["Short and plain."]},
     "gates": {
@@ -30,8 +32,9 @@
     },
     "loop": [
       {"id": "mail", "run": "gmail-find-email", "input": {"q": "is:unread newer_than:1d"}},
-      {"id": "worth", "gate": "worth", "each": "$mail.ret.messages", "label": "subject", "key": "id",
-       "on": {"empty:read": "end"}},
+      {"id": "worth", "gate": "worth", "each": "$mail.ret", "label": "subject", "key": "id",
+       "on": {"empty:read": "end"},
+       "empty": "No unread mail from the last day is worth your time, so there is no digest."},
       {"id": "digest", "agent": "Write the digest of these emails: $worth.read", "skill": "digest"},
       {"id": "send", "run": "gmail-send-email", "approval": "email you the digest",
        "input": {"to": ["$input"], "subject": "Your inbox digest", "body": "$digest"}}

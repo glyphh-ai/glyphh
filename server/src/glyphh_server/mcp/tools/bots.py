@@ -33,8 +33,11 @@ def line(bot: BotView) -> str:
     last = f", last run {bot.last_run.status}" if bot.last_run else ""
     when = f"schedule {bot.schedule_summary}" + (f", Next run {bot.next_run}" if bot.next_run else "")
     where = f"runs on rrotor {bot.runs_on}" if bot.runs_on else "runs on Glyphh cloud"
-    said = f"{bot.name} ({bot.slug}): {bot.summary or 'no summary'}; {steps} steps, {gates} gates, {bot.model}{last}"
-    return f"{said}; {when}; {where}"
+    may = "; ".join(f"{f.path} ({'read and change' if f.access == 'write' else 'read only'})" for f in bot.folders)
+    folders = f"; folders: {may}" if may else ""
+    model = f"{bot.model} at {bot.effort} effort"
+    said = f"{bot.name} ({bot.slug}): {bot.summary or 'no summary'}; {steps} steps, {gates} gates, {model}{last}"
+    return f"{said}; {when}; {where}{folders}"
 
 
 async def list_places(ctx: Context, _: NoArgs) -> Done:
@@ -121,7 +124,10 @@ TOOLS: tuple[Tool, ...] = (
         "permission mode (ask, connection or auto: which tool steps wait for the person), its voice (bot_voices), its "
         "spec (loop, gates, limits), skills and, per connection, its tools; its schedule in plain words (every: off, "
         "hour, day, weekdays, week, month; at HH:MM, weekday, day, the person's timezone, the input) and where it runs "
-        "(runs_on, one of bot_places; none: Glyphh cloud). Checked before it is made: every problem is said at once.",
+        "(runs_on, one of bot_places; none: Glyphh cloud); its effort (how hard Claude works on its agent steps: low, "
+        "medium, high, xhigh or max; medium unless said) and, on a rrotor, the folders of that machine it may use "
+        "(folders: each {path, access: read or write}; the rrotor refuses one its owner does not offer). Checked "
+        "before it is made: every problem is said at once.",
         BotIn,
         create,
         False,
@@ -129,8 +135,8 @@ TOOLS: tuple[Tool, ...] = (
     _tool(
         "bot_update",
         "Change a bot",
-        "Change what is given of a bot (its schedule, where it runs: runs_on null is Glyphh cloud), checked again; "
-        "its slug stays.",
+        "Change what is given of a bot (its schedule, where it runs: runs_on null is Glyphh cloud; its effort; its "
+        "folders, the whole list, [] for none), checked again; its slug stays.",
         Update,
         update,
         False,

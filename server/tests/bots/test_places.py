@@ -18,7 +18,9 @@ from tests.link import local_runtime, self_runtime
 
 async def test_the_places_are_glyphh_cloud_and_the_orgs_rrotors(served: Served, engine: AsyncEngine) -> None:
     ada, other = await person(engine), await person(engine)
-    cloud = {"id": None, "name": "Glyphh cloud", "mode": "cloud", "linked": True}
+    cloud = {"id": None, "name": "Glyphh cloud", "mode": "cloud", "linked": True, "url": None, "version": None}
+    at = {"url": "https://rrotor.acme.test", "version": None}
+    here = {"url": "http://127.0.0.1:7777", "version": None}  # a local one: its own computer's loopback
     res = await served.http.get("/v1/bots/places", headers=ada.headers)
     assert res.status_code == 200 and res.json() == {"places": [cloud]}
     acme, mine = await self_runtime(engine, ada), await local_runtime(engine, ada)
@@ -28,8 +30,8 @@ async def test_the_places_are_glyphh_cloud_and_the_orgs_rrotors(served: Served, 
     shown = (await served.http.get("/v1/bots/places", headers=ada.headers)).json()["places"]
     assert shown == [
         cloud,
-        {"id": str(acme.id), "name": "Acme", "mode": "self", "linked": False},
-        {"id": str(mine.id), "name": "Mac", "mode": "local", "linked": True},
+        {"id": str(acme.id), "name": "Acme", "mode": "self", "linked": False, **at},
+        {"id": str(mine.id), "name": "Mac", "mode": "local", "linked": True, **here},
     ]
     _, auth = await granted(engine, ada)
     said = (await tool(served.http, auth, "bot_places"))["content"][0]["text"]

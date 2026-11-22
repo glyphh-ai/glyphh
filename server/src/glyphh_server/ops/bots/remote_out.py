@@ -15,7 +15,7 @@ from sqlalchemy import select, update
 from glyphh_server.db import tenancy
 from glyphh_server.llm import meter
 from glyphh_server.models import Bot, BotRun
-from glyphh_server.ops.bots import prices, runs
+from glyphh_server.ops.bots import decided, prices, runs
 from glyphh_server.ops.bots.remote import Remote
 from glyphh_server.ops.link.presence import Runtime
 from glyphh_server.ops.link.protocol import Ran
@@ -82,7 +82,9 @@ async def _kept(remote: Remote, run: Any, result: dict[str, Any]) -> None:
 async def _state(remote: Remote, bot: Any, state: str) -> None:
     async with remote.svc.engine.begin() as conn:
         await tenancy.enter(conn, bot.org_id)
-        await conn.execute(update(Bot).where(Bot.id == bot.id).values(state=base64.b64decode(state)))
+        kept = base64.b64decode(state)
+        await conn.execute(update(Bot).where(Bot.id == bot.id).values(state=kept))
+        await decided.sync(conn, bot, kept)
 
 
 def new_tokens(run: Any, said: dict[str, Any]) -> dict[str, int]:

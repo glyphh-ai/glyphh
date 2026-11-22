@@ -10,6 +10,8 @@
     "rows": "---\nname: rows\ndescription: How a lead becomes a sheet row\n---\n\nEach row is, in order: date (today, YYYY-MM-DD), name, company, role, what they asked for, a suggested first line for the call. Empty cells stay empty strings.\n"
   },
   "spec": {
+    "takes": "the leads to score, pasted in any form",
+    "try": "Ana Ruiz, ana@acme.com, VP Engineering at Acme, asked for a demo",
     "touches": "sends",
     "seed": {"personality": ["Honest and quick."], "instructions": ["A lead who asked for pricing or a demo is at least warm."]},
     "gates": {
@@ -38,7 +40,8 @@
          "properties": {"name": {"type": "string"}, "email": {"type": "string"}, "company": {"type": "string"},
                         "role": {"type": "string"}, "asked": {"type": "string"}}}}}}},
       {"id": "score", "gate": "score", "each": "$leads.leads", "label": "name", "key": "email",
-       "on": {"empty:hot": "end"}},
+       "on": {"empty:hot": "end"},
+       "empty": "None of these leads scored hot, so nothing was added to your sheet."},
       {"id": "rows", "agent": "Write one sheet row for each of these hot leads: $score.hot", "skill": "rows",
        "schema": {"type": "object", "required": ["rows"],
                   "properties": {"rows": {"type": "array", "items": {"type": "array", "items": {"type": "string"}}}}}},

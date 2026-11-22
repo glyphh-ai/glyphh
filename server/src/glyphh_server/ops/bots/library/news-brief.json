@@ -34,7 +34,8 @@
     "loop": [
       {"id": "page", "run": "fetch", "input": "https://hn.algolia.com/api/v1/search?tags=front_page"},
       {"id": "read", "gate": "read", "each": "$page.hits", "label": "title", "key": "objectID",
-       "on": {"empty:read": "end"}},
+       "on": {"empty:read": "end"},
+       "empty": "None of today's front-page stories is one you would read, so there is no brief."},
       {"id": "brief", "agent": "Write today's brief of these stories: $read.read", "skill": "brief", "remember": true}
     ],
     "limits": {"seconds": 180, "agent_turns": 2, "max_items": 30, "runs_per_day": 3}

@@ -1,6 +1,7 @@
 """What one go of a bot's runner needs, gathered on the server's loop before the worker thread starts: the bot, its
 program (its scoped tools, ready to call), its Ada (by its own key) and its Claude (the org's own Anthropic key, or
-Glyphh's; metered on either, ops/bots/prices.py); and the go itself, its state kept on the bot after."""
+Glyphh's; metered on either, ops/bots/prices.py; at the bot's effort, ops/bots/access.py); and the go itself, its
+state kept on the bot after."""
 
 import asyncio
 import uuid
@@ -19,7 +20,7 @@ from glyphh_server.errors import Unavailable
 from glyphh_server.llm import meter
 from glyphh_server.models import Bot
 from glyphh_server.ops.auth.sealed import unseal
-from glyphh_server.ops.bots import cloud, engine, keys, prices
+from glyphh_server.ops.bots import access, cloud, decided, engine, keys, prices
 from glyphh_server.ops.bots.pipedream import Pipedream
 
 NO_KEY: str = "Add your Anthropic API key in the bots' settings: its agent steps run on it."
@@ -34,8 +35,12 @@ def _ada(base: str) -> Callable[[str], Any]:
     return made
 
 
-def _claude(key: str, model: str) -> Any:
-    return ApiClaude(api_key=key, model=model)
+def _claude(key: str, model: str, effort: str | None = None) -> Any:
+    """Agent steps on the Claude API with this key, each request carrying the bot's effort (ops/bots/access.py)."""
+    import anthropic
+
+    client = anthropic.Anthropic(api_key=key, max_retries=3)
+    return ApiClaude(model=model, client=access.WithEffort(client, effort))
 
 
 class Goes:
@@ -43,7 +48,8 @@ class Goes:
         self.engine, self.redis, self.settings = engine_, redis, settings
         self.pd = Pipedream(http, settings)
         self.ada_for: Callable[[str], Any] = _ada(settings.ada_base)  # a bot's Ada, by its key (a test sets a fake)
-        self.claude_for: Callable[[str, str], Any] = _claude  # agent steps, by key and model (a test sets a fake)
+        # agent steps, by key, model and effort (a test sets a fake)
+        self.claude_for: Callable[[str, str, str | None], Any] = _claude
         self.check_key: keys.Check = keys.anthropic_check
 
     async def bot(self, org_id: uuid.UUID, bot_id: uuid.UUID) -> Any:
@@ -69,7 +75,8 @@ class Goes:
         async def record(admitted: Any, got: Any) -> int:
             return await meter.record(self.engine, admitted, priced, got.input_tokens, got.output_tokens)
 
-        inner = self.claude_for(own or self.settings.anthropic_api_key, bot.model)
+        effort = getattr(bot, "effort", None)  # the maker's own steps have none: the model's default
+        inner = self.claude_for(own or self.settings.anthropic_api_key, bot.model, effort)
         return engine.Metered(inner, asyncio.get_running_loop(), admit, record), bool(own)
 
     async def go(self, bot: Any, act: Callable[[Runner], Any], claude: Any = None) -> engine.Left:
@@ -84,4 +91,5 @@ class Goes:
         async with self.engine.begin() as conn:
             await tenancy.enter(conn, bot.org_id)
             await conn.execute(update(Bot).where(Bot.id == bot.id).values(state=left.state))
+            await decided.sync(conn, bot, left.state)
         return left

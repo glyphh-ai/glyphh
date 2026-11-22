@@ -56,6 +56,7 @@ class Tool:
     read_only: bool = False
     panel: bool = False
     resource: str | None = None  # the panel that shows its result; None: the account panel (mcp/panel.py)
+    destructive: bool | None = None  # whether a write replaces or removes what was there (destructiveHint), when said
 
 
 def dump(model: BaseModel) -> dict[str, Any]:

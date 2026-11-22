@@ -10,6 +10,8 @@
     "report": "---\nname: report\ndescription: How the weekly report is written\n---\n\nThree sections: Shipped (the five most important changes, one line each, customer words first), Fixed (a count and the two that mattered most), Next (what the open work points to). Under 300 words. Its title is Week of <Monday's date>.\n"
   },
   "spec": {
+    "takes": "a GitHub search for the week's merged pull requests",
+    "try": "is:pr is:merged merged:>=2026-11-16 org:acme",
     "touches": "drafts",
     "seed": {"personality": ["Clear and confident, never hype."]},
     "gates": {
@@ -32,7 +34,7 @@
     },
     "loop": [
       {"id": "merged", "run": "github-search-issues-and-pull-requests", "input": {"query": "$input"}},
-      {"id": "report", "agent": "Write this week's report from these merged pull requests: $merged.ret.items",
+      {"id": "report", "agent": "Write this week's report from these merged pull requests: $merged.ret",
        "skill": "report", "remember": true,
        "schema": {"type": "object", "required": ["title", "highlights", "body"],
                   "properties": {"title": {"type": "string"}, "highlights": {"type": "string"}, "body": {"type": "string"}}}},

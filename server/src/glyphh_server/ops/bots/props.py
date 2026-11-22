@@ -15,3 +15,13 @@ def configured(props: list[dict[str, Any]], account_id: str, given: dict[str, An
     if (name := app_prop(props)) is not None:
         out[name] = {"authProvisionId": account_id}
     return out
+
+
+def returned(ran: Any) -> Any:
+    """What an action answered, its list where it is one: Gmail's Find Email answers its messages as a list, but as
+    `{messages, truncated, note}` when they were cut to fit, so a loop's `$step.ret` is the list either way (the
+    note kept beside it, `ret_note`)."""
+    ret = ran.get("ret") if isinstance(ran, dict) else None
+    if isinstance(ret, dict) and ret.get("truncated") and isinstance(ret.get("messages"), list):
+        return {**ran, "ret": ret["messages"], "ret_note": str(ret.get("note") or "")}
+    return ran

@@ -14,7 +14,11 @@ writes), model (the Claude model its agent steps run on, bot_models), connection
 may use, connection_tools lists them), schedule (when it runs on its own, in plain words, never cron: {"every":
 "off" | "hour" | "day" | "weekdays" | "week" | "month", "at": "09:00", "weekday": 0 (Monday) to 6, "day": 1 to 31,
 "timezone": "America/Chicago", "input": what each scheduled run is given}), runs_on (one of bot_places: a rrotor of
-the org's, or none for Glyphh cloud), skills ({name: SKILL.md text}, how its agent does one kind of step) and spec:
+the org's, or none for Glyphh cloud), effort (how hard Claude works on its agent steps: "low", "medium" (the
+default), "high", "xhigh" or "max"), folders (only on a rrotor: the folders of that machine it may use, [{"path":
+"/Users/ana/Documents", "access": "read" | "write"}], absolute paths, at most 20; the rrotor gives its runs exactly
+these and refuses one its owner does not offer; Glyphh cloud has no folders), skills ({name: SKILL.md text}, how its
+agent does one kind of step) and spec:
 
 spec = {
   "touches": "read_only" | "drafts" | "sends" | "pays" | "deletes",   # how far out it reaches; sends and beyond

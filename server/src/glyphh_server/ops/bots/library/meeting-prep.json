@@ -10,6 +10,8 @@
     "brief": "---\nname: brief\ndescription: How a meeting brief is written\n---\n\nFor each meeting: a heading with its time and title; Who (the attendees, one line); Why (what it is for, from its description); Ask (three short questions). Plain words, no filler.\n"
   },
   "spec": {
+    "takes": "the Notion page the briefs are filed under",
+    "try": "Meeting briefs",
     "touches": "drafts",
     "seed": {"personality": ["Prepared, brief, practical."], "instructions": ["Skip recurring stand-ups unless their description changed."]},
     "gates": {
@@ -31,8 +33,9 @@
     },
     "loop": [
       {"id": "events", "run": "google_calendar-list-events", "input": {"calendarId": "primary", "timeMin": "today", "timeMax": "tomorrow"}},
-      {"id": "prep", "gate": "prep", "each": "$events.ret.items", "label": "summary", "key": "id",
-       "on": {"empty:prep": "end"}},
+      {"id": "prep", "gate": "prep", "each": "$events.ret", "label": "summary", "key": "id",
+       "on": {"empty:prep": "end"},
+       "empty": "None of today's meetings needs a brief, so none was written."},
       {"id": "briefs", "agent": "Write a brief for each of these meetings: $prep.prep", "skill": "brief",
        "schema": {"type": "object", "properties": {"title": {"type": "string"}, "content": {"type": "string"}},
                   "required": ["title", "content"]}},

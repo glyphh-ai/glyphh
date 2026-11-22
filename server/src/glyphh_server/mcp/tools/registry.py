@@ -25,6 +25,7 @@ from glyphh_server.mcp.tools import (
     bot_market,
     bot_runs,
     bot_tools,
+    bot_training,
     bots,
     connections,
     grants,
@@ -46,9 +47,9 @@ ADA: dict[str, Tool] = {t.name: t for t in (*_WORKERS, *ada_keys.TOOLS, *templat
 # person's own: listed by `listing`) waits on a worker too.
 DETACHED: frozenset[str] = frozenset(t.name for t in _WORKERS) | templates.DETACHED
 # The bots' tools that call Pipedream or make a run: on transactions of their own too.
-DETACHED |= bot_runs.DETACHED | connections.DETACHED | bot_maker.DETACHED | projects.DETACHED
+DETACHED |= bot_runs.DETACHED | connections.DETACHED | bot_maker.DETACHED | projects.DETACHED | bot_training.DETACHED
 MINE: str = "glyphh_"
-_BOTS = (*bots.TOOLS, *bot_maker.TOOLS, *bot_runs.TOOLS, *bot_market.TOOLS, *connections.TOOLS)
+_BOTS = (*bots.TOOLS, *bot_maker.TOOLS, *bot_runs.TOOLS, *bot_training.TOOLS, *bot_market.TOOLS, *connections.TOOLS)
 _OWN = (*account.TOOLS, *billing.TOOLS, *people.TOOLS, *grants.TOOLS, *_BOTS, *projects.TOOLS)
 TOOLS: dict[str, Tool] = {t.name: t for t in _OWN}
 # rrotor's: its runtime keys, self-hosted runtimes and offline licences, and the org's apps: offered only while
@@ -112,6 +113,8 @@ def listed(tool: Tool, with_panel: bool) -> dict[str, Any]:
         "inputSchema": tool.args.model_json_schema(),
         "annotations": {"title": tool.title, "readOnlyHint": tool.read_only, "openWorldHint": False},
     }
+    if tool.destructive is not None:
+        shown["annotations"]["destructiveHint"] = tool.destructive
     if tool.panel and with_panel:
         shown["_meta"] = {"ui": {"resourceUri": tool.resource or panel.URI}}
     return shown

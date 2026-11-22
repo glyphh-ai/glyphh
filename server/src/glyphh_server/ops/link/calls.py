@@ -25,9 +25,7 @@ def offline(name: str) -> str:
 
 async def linked(conn: AsyncConnection, rrotor_id: uuid.UUID) -> places.Place:
     """The org's rrotor, linked now; else refused (Invalid when it is not the org's, Conflict when it is offline)."""
-    found = next((p for p in (await places.listing(conn)).places if p.id == rrotor_id), None)
-    if found is None:
-        raise Invalid(places.NOT_ORGS, reason="runs_on", runs_on=str(rrotor_id))
+    found = await places.one(conn, rrotor_id)
     if not found.linked:
         raise Conflict(offline(found.name), reason="rrotor_offline", runs_on=str(rrotor_id))
     return found
@@ -46,9 +44,17 @@ def fits(inputs: dict[str, Any], what: str) -> None:
 
 
 async def call(
-    hub: Hub, rrotor_id: uuid.UUID, run_id: uuid.UUID, program: str, function: str, inputs: dict[str, Any]
+    hub: Hub,
+    rrotor_id: uuid.UUID,
+    run_id: uuid.UUID,
+    program: str,
+    function: str,
+    inputs: dict[str, Any],
+    folders: list[dict[str, str]] | None = None,
 ) -> bool:
-    sent = Call(run_id=run_id, program=program, function=function, inputs=inputs)
+    """The call sent; `folders` the machine's folders its run is given (none: null, as a rrotor of any version
+    reads it)."""
+    sent = Call(run_id=run_id, program=program, function=function, inputs=inputs, folders=folders or None)
     return await hub.deliver(rrotor_id, sent)
 
 

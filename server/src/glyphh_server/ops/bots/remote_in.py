@@ -1,8 +1,9 @@
 """What a bot's run on a rrotor is sent (glyphh_bot's `run`, docs/specs/bots.md, 9): its package as files by path (as
 the cloud writes it, ops/bots/package.py, with the approvals its permission mode adds: cloud.guarded), the runner's
 state, what it is given or the answer it carries on with, its Ada by its own key, its Claude (the rrotor's: the org's
-Anthropic key set there), and where its tools are: POST tool_url (this server, https) with tool_token, a token
-minted for this run alone, short-lived (it is kept in the run's record on the machine): its run and org, signed."""
+Anthropic key set there) and how hard it works (the bot's effort), and where its tools are: POST tool_url (this
+server, https) with tool_token, a token minted for this run alone, short-lived (it is kept in the run's record on the
+machine): its run and org, signed."""
 
 import base64
 import tempfile
@@ -56,8 +57,11 @@ def tool_url(settings: Settings, run_id: uuid.UUID) -> str:
     return f"{settings.base_url}/v1/bots/runs/{run_id}/tool"
 
 
-def inputs(settings: Settings, bot: Any, run_id: uuid.UUID, given: str | None, answer: Any) -> dict[str, Any]:
-    """glyphh_bot's inputs for one call: from the bot's first step (`given`), or carrying on with `answer`."""
+def inputs(
+    settings: Settings, bot: Any, run_id: uuid.UUID, given: str | None, answer: Any, effort: bool = True
+) -> dict[str, Any]:
+    """glyphh_bot's inputs for one call: from the bot's first step (`given`), or carrying on with `answer`. `effort`
+    false leaves the bot's effort out: for a rrotor whose glyphh_bot does not know it (ops/bots/access.py)."""
     url = tool_url(settings, run_id)
     if not url.startswith("https://") or not settings.ada_base.startswith("https://"):
         raise Invalid(NOT_HTTPS, reason="not_https")
@@ -71,6 +75,8 @@ def inputs(settings: Settings, bot: Any, run_id: uuid.UUID, given: str | None, a
         "model": bot.model,
         "claude": "api",
     }
+    if effort:
+        sent["effort"] = bot.effort
     if given:
         sent["given"] = given
     if answer is not None:

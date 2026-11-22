@@ -305,16 +305,18 @@ a run answers 503 `anthropic_off`.
 | `GET /v1/bot-templates?q=`, `GET /v1/bot-templates/{slug}` | The bots Glyphh ships (`ops/bots/library/*.json`): `{slug, name, summary, description, look, model, instructions, skills, spec, apps, tools, connector_tools, gates}` |
 | `POST /v1/bot-templates/{slug}/install` | `{name?}` → 201, the org's own copy, each app's tools scoped to its first connection of that app; an app not connected is 422 `connections` with `apps` |
 | `GET /v1/bot-approvals` | `{runs}`: every run waiting on the person, oldest first |
-| `GET`/`POST /v1/bots`, `GET`/`PATCH`/`DELETE /v1/bots/{slug}` | A bot: `{id, slug, name, summary, look, mascot, instructions, model, permission_mode, voice, spec, skills, gate_models, connections: [{connection_id, app, app_name, tools}], schedule, schedule_summary, next_run_at, next_run, runs_on, connector_tools, created_at, updated_at, last_run}`; a slug taken is `E_CONFLICT`; `PATCH` with `runs_on: null` puts it back on Glyphh cloud |
+| `GET`/`POST /v1/bots`, `GET`/`PATCH`/`DELETE /v1/bots/{slug}` | A bot: `{id, slug, name, summary, look, mascot, instructions, model, permission_mode, voice, spec, skills, gate_models, connections: [{connection_id, app, app_name, tools}], schedule, schedule_summary, next_run_at, next_run, runs_on, folders: [{path, access}], effort, connector_tools, created_at, updated_at, last_run}`; a slug taken is `E_CONFLICT`; `PATCH` with `runs_on: null` puts it back on Glyphh cloud; `folders` and `effort` are section 13's |
 | `PUT /v1/bots/{slug}/connections` | `{connections: [{connection_id, tools}]}` → the bot (checked again) |
-| `GET /v1/bots/models` | `{models: [{id, name, input_cents_per_mtok, output_cents_per_mtok, own_key_input_cents_per_mtok, own_key_output_cents_per_mtok, default}], markup_pct}` |
+| `GET /v1/bots/models` | `{models: [{id, name, input_cents_per_mtok, output_cents_per_mtok, own_key_input_cents_per_mtok, own_key_output_cents_per_mtok, default}], markup_pct, efforts, default_effort}` (section 13) |
 | `GET /v1/bots/voices` | `{voices: [{id, name, accent, gender, default}], samples}` |
-| `GET /v1/bots/places` | `{places: [{id, name, mode, linked}]}`: Glyphh cloud first (`id` null, `mode` cloud), then the org's rrotors (`local` or `self`) by name |
+| `GET /v1/bots/places` | `{places: [{id, name, mode, linked, url, version}]}`: Glyphh cloud first (`id` null, `mode` cloud), then the org's rrotors (`local` or `self`) by name; `url` where a browser reads the machine itself, `version` the rrotor's (section 13) |
+| `POST /v1/bots/places/{id}/ticket` | `{token, expires_in, url}`: a ticket for the person's browser to read that rrotor itself (section 13); not one of the org's rrotors is 422 `runs_on` |
 | `POST /v1/bots/draft` | `{messages, draft?}` → `{reply, draft: {name, summary, look, mascot, instructions, model, spec, skills, apps: [{app, tools}], connections} \| null, problems, missing_apps}` |
 | `POST /v1/bots/mascot` | `{prompt}` → `{mascot}`, safe SVG |
 | `GET /v1/bots/{slug}/gates` | Per gate: its precedents, how often it asked and was right |
 | `POST /v1/bots/{slug}/runs` | `{input}` → 202, the run queued (on a rrotor: `dispatched`); a live run already is `E_CONFLICT`; a bot whose rrotor is not linked is `E_CONFLICT` `rrotor_offline` |
-| `GET /v1/bots/{slug}/runs`, `GET /v1/bot-runs/{id}` | A run: `{id, bot_slug, status, input, output, error, log, data, question: {question, options, batch, answer_with, step, approval}, input_tokens, output_tokens, cost_micros, own_key, runs_on, kind, project_slug, created_at, started_at, finished_at}`; `runs_on` the rrotor it ran on (null: Glyphh cloud); `kind` `bot` (a project's pull request in the approvals queue is `project`, section 10) |
+| `GET /v1/bots/{slug}/runs`, `GET /v1/bot-runs/{id}` | A run: `{id, bot_slug, status, input, output, error, log, data, question: {question, options, batch, answer_with, step, approval}, input_tokens, output_tokens, cost_micros, own_key, runs_on, kind, project_slug, created_at, started_at, finished_at}`; `runs_on` the rrotor it ran on (null: Glyphh cloud); `kind` `bot` (a project's pull request in the approvals queue is `project`, section 10). What the run says of itself, worked out when it is read (nothing more is kept; ops/bots/said.py, shown.py): `summary`, what happened in one plain sentence in the bot's own step and decision names (a step that ends the run early may carry `empty`, its own sentence; the runner's line stays in `log`); `hint`, when the text it was given did not fit the bot (its loop is fixed: a step reads that text only where it names `$input`), what the bot does and what to give it (the spec's `takes` and `try`); `links: [{url, title, kind}]`, the pages its steps made or touched; `apps: [{step, uri, title, html, input, result}]`, the MCP App UI resources its tool results carry |
+| `GET /v1/mcp-apps/resource?uri=`, `POST /v1/mcp-apps/tools/call` | For the platform as an MCP Apps host (a run's `apps`, shown inline): the page of a UI resource of the server's own (`ui://glyphh/...`, as the connector's `resources/read` answers it), and `{name, arguments}`, a connector tool called for a page as the person signed in, answered as MCP has a tool's result |
 | `POST /v1/bots/runs/{id}/tool` | A bot on a rrotor calls a tool: bearer its run's tool token, `{tool, input, run_id?}` → `{result}` or `{error}` |
 | `POST /v1/bot-runs/{id}/answer` | `{answer}` (an option; for a batch `N=option`, `rest=option` or a map) → 202; one that does not fit is 422 |
 | `POST /v1/bot-runs/{id}/wrong` | `{outcome, gate?, item?}` → `{gate, said, now}`, learned as a precedent |
@@ -577,3 +579,96 @@ The Bots screen has one list of past runs, a bot's own and a crew's alike, and n
 `needs_you` is the org's runs waiting on a person now, whatever the filters: the bots' questions and approvals and
 the crews' pull requests (what each asks is still `GET /v1/bot-approvals`). Pinned and archived are each person's own
 (`run_marks`: `user_id`, `run_id`, `pinned`, `archived`); `archived_count` is the person's.
+
+## 12. Decisions: read them, train the gates (built)
+
+Every decision a bot's gates make, one row per item per gate per run, is copied from the runner's state (its
+`runs.sqlite`, the newest 5,000) into `bot_decisions` after each go, on the cloud and back from a rrotor alike
+(`ops/bots/decided.py`), so a person (or Claude, through the connector) can read, search, sort and page them and train
+the gates from them. The runner's own columns are copied each time (upserted on bot, run, gate, step, item number and
+key); what only the server knows (`confirmed`, `precedent`, its precedent's id in the gate's Ada model) is never
+overwritten. A state that is not the runner's database copies nothing.
+
+**Readable** (`ops/bots/readable.py`): an item's `fields` are its values flattened to `name: text` (nested names joined
+with a dot, a start every name shares left off, lists of plain values joined; at most 40, each at most 2,000
+characters), and its `label` is a title drawn from them: the runner's label unless it is JSON (the SDK falls back to a
+JSON dump), else its first `title`, `subject`, `summary`, `name`, `headline`, `label`, `snippet`, `text` or `body`,
+else its first three fields; never raw JSON. `who` is `ada` (its gate's model, sure enough, or its guess in code),
+`you` (the person was asked) or `default`. `now` is what it is: the correction when it was corrected (a relabel, or
+what the world said), else the outcome.
+
+**Training** goes through the gate's Ada model the way `wrong` does, as a go of the runner, so the bot must be idle
+(409 otherwise): a relabel grades the decision's precedent with the new outcome (or records it, when it was never one)
+and marks it corrected; a confirm records it as it is (or as corrected) and marks it `confirmed`; a case added by hand
+is recorded with its outcome and kept as a decision of kind `case`; forgetting a precedent forgets it in Ada and drops
+it from the decisions (a hand-made case is deleted). Many at once must be of one gate (422 `gate`). Reading one
+decision asks its gate for the nearest precedents now (up to 8, nearest first, each with its item's label when it is
+one of the bot's); a backtest replays the newest decisions through the gates as they stand now and says which would
+change, or be asked, without touching anything.
+
+| Call | What |
+|---|---|
+| `GET /v1/bots/{slug}/decisions` | `?q=` (each word a prefix, all of them), `gate`, `outcome` (what it is now), `who`, `corrected`, `since`, `until`, `run_id`, `sort` (`time`, the default, `confidence`, `gate`, `outcome`), `order` (`desc`), `cursor`, `limit` (25, at most 100) → `{decisions: [{id, run_id, gate, step, key, kind, label, fields, outcome, now, who, mode, confidence, guess, recorded, corrected, confirmed, outcomes, at}], total, next_cursor, gates}`; a cursor not one of its own is 422 `cursor` |
+| `GET /v1/bots/{slug}/decisions/stats` | `?gate=&days=` (30, at most 365) → per gate: decisions, by whom, corrected, confirmed, `ask_rate`, `agreement` (Ada's guess against the person's answer), `accuracy` (Ada's calls the person checked), and the same day by day |
+| `GET /v1/bot-decisions/{id}` | One, with its `case` and its nearest `precedents` `[{id, outcome, similarity, label, decision_id}]` |
+| `POST /v1/bot-decisions/{id}/relabel`, `/confirm` | `{outcome}` (one of its gate's, else 422 `outcome`); none → `{decisions, precedents, said}` |
+| `POST /v1/bots/{slug}/decisions/relabel`, `/confirm` | `{ids, outcome}`, `{ids}`: up to 200 of one gate |
+| `POST /v1/bots/{slug}/cases` | `{gate, outcome, item \| case, label}` → 201, the gate's precedents |
+| `DELETE /v1/bots/{slug}/gates/{gate}/precedents/{id}` | `{gate, id, precedents}` |
+| `POST /v1/bots/{slug}/backtest` | `{gate, limit}` (50, at most 200) → `{replayed, same, changed: [{decision, then, now, ask}], would_ask, right_now}` |
+
+The connector's tools: `bot_decisions` (search, filter, sort, page), `bot_decision` (one, with its precedents),
+`bot_gate_stats` and `bot_backtest` read only; `bot_relabel`, `bot_relabel_many` and `bot_forget_case` change what a
+gate learned (destructive); `bot_confirm` and `bot_add_case` add to it. Each answers in lines a person reads (`[skip]
+Lunch on Friday? (gate worth, by Ada 92%; …)`), never JSON.
+
+**A tool's answer is its list.** The marketplace's templates read a Pipedream action's answer at `$step.ret`, where its
+list is: GitHub's Search Issues and Pull Requests and Google Calendar's List Events answer a list, and Gmail's Find
+Email a list too, but `{messages, truncated, note}` when cut to fit, which `ops/bots/props.py` (`returned`) turns into
+the list (the note kept as `ret_note`). The templates had read `$prs.ret.items`, `$merged.ret.items`,
+`$events.ret.items`, `$mail.ret.messages` and `$tickets.ret.messages`: a gate saw no items, `empty:` ended the run and
+no agent step ran, so its 0 tokens were right. Migration 0024 rewrites those paths in the bots installed from them.
+
+## 13. A bot's folders and effort (built)
+
+Two settings a bot's owner chooses, on the bot (`bots.folders`, `bots.effort`, migration 0025) and so on `BotView`,
+`POST /v1/bots`, `PATCH /v1/bots/{slug}`, and the connector's `bot_create`, `bot_update`, `bot`, `bots`
+(`ops/bots/access.py`).
+
+**Folders**, `folders: [{path, access: "read" | "write"}]`, none by default: the folders of its rrotor's machine the
+bot may read (`read`) or read and change (`write`). They mean something only when the bot runs on a rrotor
+(`runs_on`); on Glyphh cloud, which has no folders, they are kept and ignored. The server knows nothing of the
+machine's files, so it checks their shape and nothing more: an absolute path (a trailing `/` dropped), no `..`, at most
+1,024 characters, at most 20 folders, none twice; anything else is 422 `folders`, saying which in a plain sentence.
+`PATCH` replaces the whole list (`[]`: none). A template's copy has none: a template knows no machine.
+
+- **With each run.** The `call` of `glyphh_bot` carries them beside its inputs (`folders`, null for none: the link's
+  `Call`). The rrotor mounts exactly those in the run's sandbox, read-only or writable as chosen, and nothing else
+  of the machine (rrotor's docs/architecture.md, 5.11).
+- **The machine's owner has the last word.** A rrotor offers only the folders its owner names (`RROTOR_FOLDERS`, none
+  by default). A call that asks for one outside them is refused there before anything runs; its plain sentence
+  ("/Users/ana/Secret is not in a folder this rrotor's owner shares with bots: it shares /Users/ana/Documents.")
+  comes back as the run's `failed` result and is the run's `error`.
+- **An older rrotor.** One before 0.6.0 knows no folders: a run of a bot with any is not sent there and fails saying
+  to update it (the place's `version` is what it last said it runs).
+- **Choosing them.** The platform's picker reads the machine itself, never through this server: `GET
+  {url}/v1/folders?under=<path>` on the rrotor, `url` the place's (`GET /v1/bots/places`: a self-hosted rrotor's own
+  address; a local one's `http://127.0.0.1:7777`, which answers only a browser on that computer), with a ticket from
+  `POST /v1/bots/places/{id}/ticket` as its bearer. The ticket is the rrotor's work ticket (its
+  `rrotord/ticket.py`): `{"kind": "work", "runtime_id": <the rrotor's id>, "sub": <the person's id>, "expires_at"}`
+  signed as a licence key is (`ops/license_keys.encode`), good ten minutes, for any person of the org and only for
+  one of the org's rrotors; the rrotor checks it itself, with the public key it carries. It opens the folder listing
+  and the crew's work there, nothing else. What it opens is never carried or kept by this server.
+
+**Effort**, `effort`: `low`, `medium` (the default), `high`, `xhigh` or `max`: how hard Claude works on the bot's
+agent steps. It is the Claude API's own `output_config.effort`, and those five are its values (`GET /v1/bots/models`
+lists them, `efforts` and `default_effort`: one list, every bot model takes each).
+
+- **In the cloud**, each request of an agent step carries `output_config: {"effort": <the bot's>}`
+  (`access.WithEffort`, around the Anthropic client the SDK's `ApiClaude` calls; `goes._claude`). `medium` is said
+  too: a model's own default is not always medium (Claude Sonnet 5.5's is `high`).
+- **A model that takes none** (one not in `access.EFFORT_MODELS`: today the three bot models take all five) is asked
+  without it, as is a level a model does not take. A run never fails over its effort.
+- **On a rrotor**, it is `glyphh_bot`'s `effort` input, applied the same way there; a rrotor before 0.6.0, whose
+  `glyphh_bot` does not know the input, is sent none. Claude Code signed in on the rrotor (`claude: "cli"`) takes none.
+- The bot maker's own steps and the mascot's carry none (the model's default).

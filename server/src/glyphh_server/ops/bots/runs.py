@@ -19,12 +19,16 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 from glyphh_server.db import tenancy
 from glyphh_server.errors import Conflict, NotFound
 from glyphh_server.models import Bot, BotRun
+from glyphh_server.ops.bots import said, shown
+from glyphh_server.ops.bots.runs_words import INTERRUPTED
 from glyphh_server.ops.bots.views import Question, RunView
 
 MISSING: str = "There is no such run."
-INTERRUPTED: str = "interrupted by a restart"
 LIVE: str = "The bot has a run going or waiting on an answer: answer it, or cancel it, first."
 SHOWN: int = 50
+# A run read with its bot: what the bot is, for what the run says of itself (ops/bots/said.py)
+BOT = (Bot.slug, Bot.name.label("bot_name"), Bot.summary.label("bot_summary"), Bot.spec.label("bot_spec"))
+TOLD: frozenset[str] = frozenset({"bot_slug", "question", "runs_on", "kind", "project_slug", *shown.Shown.model_fields})
 
 
 def machine() -> str:
@@ -35,15 +39,28 @@ def now() -> datetime:
     return datetime.now(UTC)
 
 
-def view(run: Any, slug: str) -> RunView:
-    fields = RunView.model_fields.keys() - {"bot_slug", "question", "runs_on", "kind", "project_slug"}
+def view(run: Any, slug: str, name: str, about: str, spec: dict[str, Any]) -> RunView:
+    """The run as it is shown: its record, and what it says of itself (a plain summary, a hint when the text it was
+    given did not fit the bot, the pages and MCP Apps its steps brought back)."""
     asked = Question(**run.question) if run.question else None
-    return RunView(bot_slug=slug, question=asked, runs_on=run.rrotor_id, **{k: getattr(run, k) for k in fields})
+    words = {"summary": said.summary(run, spec), "hint": said.hint(run, spec, name, about)}
+    back = {"links": shown.links(run), "apps": shown.apps(run)}
+    kept = {k: getattr(run, k) for k in RunView.model_fields.keys() - TOLD}
+    return RunView(bot_slug=slug, question=asked, runs_on=run.rrotor_id, **words, **back, **kept)
+
+
+def joined(found: Any) -> RunView:
+    """A run read with its bot (BOT)."""
+    return view(found, found.slug, found.bot_name, found.bot_summary, found.bot_spec)
+
+
+def of(run: Any, bot: Any) -> RunView:
+    return view(run, bot.slug, bot.name, bot.summary, bot.spec)
 
 
 async def row(conn: AsyncConnection, run_id: uuid.UUID) -> Any:
     found = (
-        await conn.execute(select(BotRun, Bot.slug).join(Bot, Bot.id == BotRun.bot_id).where(BotRun.id == run_id))
+        await conn.execute(select(BotRun, *BOT).join(Bot, Bot.id == BotRun.bot_id).where(BotRun.id == run_id))
     ).first()
     if found is None:
         raise NotFound(MISSING, run_id=str(run_id))
@@ -51,25 +68,24 @@ async def row(conn: AsyncConnection, run_id: uuid.UUID) -> Any:
 
 
 async def get(conn: AsyncConnection, run_id: uuid.UUID) -> RunView:
-    found = await row(conn, run_id)
-    return view(found, found.slug)
+    return joined(await row(conn, run_id))
 
 
 async def listing(conn: AsyncConnection, bot: Any) -> list[RunView]:
     newest = select(BotRun).where(BotRun.bot_id == bot.id).order_by(BotRun.created_at.desc()).limit(SHOWN)
-    return [view(r, bot.slug) for r in await conn.execute(newest)]
+    return [of(r, bot) for r in await conn.execute(newest)]
 
 
 async def waiting(conn: AsyncConnection) -> list[RunView]:
     """The org's runs waiting on the person (its approvals queue), oldest first: what each asks."""
     asked = (
-        select(BotRun, Bot.slug)
+        select(BotRun, *BOT)
         .join(Bot, Bot.id == BotRun.bot_id)
         .where(BotRun.status == "needs_input")
         .order_by(BotRun.created_at)
         .limit(SHOWN)
     )
-    return [view(r, r.slug) for r in await conn.execute(asked)]
+    return [joined(r) for r in await conn.execute(asked)]
 
 
 async def create(engine: AsyncEngine, org_id: uuid.UUID, bot: Any, user_id: uuid.UUID | None, given: str) -> RunView:
@@ -81,7 +97,7 @@ async def create(engine: AsyncEngine, org_id: uuid.UUID, bot: Any, user_id: uuid
             made = (await conn.execute(BotRun.__table__.insert().values(**values).returning(BotRun))).one()
     except IntegrityError as err:
         raise Conflict(LIVE, slug=bot.slug) from err
-    return view(made, bot.slug)
+    return of(made, bot)
 
 
 async def put(engine: AsyncEngine, org_id: uuid.UUID, run_id: uuid.UUID, **values: Any) -> None:

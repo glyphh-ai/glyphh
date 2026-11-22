@@ -6,9 +6,11 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from glyphh_server.ops.bots.access import Chosen, ChosenIn, ChosenPatch
 from glyphh_server.ops.bots.exposed import ABOUT as TOOLS_ABOUT
 from glyphh_server.ops.bots.exposed import ConnectorTool
 from glyphh_server.ops.bots.schedule import Schedule
+from glyphh_server.ops.bots.shown import Shown
 
 LOOK_PARTS: tuple[str, ...] = ("head", "tail", "eye", "extra", "accessory", "pose")
 
@@ -51,7 +53,7 @@ class LastRun(BaseModel):
     created_at: datetime
 
 
-class BotView(BaseModel):
+class BotView(Chosen):  # with its folders and effort (ops/bots/access.py)
     id: uuid.UUID
     slug: str
     name: str
@@ -81,7 +83,7 @@ class Bots(BaseModel):
     bots: list[BotView]
 
 
-class BotIn(BaseModel):
+class BotIn(ChosenIn):
     model_config = ConfigDict(extra="forbid")
     name: str = Field(min_length=1, max_length=80)
     summary: str = Field("", max_length=500)
@@ -101,7 +103,7 @@ class BotIn(BaseModel):
     connector_tools: list[ConnectorTool] = Field(default_factory=list, max_length=20, description=TOOLS_ABOUT)
 
 
-class BotPatch(BaseModel):
+class BotPatch(ChosenPatch):
     model_config = ConfigDict(extra="forbid")
     name: str | None = Field(None, min_length=1, max_length=80, description="Its name; its slug stays")
     summary: str | None = Field(None, max_length=500)
@@ -137,7 +139,7 @@ class Question(BaseModel):
     approval: bool = Field(False, description="An approval: the person's yes (or no) before the step acts")
 
 
-class RunView(BaseModel):
+class RunView(Shown):
     id: uuid.UUID
     bot_slug: str
     status: str = Field(

@@ -4,7 +4,12 @@ the run is refused unless that rrotor is linked now and the org's tokens are not
 `call` (ops/link/calls.py) and is `dispatched` until its result comes back (ops/bots/remote_out.py). A question
 waits in the approvals queue as any run's does; answered within the 14 minutes the rrotor still holds the run, the
 answer goes as `continue`; later, as a fresh call carrying the bot's state and the answer. Cancelled, a run is ended
-here and the rrotor is told. Anything that keeps a call from going fails the run, saying why."""
+here and the rrotor is told. Anything that keeps a call from going fails the run, saying why.
+
+Each call carries the folders of the machine the bot's owner chose (ops/bots/access.py): the rrotor gives the run
+exactly those and refuses the call, in a plain sentence that becomes the run's error, when its own owner does not
+offer one of them. A rrotor before 0.6.0 knows no folders (a bot with any is not sent there: the run fails saying to
+update it) and no effort (left out for it)."""
 
 import uuid
 from datetime import datetime, timedelta
@@ -13,11 +18,11 @@ from typing import Any
 from sqlalchemy import func, update
 
 from glyphh_server.db import tenancy
-from glyphh_server.errors import Conflict, GlyphhError
+from glyphh_server.errors import Conflict, GlyphhError, Invalid
 from glyphh_server.llm import meter
 from glyphh_server.models import BotRun
 from glyphh_server.ops.auth.principal import Principal
-from glyphh_server.ops.bots import approvals, cloud, mend, remote_in, runs
+from glyphh_server.ops.bots import access, approvals, cloud, mend, places, remote_in, runs
 from glyphh_server.ops.bots.goes import Goes
 from glyphh_server.ops.bots.views import RunView
 from glyphh_server.ops.link import calls
@@ -28,6 +33,11 @@ FUNCTION: str = "run"
 HELD: timedelta = timedelta(minutes=14)  # a rrotor holds a waiting run 15 minutes: past 14, a fresh call
 PLACE: str = "The bot's rrotor"
 CANCELLED: str = "cancelled"
+OLD: str = (
+    "{name} runs rrotor {version}, which cannot give a bot folders: update it to rrotor "
+    + access.RROTOR_MIN_NAME
+    + " or later, or take the folders off the bot."
+)
 
 
 class Remote:
@@ -60,13 +70,17 @@ class Remote:
                 await tenancy.enter(conn, org_id)
                 _, asked = await cloud.calls(self.svc.pd, conn, bot)
                 run = await runs.row(conn, run_id)
-            sent = remote_in.inputs(self.svc.settings, cloud.guarded(bot, asked), run_id, given, answer)
+                place = await places.one(conn, rrotor_id)
+            knows = access.takes(place.version)  # folders and effort: rrotor 0.6.0's
+            if bot.folders and not knows:
+                raise Invalid(OLD.format(name=place.name, version=place.version or "an earlier version"))
+            sent = remote_in.inputs(self.svc.settings, cloud.guarded(bot, asked), run_id, given, answer, effort=knows)
             calls.fits(sent, "The bot's package and state")
             began = {"in": run.input_tokens, "out": run.output_tokens, "answer": answer}
             dispatched = {"status": "dispatched", "rrotor_id": rrotor_id, "own_key": True, "question": {}}
             started = func.coalesce(BotRun.started_at, func.now())
             await runs.put(self.svc.engine, org_id, run_id, **dispatched, remote=began, started_at=started)
-            if not await calls.call(self.hub, rrotor_id, run_id, PROGRAM, FUNCTION, sent):
+            if not await calls.call(self.hub, rrotor_id, run_id, PROGRAM, FUNCTION, sent, bot.folders):
                 await runs.failed(self.svc.engine, org_id, run_id, calls.offline(PLACE))
         except GlyphhError as err:
             await runs.failed(self.svc.engine, org_id, run_id, err.message)

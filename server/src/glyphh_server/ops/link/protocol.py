@@ -26,7 +26,6 @@ from glyphh_server.ops.nodes import NodeId, Role
 PROTOCOL: int = 3  # 2 said artifact for an app; 1 named a program `model`
 ACCEPTED: tuple[int, ...] = (2, 3)  # 2: a 0.2.0 rrotor, told the catalogue in its own names
 NAMES: dict[int, tuple[str, str]] = {2: ("artifact", "artifacts"), 3: ("app", "apps")}  # one app, the welcome's list
-
 # How a link is closed, so the rrotor knows whether to reconnect.
 REFUSED: int = 4401  # the runtime token is not valid, or its install was signed out: do not retry with it
 BAD_HELLO: int = 4400  # the first message was not a good hello for this runtime
@@ -173,7 +172,7 @@ class Keys(Message):
 
 
 class Call(Message):
-    """A run of one of Glyphh's programs on the rrotor (version null: its active one)."""
+    """A run of one of Glyphh's programs on the rrotor (version null: its active one; folders: ops/bots/access.py)."""
 
     type: Literal["call"] = "call"
     run_id: uuid.UUID
@@ -182,6 +181,7 @@ class Call(Message):
     function: Name
     inputs: dict[str, Any]
     caller: Literal["routine"] = "routine"
+    folders: list[dict[str, str]] | None = None
 
 
 class Continue(Message):

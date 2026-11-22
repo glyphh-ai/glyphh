@@ -85,6 +85,12 @@ async def test_nothing_worth_it_ends_the_run_and_wrong_teaches_the_gate(served: 
     run = await started(served, ada)
     run = await answered(served, ada, run, "skip")
     assert run["status"] == "done" and "the run ends here" in run["error"]
+    # what the person is told is a plain sentence in the bot's own names, and what the bot takes (ops/bots/said.py)
+    assert run["summary"].startswith("It decided 1 (1 skip and 0 answer); none came out answer, so it stopped before")
+    assert run["hint"].startswith("Inbox Cat does one job: answers the mail worth answering.")
+    assert (run["links"], run["apps"]) == ([], [])
+    listed = (await served.http.get("/v1/bots/inbox-cat/runs", headers=ada.headers)).json()["runs"][0]
+    assert listed["summary"] == run["summary"]
     res = await served.http.post(
         f"/v1/bot-runs/{run['id']}/wrong", json={"outcome": "answer", "item": "m3"}, headers=ada.headers
     )

@@ -17,6 +17,7 @@ from glyphh_server.models.base import Base, created_at, guid
 RUN_STATUSES: tuple[str, ...] = ("queued", "running", "dispatched", "needs_input", "done", "failed", "skipped")
 LIVE: tuple[str, ...] = ("queued", "running", "dispatched", "needs_input")
 PERMISSION_MODES: tuple[str, ...] = ("ask", "connection", "auto")
+EFFORTS: tuple[str, ...] = ("low", "medium", "high", "xhigh", "max")  # the Claude API's output_config.effort
 
 
 class Connection(Base):
@@ -43,6 +44,7 @@ class Bot(Base):
         Index("bots_one_slug", "org_id", "slug", unique=True),
         Index("bots_due", "next_run_at", postgresql_where=text("next_run_at IS NOT NULL")),
         CheckConstraint(f"permission_mode IN {PERMISSION_MODES}", name="bots_permission_mode"),
+        CheckConstraint(f"effort IN {EFFORTS}", name="bots_effort"),
     )
 
     id: Mapped[uuid.UUID] = guid()
@@ -73,6 +75,10 @@ class Bot(Base):
     runs_on: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("rrotors.id", ondelete="SET NULL"))
     # the tools it adds to the org's connector, by purpose (ops/bots/exposed.py): its template's, or its own
     connector_tools: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, server_default=text("'[]'::jsonb"))
+    # the folders of its rrotor's machine it may use, [{"path": "/…", "access": "read" | "write"}], and how hard
+    # Claude works on its agent steps (ops/bots/access.py)
+    folders: Mapped[list[dict[str, str]]] = mapped_column(JSONB, server_default=text("'[]'::jsonb"))
+    effort: Mapped[str] = mapped_column(Text, server_default="medium")
     created_at: Mapped[datetime] = created_at()
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

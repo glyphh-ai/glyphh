@@ -8,10 +8,11 @@ hosted list's are)."""
 from dataclasses import replace
 from datetime import date
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from glyphh_server.errors import Invalid
 from glyphh_server.llm.registry import Model
+from glyphh_server.ops.bots import access
 
 DEFAULT: str = "claude-opus-5-5"
 MARKUP_PCT: int = 20  # Glyphh's markup on Anthropic's rate, on either key
@@ -48,6 +49,8 @@ class BotModel(BaseModel):
 class BotModels(BaseModel):
     models: list[BotModel]
     markup_pct: int
+    efforts: list[str] = Field(description="The efforts a bot may be set to (every model here takes each)")
+    default_effort: str
 
 
 def listing() -> BotModels:
@@ -63,7 +66,9 @@ def listing() -> BotModels:
         )
         for m in CLAUDE.values()
     ]
-    return BotModels(models=shown, markup_pct=MARKUP_PCT)
+    return BotModels(
+        models=shown, markup_pct=MARKUP_PCT, efforts=list(access.EFFORTS), default_effort=access.DEFAULT_EFFORT
+    )
 
 
 def model(id: str) -> Model:

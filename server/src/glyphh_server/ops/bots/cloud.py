@@ -119,7 +119,7 @@ def named(scopes: list[dict[str, Any]]) -> dict[str, Call]:
 
 def _action(pd: Pipedream, org_id: uuid.UUID, key: str, defined: list[dict[str, Any]], account: str) -> Call:
     async def call(given: dict[str, Any]) -> Any:
-        return await pd.run(org_id, key, props.configured(defined, account, given))
+        return props.returned(await pd.run(org_id, key, props.configured(defined, account, given)))
 
     return call
 

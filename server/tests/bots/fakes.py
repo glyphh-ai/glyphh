@@ -79,7 +79,7 @@ class FakePipedream:
         if self.fail_run:
             return httpx.Response(400, json={"error": "the account's token was revoked"})
         if body["id"] == FIND["key"]:
-            return httpx.Response(200, json={"exports": {"$summary": "Found"}, "ret": {"messages": self.mail}})
+            return httpx.Response(200, json={"exports": {"$summary": "Found"}, "ret": self.mail})  # a list, as Gmail's
         return httpx.Response(200, json={"exports": {"$summary": "Sent"}, "ret": {"id": "msg_1"}})
 
     def _connect(self, method: str, path: str, body: Any, query: dict[str, str]) -> httpx.Response:
@@ -123,12 +123,24 @@ class FakeModel:
 
     def info(self) -> ModelInfo:
         self._there()
-        return ModelInfo({"name": self.name, "precedents": len(self.ada.cases[self.name])})
+        gone = sum(1 for p in self.ada.forgotten if int(p[1:]) <= len(self.ada.cases[self.name]))
+        return ModelInfo({"name": self.name, "precedents": len(self.ada.cases[self.name]) - gone})
 
     def record(self, data: dict[str, Any], outcome: str | None = None) -> SimpleNamespace:
         self._there()
         self.ada.cases[self.name].append((data, outcome))
         return SimpleNamespace(data={"id": f"p{len(self.ada.cases[self.name])}"})
+
+    def grade(self, precedent_id: str, value: Any) -> dict[str, Any]:
+        self._there()
+        at = int(precedent_id[1:]) - 1
+        self.ada.cases[self.name][at] = (self.ada.cases[self.name][at][0], value)
+        return {"id": precedent_id}
+
+    def forget(self, precedent_id: str) -> dict[str, Any]:
+        self._there()
+        self.ada.forgotten.append(precedent_id)  # its id is never given again: info counts it out
+        return {"id": precedent_id}
 
     def record_many(self, cases: list[dict[str, Any]]) -> dict[str, Any]:
         for c in cases:
@@ -161,6 +173,7 @@ class FakeAda:
         self.rule: dict[str, Callable[[dict[str, Any]], tuple[str, float]]] = {}
         self.near: dict[str, Callable[[dict[str, Any]], float]] = {}  # the nearest precedent's sim (else 1)
         self.keys: list[str] = []
+        self.forgotten: list[str] = []
 
     def models(self) -> list[ModelInfo]:
         return [ModelInfo({"name": n, "precedents": len(self.cases[n])}) for n in self.specs]

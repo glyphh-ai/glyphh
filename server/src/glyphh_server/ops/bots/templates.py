@@ -16,6 +16,7 @@ from glyphh_server.errors import Invalid, NotFound
 from glyphh_server.models import Connection
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.bots import store
+from glyphh_server.ops.bots.access import EFFORT_ABOUT, Effort
 from glyphh_server.ops.bots.exposed import ABOUT as TOOLS_ABOUT
 from glyphh_server.ops.bots.exposed import ConnectorTool
 from glyphh_server.ops.bots.schedule import Schedule
@@ -40,6 +41,7 @@ class BotTemplate(BaseModel):
     connector_tools: list[ConnectorTool] = Field(default_factory=list, description=TOOLS_ABOUT)
     gates: list[str] = Field(default_factory=list, description="Its gates, each its own Ada model that learns")
     schedule: Schedule = Field(default_factory=Schedule, description="When the installed bot runs on its own")
+    effort: Effort = Field("medium", description=EFFORT_ABOUT)
 
 
 class BotTemplates(BaseModel):
@@ -72,7 +74,8 @@ def one(slug: str) -> BotTemplate:
 
 
 async def install(conn: AsyncConnection, who: Principal, secret: str, slug: str, given: InstallIn) -> BotView:
-    """The org's own bot made from the template, its tools scoped to the org's connection of each app."""
+    """The org's own bot made from the template, its tools scoped to the org's connection of each app, at the
+    template's effort. It is given no folders: a template knows no machine, the bot's owner chooses them after."""
     t = one(slug)
     linked: dict[str, Any] = {}
     for c in await conn.execute(select(Connection).order_by(Connection.created_at)):
@@ -86,5 +89,6 @@ async def install(conn: AsyncConnection, who: Principal, secret: str, slug: str,
     body = BotIn(
         name=given.name or t.name, summary=t.summary, look=t.look, instructions=t.instructions, model=t.model,
         spec=t.spec, skills=t.skills, connections=scopes, connector_tools=t.connector_tools, schedule=t.schedule,
+        effort=t.effort, folders=[],
     )  # fmt: skip
     return await store.create(conn, who, secret, body)

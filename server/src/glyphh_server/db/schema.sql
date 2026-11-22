@@ -512,13 +512,16 @@ CREATE TABLE IF NOT EXISTS bots (
     next_run_at TIMESTAMP WITH TIME ZONE,
     runs_on UUID,
     connector_tools JSONB DEFAULT '[]'::jsonb NOT NULL,
+    folders JSONB DEFAULT '[]'::jsonb NOT NULL,
+    effort TEXT DEFAULT 'medium' NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
     FOREIGN KEY(created_by) REFERENCES users (id) ON DELETE SET NULL,
     FOREIGN KEY(runs_on) REFERENCES rrotors (id) ON DELETE SET NULL,
-    CONSTRAINT bots_permission_mode CHECK (permission_mode IN ('ask', 'connection', 'auto'))
+    CONSTRAINT bots_permission_mode CHECK (permission_mode IN ('ask', 'connection', 'auto')),
+    CONSTRAINT bots_effort CHECK (effort IN ('low', 'medium', 'high', 'xhigh', 'max'))
 );
 CREATE UNIQUE INDEX IF NOT EXISTS bots_one_slug ON bots (org_id, slug);
 CREATE INDEX IF NOT EXISTS bots_due ON bots (next_run_at) WHERE next_run_at IS NOT NULL;
@@ -570,6 +573,42 @@ CREATE TABLE IF NOT EXISTS bot_keys (
     FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
     FOREIGN KEY(set_by) REFERENCES users (id) ON DELETE SET NULL
 );
+
+-- bot_decisions: each gate's decision on each item of each run, copied from the runner's runs.sqlite after each go
+-- and made readable (label, fields), searched (body), relabelled and confirmed (docs/specs/bots.md, 12)
+CREATE TABLE IF NOT EXISTS bot_decisions (
+    id UUID DEFAULT gen_random_uuid() NOT NULL,
+    org_id UUID NOT NULL,
+    bot_id UUID NOT NULL,
+    loop_run TEXT DEFAULT '' NOT NULL,
+    gate TEXT NOT NULL,
+    step TEXT DEFAULT '' NOT NULL,
+    n INTEGER DEFAULT 0 NOT NULL,
+    key TEXT DEFAULT '' NOT NULL,
+    kind TEXT DEFAULT 'gate' NOT NULL,
+    label TEXT DEFAULT '' NOT NULL,
+    fields JSONB DEFAULT '{}'::jsonb NOT NULL,
+    "case" JSONB DEFAULT '{}'::jsonb NOT NULL,
+    outcome TEXT,
+    who TEXT DEFAULT 'ada' NOT NULL,
+    mode TEXT DEFAULT '' NOT NULL,
+    p DOUBLE PRECISION,
+    guess TEXT,
+    recorded BOOLEAN DEFAULT false NOT NULL,
+    corrected TEXT,
+    confirmed BOOLEAN DEFAULT false NOT NULL,
+    precedent TEXT DEFAULT '' NOT NULL,
+    body TEXT DEFAULT '' NOT NULL,
+    search TSVECTOR GENERATED ALWAYS AS (to_tsvector('simple'::regconfig, body)) STORED,
+    at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT bot_decisions_who CHECK (who IN ('ada', 'you', 'default')),
+    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
+    FOREIGN KEY(bot_id) REFERENCES bots (id) ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS bot_decisions_one ON bot_decisions (bot_id, loop_run, gate, step, n, key);
+CREATE INDEX IF NOT EXISTS bot_decisions_newest ON bot_decisions (bot_id, at);
+CREATE INDEX IF NOT EXISTS bot_decisions_search ON bot_decisions USING gin (search);
 
 -- projects, project_runs, project_turns, run_marks: a crew of the org's bots, in no order, on one GitHub repo and a
 -- set of instructions, taking turns one at a time on Glyphh cloud or one of its rrotors, each turn a pull request
@@ -946,6 +985,10 @@ ALTER TABLE bot_keys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bot_keys FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON bot_keys;
 CREATE POLICY tenant ON bot_keys USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
+ALTER TABLE bot_decisions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bot_decisions FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant ON bot_decisions;
+CREATE POLICY tenant ON bot_decisions USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE projects FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON projects;

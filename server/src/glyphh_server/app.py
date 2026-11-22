@@ -28,6 +28,7 @@ from glyphh_server.api import (
     license,
     llm,
     mcp,
+    mcp_apps,
     me,
     mods,
     oauth,
@@ -83,6 +84,7 @@ ROUTERS = (
     oauth_pages,
     connector,
     mcp,
+    mcp_apps,
     attribution,
     admin,
 )

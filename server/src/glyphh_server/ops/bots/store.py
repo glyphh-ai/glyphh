@@ -19,7 +19,7 @@ from glyphh_server.errors import Conflict, Invalid, NotFound
 from glyphh_server.models import Bot, BotRun, Connection, RuntimeKey
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.sealed import seal, unseal
-from glyphh_server.ops.bots import cloud, exposed, package, places, prices, schedule, seeds, svg, voices
+from glyphh_server.ops.bots import access, cloud, exposed, package, places, prices, schedule, seeds, svg, voices
 from glyphh_server.ops.bots.views import LOOK_PARTS, BotIn, BotPatch, BotView, LastRun, Scope, ScopeIn, ScopesIn
 from glyphh_server.ops.runtime_keys import key_hash
 
@@ -27,7 +27,7 @@ MISSING: str = "There is no such bot."
 KEY_NAME: str = "bot "  # its own Ada key's name, then its slug: never a person's key (api/key_auth.py)
 FIELDS: tuple[str, ...] = (
     *("id", "slug", "name", "summary", "look", "mascot", "instructions", "model", "permission_mode", "voice"),
-    *("spec", "skills", "connector_tools"),
+    *("spec", "skills", "connector_tools", "folders", "effort"),
 )
 
 
@@ -125,6 +125,8 @@ async def create(conn: AsyncConnection, who: Principal, secret: str, body: BotIn
         "schedule": body.schedule.model_dump(),
         "next_run_at": schedule.next_after(body.schedule, schedule.now()),
         "runs_on": await places.checked(conn, body.runs_on),
+        "folders": access.folders(body.folders),
+        "effort": body.effort,
         "connector_tools": [t.model_dump(mode="json") for t in body.connector_tools],
     }
     checked(SimpleNamespace(**values, state=None))
@@ -144,6 +146,8 @@ def _changes(body: BotPatch) -> dict[str, Any]:
     if "model" in given:
         given["model"] = prices.model(given["model"] or prices.DEFAULT).id
     changes = {k: v for k, v in given.items() if v is not None}
+    if body.folders is not None:  # the whole list, checked as at its making
+        changes["folders"] = access.folders(body.folders)
     if body.schedule is not None:  # its next run worked out again, from now
         changes["next_run_at"] = schedule.next_after(body.schedule, schedule.now())
     return changes

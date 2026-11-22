@@ -10,6 +10,8 @@
     "urgent-post": "---\nname: urgent-post\ndescription: How an urgent-ticket Slack post is written\n---\n\nOne block per ticket: *Customer* - what is broken, in one line. Then how many people it stops. Then a suggested first reply in quotes. Most urgent first. No greeting, no sign-off.\n"
   },
   "spec": {
+    "takes": "the Slack channel the urgent ones are posted to",
+    "try": "#support-urgent",
     "touches": "sends",
     "seed": {"personality": ["Calm, short and exact."], "instructions": ["An outage, data loss or a payment failure is always urgent."]},
     "gates": {
@@ -33,8 +35,9 @@
     },
     "loop": [
       {"id": "tickets", "run": "gmail-find-email", "input": {"q": "to:support newer_than:1h"}},
-      {"id": "urgency", "gate": "urgency", "each": "$tickets.ret.messages", "label": "subject", "key": "id",
-       "on": {"empty:urgent": "end"}},
+      {"id": "urgency", "gate": "urgency", "each": "$tickets.ret", "label": "subject", "key": "id",
+       "on": {"empty:urgent": "end"},
+       "empty": "No new support email is urgent, so nothing was posted."},
       {"id": "post", "agent": "Write the Slack post for these urgent tickets: $urgency.urgent", "skill": "urgent-post"},
       {"id": "slack", "run": "slack-send-message", "approval": "post the urgent tickets to Slack",
        "input": {"conversation": "$input", "text": "$post"}}

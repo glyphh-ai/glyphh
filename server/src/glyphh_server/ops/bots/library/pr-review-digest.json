@@ -10,6 +10,8 @@
     "digest": "---\nname: digest\ndescription: How a review digest is written\n---\n\nOne line per pull request: <link|title> - who asked, how long it has waited, what to look at first. Blocking work first. End with how many were left for later.\n"
   },
   "spec": {
+    "takes": "a GitHub search for the pull requests to rank",
+    "try": "is:pr is:open review-requested:@me",
     "touches": "sends",
     "seed": {"personality": ["Direct and useful."], "instructions": ["A pull request that blocks a release always needs review today."]},
     "gates": {
@@ -32,8 +34,9 @@
     },
     "loop": [
       {"id": "prs", "run": "github-search-issues-and-pull-requests", "input": {"query": "$input"}},
-      {"id": "today", "gate": "today", "each": "$prs.ret.items", "label": "title", "key": "id",
-       "on": {"empty:today": "end"}},
+      {"id": "today", "gate": "today", "each": "$prs.ret", "label": "title", "key": "id",
+       "on": {"empty:today": "end"},
+       "empty": "No pull request needs your review today, so there is no digest to post."},
       {"id": "digest", "agent": "Write the review digest of these pull requests: $today.today", "skill": "digest"},
       {"id": "slack", "run": "slack-send-message", "approval": "post your review digest to Slack",
        "input": {"conversation": "@me", "text": "$digest"}}
