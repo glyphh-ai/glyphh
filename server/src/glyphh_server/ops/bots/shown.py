@@ -10,6 +10,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from glyphh_server.ops.bots.files import RunFile
+
 MIME: str = "text/html;profile=mcp-app"
 URL_KEYS: tuple[str, ...] = ("html_url", "permalink", "webViewLink", "web_url", "url", "link")
 TITLE_KEYS: tuple[str, ...] = ("title", "name", "subject", "text")
@@ -54,6 +56,10 @@ class Shown(BaseModel):
     hint: str = Field("", description="When the text it was given did not fit the bot: what the bot does, what to give")
     links: list[RunLink] = Field(default_factory=list, description="Pages its steps made or touched")
     apps: list[RunApp] = Field(default_factory=list, description="MCP App UI resources its tool results carry")
+    files: list[RunFile] = Field(
+        default_factory=list,
+        description="On a rrotor: the files of its folders it read and changed, by name (never what is in them)",
+    )
 
 
 def _dicts(value: Any, depth: int = 0) -> Iterator[dict[str, Any]]:

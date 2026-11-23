@@ -315,9 +315,9 @@ a run answers 503 `anthropic_off`.
 | `POST /v1/bots/mascot` | `{prompt}` → `{mascot}`, safe SVG |
 | `GET /v1/bots/{slug}/gates` | Per gate: its precedents, how often it asked and was right |
 | `POST /v1/bots/{slug}/runs` | `{input}` → 202, the run queued (on a rrotor: `dispatched`); a live run already is `E_CONFLICT`; a bot whose rrotor is not linked is `E_CONFLICT` `rrotor_offline` |
-| `GET /v1/bots/{slug}/runs`, `GET /v1/bot-runs/{id}` | A run: `{id, bot_slug, status, input, output, error, log, data, question: {question, options, batch, answer_with, step, approval}, input_tokens, output_tokens, cost_micros, own_key, runs_on, kind, project_slug, created_at, started_at, finished_at}`; `runs_on` the rrotor it ran on (null: Glyphh cloud); `kind` `bot` (a project's pull request in the approvals queue is `project`, section 10). What the run says of itself, worked out when it is read (nothing more is kept; ops/bots/said.py, shown.py): `summary`, what happened in one plain sentence in the bot's own step and decision names (a step that ends the run early may carry `empty`, its own sentence; the runner's line stays in `log`); `hint`, when the text it was given did not fit the bot (its loop is fixed: a step reads that text only where it names `$input`), what the bot does and what to give it (the spec's `takes` and `try`); `links: [{url, title, kind}]`, the pages its steps made or touched; `apps: [{step, uri, title, html, input, result}]`, the MCP App UI resources its tool results carry |
+| `GET /v1/bots/{slug}/runs`, `GET /v1/bot-runs/{id}` | A run: `{id, bot_slug, status, input, output, error, log, data, question: {question, options, batch, answer_with, step, approval}, input_tokens, output_tokens, cost_micros, own_key, runs_on, kind, project_slug, created_at, started_at, finished_at}`; `runs_on` the rrotor it ran on (null: Glyphh cloud); `kind` `bot` (a project's pull request in the approvals queue is `project`, section 10). What the run says of itself, worked out when it is read (nothing more is kept; ops/bots/said.py, shown.py): `summary`, what happened in one plain sentence in the bot's own step and decision names (a step that ends the run early may carry `empty`, its own sentence; the runner's line stays in `log`); `hint`, when the text it was given did not fit the bot (its loop is fixed: a step reads that text only where it names `$input`), what the bot does and what to give it (the spec's `takes` and `try`); `links: [{url, title, kind}]`, the pages its steps made or touched; `apps: [{step, uri, title, html, input, result}]`, the MCP App UI resources its tool results carry; `files: [{name, did}]`, on a rrotor, the files of its folders it read and changed, by name (section 14) |
 | `GET /v1/mcp-apps/resource?uri=`, `POST /v1/mcp-apps/tools/call` | For the platform as an MCP Apps host (a run's `apps`, shown inline): the page of a UI resource of the server's own (`ui://glyphh/...`, as the connector's `resources/read` answers it), and `{name, arguments}`, a connector tool called for a page as the person signed in, answered as MCP has a tool's result |
-| `POST /v1/bots/runs/{id}/tool` | A bot on a rrotor calls a tool: bearer its run's tool token, `{tool, input, run_id?}` → `{result}` or `{error}` |
+| `POST /v1/bots/runs/{id}/tool` | A bot on a rrotor calls a tool: bearer its run's tool token, `{tool, input, run_id?}` → `{result}` or `{error}`; `file_change` asks whether a file of its folders may be changed now (section 14) |
 | `POST /v1/bot-runs/{id}/answer` | `{answer}` (an option; for a batch `N=option`, `rest=option` or a map) → 202; one that does not fit is 422 |
 | `POST /v1/bot-runs/{id}/wrong` | `{outcome, gate?, item?}` → `{gate, said, now}`, learned as a precedent |
 | `POST /v1/bot-runs/{id}/cancel` | A waiting run, failed `cancelled` |
@@ -672,3 +672,41 @@ lists them, `efforts` and `default_effort`: one list, every bot model takes each
 - **On a rrotor**, it is `glyphh_bot`'s `effort` input, applied the same way there; a rrotor before 0.6.0, whose
   `glyphh_bot` does not know the input, is sent none. Claude Code signed in on the rrotor (`claude: "cli"`) takes none.
 - The bot maker's own steps and the mascot's carry none (the model's default).
+
+## 14. A bot uses the files in its folders (built)
+
+A bot on a rrotor with folders (section 13) uses them: its agent steps there get tools over exactly those folders
+(rrotor 0.8.0's `glyphh_bot`, its docs/architecture.md, 5.10): list a folder, read a file (text, Word, PDF), search by
+name or text, write a file and move or rename one, the last two only in a folder given to read and change. No
+delete, no shell. So a typed task can be done by a bot that has folders ("summarise the invoices in my Invoices
+folder"). On Glyphh cloud there are no folders and nothing changes. `ops/bots/files.py`.
+
+- **Which rrotors.** The `call` carries `file_tools: true` when the bot has folders and its rrotor says it runs 0.8.0
+  or later (the place's `version`). An older rrotor is not sent the input and keeps the single request a step was
+  (its folders mounted and unused, as before). With it, the call also carries the run's text (`given`) each time, a
+  fresh call for an answer too: the rrotor puts what the person typed before each agent step, whatever the loop
+  names. So the run's `hint` ("it does not read what you type") is not said for a run whose agent steps had files.
+- **Reads never ask. A change is made only on this server's word.** Before each write or move the rrotor calls the
+  run's tool endpoint with `file_change` and the change's action and names, `{action: write | move, path, name, to?,
+  to_name?}` (`name`: the folder's name and the way down, `Notes/Summary.md`). A change outside the folders the bot
+  may change is an `error` (the most particular folder that holds the path decides, as on the machine). Otherwise
+  `{result: {allowed: true}}` at once when the bot's permission mode is not `ask` (`auto`, Act on its own; and
+  `connection`, Follow each app's settings: a folder is no app, and its own setting, read and change, is the say),
+  and under `ask` (Ask me first) only by taking the person's yes to that very change: `{allowed: false}` means ask.
+- **The question.** The rrotor then stops the step and its result is `needs_input`: "Write Notes/Summary.md?"
+  ("Replace what is in …?", "Move … to …?"), `yes` or `no`, an approval; the change it names is kept with the run's question (`file`), not shown. It
+  waits in the chat and in `GET /v1/bot-approvals` as any question does. A yes is kept on the run as the yes to
+  that change (`bot_runs.approvals.file_change`: its action and paths, who and when; that one alone) and the
+  rrotor's next `file_change` for the same action and paths takes it, in one statement: once. Any other change, or
+  the same again, is `{allowed: false}` and is asked about in its turn. A no keeps nothing; the rrotor tells Claude
+  the person said no, and the step goes on without it. The rrotor is the machine (it could write its own disk), so
+  this is the bot's manners held in one place, the server, as its connections' tools are: not a wall.
+- **Names here, contents never.** Each result of such a run names the files it read and changed so far
+  (`data.files`); the server keeps them with the run as `data._files`, `[{name, did: read | written | moved}]` (the
+  200 latest, a fresh call's added to what the run had), and the run's view says them as `files` (what it changed
+  first, 12 at most), which the platform shows as the turn's file chips ("Invoices/March.pdf · read"). Anything
+  else in what the rrotor names is dropped. What is in a file goes from the machine to Claude and nowhere else: the
+  rrotor puts none of it in a step's data, the log or the bot's state, and the conversation a waiting run holds
+  stays on the machine. The step's own answer (the bot's words, `output`) is kept as every run's is.
+- **Tokens** are the rrotor's count as before (every request of a step's loop added up, cache reads and writes
+  counted as input), metered at the org's own key's rate.

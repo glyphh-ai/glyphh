@@ -4,12 +4,15 @@ run was given did not fit the bot: what the bot does and what to give it. A bot'
 order; nothing reads free text but the steps that name `$input`), so a task that does not fit cannot be answered by
 the bot: the turn says so instead of ending silently. The runner's own lines (`gate today: today 0, later 0; the run
 ends here`) are never the answer: they stay in the run's log. A step that can end the run early may carry `empty`,
-the bot's own sentence for it; a bot may carry `takes` and `try` (what its `$input` is used as, an example)."""
+the bot's own sentence for it; a bot may carry `takes` and `try` (what its `$input` is used as, an example). A bot
+on a rrotor whose agent steps have its folders' files is told what the person typed whatever its loop names
+(ops/bots/files.py), so its run gets no hint: the task was read."""
 
 import json
 import re
 from typing import Any
 
+from glyphh_server.ops.bots import files
 from glyphh_server.ops.bots.runs_words import INTERRUPTED, joined, named, plain, sentence
 
 ENGINE_EACH: re.Pattern[str] = re.compile(r"^gate (\S+): .*; the run ends here$")
@@ -112,6 +115,8 @@ def hint(run: Any, spec: dict[str, Any], name: str, about: str) -> str:
     run that is going or waiting, one given nothing, or one that read its text and went the whole way."""
     given, status = str(run.input or "").strip(), str(run.status)
     if not given or status in WORKING or status == "needs_input":
+        return ""
+    if files.used(run, spec):  # its agent steps had its folders' files, and were told what the person typed
         return ""
     job = sentence(about)
     job = job[0].lower() + job[1:] if job[1:2].islower() else job  # after the colon: "finds ...", but "PRs ..." stays

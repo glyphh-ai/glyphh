@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 from glyphh_server.db import tenancy
 from glyphh_server.errors import Conflict, NotFound
 from glyphh_server.models import Bot, BotRun
-from glyphh_server.ops.bots import said, shown
+from glyphh_server.ops.bots import files, said, shown
 from glyphh_server.ops.bots.runs_words import INTERRUPTED
 from glyphh_server.ops.bots.views import Question, RunView
 
@@ -44,7 +44,7 @@ def view(run: Any, slug: str, name: str, about: str, spec: dict[str, Any]) -> Ru
     given did not fit the bot, the pages and MCP Apps its steps brought back)."""
     asked = Question(**run.question) if run.question else None
     words = {"summary": said.summary(run, spec), "hint": said.hint(run, spec, name, about)}
-    back = {"links": shown.links(run), "apps": shown.apps(run)}
+    back = {"links": shown.links(run), "apps": shown.apps(run), "files": files.of(run)}
     kept = {k: getattr(run, k) for k in RunView.model_fields.keys() - TOLD}
     return RunView(bot_slug=slug, question=asked, runs_on=run.rrotor_id, **words, **back, **kept)
 
@@ -122,26 +122,34 @@ async def start(engine: AsyncEngine, org_id: uuid.UUID, run_id: uuid.UUID, own_k
     await put(engine, org_id, run_id, status="running", started_at=now(), own_key=own_key)
 
 
-def _question(result: RunResult) -> dict[str, Any]:
+def _question(result: RunResult, file: dict[str, str] | None = None) -> dict[str, Any]:
     if result.status != "needs_input":
         return {}
     asked = {"question": result.question or result.reason, "options": result.options or []}
     shown = re.sub(r"^glyphh bot continue \S+\s*", "", result.answer_with) if result.answer_with else None
     where = {"step": result.step, "approval": bool(result.approval)}  # an approval's step: approvals.granted
-    return asked | {"batch": result.batch, "answer_with": shown} | where
+    change = {"file": file} if file else {}  # the change to a file it asks about (ops/bots/files.py)
+    return asked | {"batch": result.batch, "answer_with": shown} | where | change
 
 
 async def ended(
-    engine: AsyncEngine, run: Any, result: RunResult, out: str, tokens: dict[str, int], charged: int, **more: Any
+    engine: AsyncEngine,
+    run: Any,
+    result: RunResult,
+    out: str,
+    tokens: dict[str, int],
+    charged: int,
+    file: dict[str, str] | None = None,
+    **more: Any,
 ) -> None:
     """What the runner left: the run's status, log, data, question and output; its tokens added to what it had (and
-    `more`: a run on a rrotor's own)."""
+    `more`: a run on a rrotor's own). `file`: the change to a file its question asks about."""
     values: dict[str, Any] = {
         "status": result.status,
         "error": result.reason if result.status != "needs_input" else "",
         "log": result.log,
         "data": result.data,
-        "question": _question(result),
+        "question": _question(result, file),
         "output": out,
         "loop_run": result.run_id or "",
         "input_tokens": BotRun.input_tokens + tokens["input_tokens"],

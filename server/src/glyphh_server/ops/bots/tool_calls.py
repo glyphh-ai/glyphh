@@ -6,7 +6,12 @@ connection's account. The server holds the bot's permissions itself, not trustin
 connection denies is refused, and one to ask the person about (by the bot's permission mode and the connection) runs
 only by taking the person's yes to the step that runs it (ops/bots/approvals.py), once; every refusal is logged. The
 bot's egress on the rrotor is its manifest's hosts alone, so its fetches come here. The token opens this run only,
-while it is out on its rrotor."""
+while it is out on its rrotor.
+
+`file_change` is the bot's permission to change a file of its folders (ops/bots/files.py), asked before each write
+or move with the change's action and names: `{result: {allowed: true}}` at once when the bot does not ask first,
+else only by taking the person's yes to that very change; `{allowed: false}`: the rrotor asks the person. Nothing of
+a file comes here."""
 
 import asyncio
 import logging
@@ -21,7 +26,7 @@ from sqlalchemy import select
 from glyphh_server.db import tenancy
 from glyphh_server.errors import GlyphhError
 from glyphh_server.models import Bot
-from glyphh_server.ops.bots import approvals, cloud, remote_in, runs
+from glyphh_server.ops.bots import approvals, cloud, files, remote_in, runs
 from glyphh_server.ops.bots.goes import Goes
 
 log = logging.getLogger("glyphh.bots")
@@ -85,7 +90,28 @@ async def call(svc: Goes, token: str, run_id: uuid.UUID, body: ToolIn) -> dict[s
     return said
 
 
+async def _file(svc: Goes, org_id: uuid.UUID, run_id: uuid.UUID, given: Any) -> dict[str, Any]:
+    """Whether the run may make this change to a file now: at once unless its bot asks first, and then only by
+    taking the person's yes to it (used once); never outside the folders the bot may change."""
+    asked = files.change(given)
+    if asked is None:
+        return {"error": files.BAD}
+    async with svc.engine.begin() as conn:
+        await tenancy.enter(conn, org_id)
+        run = await runs.row(conn, run_id)
+        if run.status != "dispatched" or run.rrotor_id is None:
+            return {"error": NOT_OUT}
+        bot = (await conn.execute(select(Bot).where(Bot.id == run.bot_id))).one()
+        outside = files.may_change(bot.folders, asked)
+        if outside is not None:
+            return {"error": files.NO_FOLDERS.format(path=outside, name=bot.name)}
+        allowed = bot.permission_mode != "ask" or await approvals.take_file(conn, run_id, asked)
+    return {"result": {"allowed": allowed}}
+
+
 async def _answer(svc: Goes, org_id: uuid.UUID, run_id: uuid.UUID, body: ToolIn) -> dict[str, Any]:
+    if body.tool == files.TOOL:
+        return await _file(svc, org_id, run_id, body.input)
     bot, made, refused = await _allowed(svc, org_id, run_id, body.tool)
     if refused:
         return {"error": refused}

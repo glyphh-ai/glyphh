@@ -3,7 +3,9 @@ run took, from the rrotor the run is on, while the run is out there or waits), t
 question, as a run in the cloud is (runs.ended), the bot's state kept from it. The tokens the rrotor reports (the
 whole call's, so each result's are what is new since the last) go on the meter at the org's own key's rate, the
 markup alone: the rrotor ran them on the org's key. A run that waits and whose wait expires on the rrotor still waits
-here (its answer then goes as a fresh call); a `continue` the rrotor no longer had a run for goes as one too."""
+here (its answer then goes as a fresh call); a `continue` the rrotor no longer had a run for goes as one too. A
+result of a bot with its folders' files names the files it read and changed (`data.files`), kept with the run as
+names alone (ops/bots/files.py)."""
 
 import base64
 import logging
@@ -15,7 +17,7 @@ from sqlalchemy import select, update
 from glyphh_server.db import tenancy
 from glyphh_server.llm import meter
 from glyphh_server.models import Bot, BotRun
-from glyphh_server.ops.bots import decided, prices, runs
+from glyphh_server.ops.bots import decided, files, prices, runs
 from glyphh_server.ops.bots.remote import Remote
 from glyphh_server.ops.link.presence import Runtime
 from glyphh_server.ops.link.protocol import Ran
@@ -74,9 +76,14 @@ async def _kept(remote: Remote, run: Any, result: dict[str, Any]) -> None:
     tokens = new_tokens(run, ran.tokens or {})
     charged = await bill(remote, bot, tokens)
     since = runs.now().isoformat() if ran.status == "needs_input" else None
-    await runs.ended(
-        remote.svc.engine, run, ran, ran.output or "", tokens, charged, remote={**run.remote, "since": since}
-    )
+    # a bot with its folders' files: the names of those it read and changed are kept with the run (never what is
+    # in them: the rrotor sends none), and the change its question asks about, for the person's yes to be to it
+    said = result["data"] if isinstance(result.get("data"), dict) else {}
+    named = files.named(said.get("files"))
+    if named is not None:
+        ran.data[files.KEPT] = files.merged((run.data or {}).get(files.KEPT), named)
+    more = {"remote": {**run.remote, "since": since}, "file": files.change(said.get("file"))}
+    await runs.ended(remote.svc.engine, run, ran, ran.output or "", tokens, charged, **more)
 
 
 async def _state(remote: Remote, bot: Any, state: str) -> None:

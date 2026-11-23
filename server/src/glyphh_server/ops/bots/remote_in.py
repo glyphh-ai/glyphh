@@ -58,10 +58,18 @@ def tool_url(settings: Settings, run_id: uuid.UUID) -> str:
 
 
 def inputs(
-    settings: Settings, bot: Any, run_id: uuid.UUID, given: str | None, answer: Any, effort: bool = True
+    settings: Settings,
+    bot: Any,
+    run_id: uuid.UUID,
+    given: str | None,
+    answer: Any,
+    effort: bool = True,
+    file_tools: bool = False,
 ) -> dict[str, Any]:
     """glyphh_bot's inputs for one call: from the bot's first step (`given`), or carrying on with `answer`. `effort`
-    false leaves the bot's effort out: for a rrotor whose glyphh_bot does not know it (ops/bots/access.py)."""
+    false leaves the bot's effort out: for a rrotor whose glyphh_bot does not know it (ops/bots/access.py).
+    `file_tools` tells it to give the bot's agent steps the files of its folders (ops/bots/files.py): only for a
+    rrotor whose glyphh_bot knows the input."""
     url = tool_url(settings, run_id)
     if not url.startswith("https://") or not settings.ada_base.startswith("https://"):
         raise Invalid(NOT_HTTPS, reason="not_https")
@@ -77,6 +85,8 @@ def inputs(
     }
     if effort:
         sent["effort"] = bot.effort
+    if file_tools:
+        sent["file_tools"] = True
     if given:
         sent["given"] = given
     if answer is not None:
