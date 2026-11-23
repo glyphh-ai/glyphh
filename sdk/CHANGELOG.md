@@ -2,10 +2,10 @@
 
 Both packages carry one version; a tag `sdk-v<version>` publishes both.
 
-## Unreleased
+## 3.16.0 — 2026-11-23
 
-Hosted bots became Claude agents you talk to (the server's `docs/specs/bot-agent-loop.md`). Python only; nothing is
-published by this entry.
+Hosted bots became Claude agents you talk to (the server's `docs/specs/bot-agent-loop.md`). Python only; the
+TypeScript package carries the version unchanged.
 
 - `glyphh.hosted`: `BotTemplate.apps` reads the server's new answer (each app `{app, name, tools}`) as well as the
   old one (slugs), and `BotTemplate.runs_on` says where a template can run (`cloud`, `rrotor`, or only `rrotor`).
