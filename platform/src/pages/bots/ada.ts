@@ -26,15 +26,12 @@ export type RunDecision = GateDecision & { gate: string; items: ItemDecision[] }
 
 /**
  * The decisions one run made (`run.data._gates`), each with its items when it decided over many
- * (`run.data[step].decisions`, the step it sits on).
+ * (`run.data[name].decisions`, under the decision's own name).
  */
-export function decisionsOf(run: BotRun, spec: BotSpec): RunDecision[] {
+export function decisionsOf(run: BotRun): RunDecision[] {
   const gates = (run.data?._gates ?? {}) as Record<string, GateDecision>;
-  const steps = Array.isArray(spec.loop) ? spec.loop : [];
   return Object.entries(gates).map(([gate, d]) => {
-    const step = steps.find((s) => s.gate === gate);
-    const keys = [step?.id, step?.step, gate].filter((k): k is string => typeof k === 'string');
-    const held = keys.map((k) => run.data?.[k] as { decisions?: unknown } | undefined).find((v) => Array.isArray(v?.decisions));
-    return { ...d, gate, items: d.each && held ? (held.decisions as ItemDecision[]) : [] };
+    const held = run.data?.[gate] as { decisions?: unknown } | undefined;
+    return { ...d, gate, items: d.each && Array.isArray(held?.decisions) ? (held.decisions as ItemDecision[]) : [] };
   });
 }

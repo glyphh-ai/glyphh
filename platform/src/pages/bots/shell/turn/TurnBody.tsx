@@ -20,7 +20,7 @@ export function Rich({ text }: { text: string }) {
  * decided nothing (a decision over many items with no items is not a row).
  */
 function Decided({ run, bot }: { run: BotRun; bot: Bot }) {
-  const rows = rowsOf(run, bot).filter((r) => !r.sum);
+  const rows = rowsOf(run).filter((r) => !r.sum);
   if (rows.length === 0) return null;
   return (
     <div className="dtable" role="table" aria-label="Decisions">
@@ -36,18 +36,17 @@ function Decided({ run, bot }: { run: BotRun; bot: Bot }) {
 }
 
 /**
- * What a bot's turn shows, top to bottom: the one line that folds its steps (and, one toggle further, their raw data),
- * what Ada decided as rows to keep or correct, the bot's own words as markdown, what its steps brought back (images,
- * link cards for things with a page, files, MCP Apps in their frames), then what happened in a plain sentence when
- * the words do not already say it, what the bot takes when the task did not fit, and its question (`ask`), answered
- * in place. Never the run's raw data, its engine's log lines or its engine's reason.
+ * What a bot's turn shows, top to bottom: the one line that folds what it used (each in plain words), what Ada
+ * decided as rows to keep or correct, the bot's own words as markdown, what it brought back (images, link cards for
+ * things with a page, files, MCP Apps in their frames), then for a run with no words what happened in a plain
+ * sentence, and its question (`ask`), answered in place. Never the run's raw data or a tool's own name.
  */
 export function TurnBody({ run, bot, going, ask }: { run: BotRun; bot: Bot; going: boolean; ask?: ReactNode }) {
-  const { answer, summary, hint } = wordsOf(run, bot.spec);
+  const { answer, summary } = wordsOf(run);
   const over = run.status === 'done' || run.status === 'failed';
   return (
     <>
-      <Steps run={run} bot={bot} live={going} />
+      <Steps run={run} live={going} />
       <TurnDecisions slug={bot.slug} runId={run.id} over={over} fallback={<Decided run={run} bot={bot} />} />
       {answer && <Rich text={answer} />}
       {!going && (
@@ -61,11 +60,6 @@ export function TurnBody({ run, bot, going, ask }: { run: BotRun; bot: Bot; goin
         </>
       )}
       {summary && <p className={`tsaid ${run.status === 'failed' ? 'bad' : ''}`}>{summary}</p>}
-      {hint && (
-        <p className="tsaid thint" role="note">
-          {hint}
-        </p>
-      )}
       {run.status === 'needs_input' && ask}
     </>
   );

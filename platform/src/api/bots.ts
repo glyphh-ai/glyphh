@@ -4,9 +4,9 @@ import { api, ApiError } from './client';
 
 /**
  * Glyphh bots (the server's /v1/bots, /v1/bot-runs, /v1/bot-approvals, /v1/bot-key and /v1/connections; the bots
- * to add are the Marketplace's, in botTemplates.ts): each bot is a loop of steps the SDK walks (its spec), gates that learn in Ada, Claude for the
- * steps that need judgment, and the tools of the org's connections it is allowed. A run that needs the person stops
- * (needs_input) until they answer it, in the bot's runs or the org's approvals.
+ * to add are the Marketplace's, in botTemplates.ts): each bot is a Claude agent you talk to, with what it decides
+ * learned in Ada and the tools of the org's connections it is allowed. A run is one turn of the conversation; one that
+ * needs the person stops (needs_input) until they answer it, in the bot's chat.
  */
 export type Permission = 'allow' | 'ask' | 'deny';
 export type Connection = {
@@ -34,7 +34,12 @@ export type ConnectionTool = {
 export type BotConnection = { connection_id: string; app: string; app_name: string; tools: string[] };
 /** `dispatched`: sent to the org's rrotor the bot runs on, running there until its result comes back. */
 export type RunStatus = 'queued' | 'running' | 'dispatched' | 'needs_input' | 'done' | 'failed' | 'skipped';
-export type BotSpec = Record<string, unknown> & { loop?: Array<Record<string, unknown>>; gates?: Record<string, unknown> };
+/** A bot's internal definition: kept as loaded and saved back unchanged, never shown. Only what it decides is read. */
+export type BotSpec = Record<string, unknown> & { gates?: Record<string, unknown> };
+/** `orchestrator`: the org's one bot that leads the crew and can ask the others; always there, never deleted. */
+export type BotRole = 'bot' | 'orchestrator';
+/** Where a bot may run: Glyphh cloud, one of the org's rrotors, or both. */
+export type RunsWhere = 'cloud' | 'rrotor';
 export type Bot = {
   id: string;
   slug: string;
@@ -44,6 +49,14 @@ export type Bot = {
   /** Its own drawn mascot (safe SVG from the server), shown in place of its cat; empty for the cat. */
   mascot?: string;
   instructions: string;
+  /** `orchestrator` for the org's orchestrator; a bot otherwise (and on a server that does not say). */
+  role?: BotRole;
+  /** Its standing task: what it does when it runs on its own (4,000 characters at most). */
+  task?: string;
+  /** Things to ask it, offered in its empty chat: six at most, 200 characters each. */
+  examples?: string[];
+  /** Where it may run; a bot that needs a machine of the org's own has only `rrotor`. */
+  can_run_on?: RunsWhere[];
   model: string;
   permission_mode?: PermissionMode;
   /** How hard it thinks: low, medium (the default) or high. */
@@ -96,7 +109,13 @@ export type BotModel = {
 export type Effort = string;
 export type BotModels = { models: BotModel[]; markup_pct: number; /** The effort levels every bot model takes, and the one a new bot starts on. */ efforts?: Effort[]; default_effort?: Effort };
 export type BatchItem = { n: number; label: string; [k: string]: unknown };
-export type Question = { question: string; options: string[]; batch: BatchItem[] | null; answer_with: string | null };
+/**
+ * What a run asks the person. An approval (the bot wants to act and must ask first) also says the action in plain
+ * words (`detail`); `tool` is the server's own name for it and is never shown.
+ */
+export type Question = { question: string; options: string[]; batch: BatchItem[] | null; answer_with: string | null; approval?: boolean; tool?: string; detail?: string };
+/** One thing the bot used during a turn, in plain words (`title`), with the app it belongs to (its name, or none). */
+export type RunStep = { tool: string; title: string; app: string; ok: boolean };
 export type RunLink = { url: string; title: string; kind: string };
 /** A file of the bot's folders (on its rrotor) the run read or changed: its name alone, never what is in it. */
 export type RunFile = { name: string; did: 'read' | 'written' | 'moved' };
@@ -118,10 +137,10 @@ export type BotRun = {
   output_tokens: number;
   cost_micros: number;
   own_key: boolean;
-  /** What happened, in a plain sentence or two (the server's words); empty while it runs. */
+  /** For a run with no words of its own (failed, cancelled, skipped, waiting): what happened, in a plain sentence. */
   summary?: string;
-  /** When the task did not fit the bot's loop: what the bot does and what to ask it. */
-  hint?: string;
+  /** What the bot used during the turn, in order, in plain words: the turn's "Ran N steps" fold. */
+  steps?: RunStep[];
   /** Pages the run made or touched (a pull request, a Slack message, a doc, an app). */
   links?: RunLink[];
   /** MCP App UI resources its steps' tool results carry, shown inline in the turn. */
@@ -180,6 +199,8 @@ export type NewBot = {
   look: Look;
   mascot?: string;
   instructions: string;
+  task?: string;
+  examples?: string[];
   model?: string;
   permission_mode?: PermissionMode;
   effort?: Effort;
@@ -252,6 +273,9 @@ export const useBotPlaces = () =>
   useQuery({ queryKey: botKeys.places, queryFn: async () => (await api.get<{ places: Place[] }>('/bots/places')).places, staleTime: 60_000 });
 export const useBotGates = (slug: string) =>
   useQuery({ queryKey: botKeys.gates(slug), queryFn: async () => (await api.get<{ gates: GateStats }>(`${one(slug)}/gates`)).gates });
+
+/** The org's orchestrator: always there, changed like any bot, never deleted (the server answers 409, reason `orchestrator`). */
+export const isOrchestrator = (bot: Pick<Bot, 'role'> | null | undefined): boolean => bot?.role === 'orchestrator';
 
 export const working = (status: RunStatus | undefined) => status === 'queued' || status === 'running' || status === 'dispatched';
 

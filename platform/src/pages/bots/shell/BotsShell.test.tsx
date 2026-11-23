@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { decision, decisionsFake } from '@/test/botDecisions';
-import { botsFake, drafted, drawnMascot, gmail, inbox, slack, waiting, weekdays } from '@/test/bots';
+import { botsFake, drafted, drawnMascot, gmail, inbox, orchestrator, slack, waiting, weekdays } from '@/test/bots';
 import { renderApp } from '@/test/render';
 import { http, HttpResponse, server } from '@/test/server';
 import { closing, crewFake, picking, projectRun, siteCrew, turn } from '@/test/projects';
@@ -27,7 +27,7 @@ const decided = () =>
     question: null,
     data: {
       _gates: { easy: { each: true, outcome: 'answer 1, leave 1', by: 'ada', asked: 1, decided: 1, defaulted: 0 } },
-      decide: {
+      easy: {
         decisions: [
           { n: 1, label: 'Lunch on Friday?', outcome: 'answer', by: 'ada', p: 0.97 },
           { n: 2, label: 'Invoice overdue', outcome: 'leave', by: 'person' },
@@ -41,11 +41,11 @@ const rail = () => screen.findByRole('complementary', { name: 'Bots and connecti
 const pills = () => within(screen.getByRole('group', { name: 'For this chat' })).getAllByRole('combobox');
 
 describe('the Bots area, as the Glyphh Bot app', () => {
-  it('has the rail (BOTS | CONNECTIONS, the crew card, the bots, New bot, the account), the chat and the status bar, with the logo as the image', async () => {
+  it('has the rail (BOTS | PROGRAMS | CONNECTIONS, the crew card, the bots, New bot, the account), the chat and the status bar, with the logo as the image', async () => {
     on({ bots: [inbox(), inbox({ id: 'b-2', slug: 'quiet', name: 'Quiet', summary: 'Says little.', gate_models: [] })], runs: [waiting()] }, { projects: [] });
     renderApp('/bots');
     const side = await rail();
-    expect(within(side).getAllByRole('tab').map((t) => t.textContent)).toEqual(['Bots', 'Connections']);
+    expect(within(side).getAllByRole('tab').map((t) => t.textContent)).toEqual(['Bots', 'Programs', 'Connections']);
     expect(within(side).getByRole('tab', { name: 'Bots' })).toHaveAttribute('aria-selected', 'true');
     const bots = await within(side).findByRole('navigation', { name: 'Your bots' });
     await waitFor(() => expect(within(bots).getAllByRole('link')).toHaveLength(2));
@@ -77,10 +77,13 @@ describe('the Bots area, as the Glyphh Bot app', () => {
   });
 
   it('opens a bot with nothing said yet on its cat, a headline, ideas and the composer with exactly three pills', async () => {
-    const fake = on({ bots: [inbox({ runs_on: 'rr-acme', schedule: weekdays() })] });
+    const examples = ['What needs an answer today?', 'Answer the easy ones', 'What needs an answer today?', '  '];
+    const fake = on({ bots: [inbox({ runs_on: 'rr-acme', schedule: weekdays(), examples })] });
     const { user } = renderApp('/bots/inbox-helper');
     expect(await screen.findByRole('heading', { name: 'What should Inbox helper do?', level: 1 })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'is:unread' })).toBeInTheDocument(); // an idea: what its schedule gives it
+    // Its ideas are its own examples, each once; nothing made up here, and nothing of its schedule.
+    expect(within(screen.getByRole('group', { name: 'Things to ask' })).getAllByRole('button').map((b) => b.textContent)).toEqual(['What needs an answer today?', 'Answer the easy ones']);
+    expect(screen.queryByRole('button', { name: 'is:unread' })).toBeNull();
     expect(screen.getByRole('textbox', { name: 'Give Inbox helper a task…' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
     // Model, Effort, Permission mode: nothing else is under the composer (no schedule, no where it runs).
@@ -103,6 +106,18 @@ describe('the Bots area, as the Glyphh Bot app', () => {
     await waitFor(() => expect(fake.state.bodies[1]).toEqual({ effort: 'high' }));
   });
 
+  it('offers no ideas for a bot that has none, and sends the one that is clicked', async () => {
+    const fake = on({ bots: [inbox(), inbox({ id: 'b-2', slug: 'asker', name: 'Asker', examples: ['What needs an answer today?'] })] });
+    const { user, router } = renderApp('/bots/inbox-helper');
+    expect(await screen.findByRole('heading', { name: 'What should Inbox helper do?', level: 1 })).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Things to ask' })).toBeNull();
+    await router.navigate('/bots/asker');
+    await user.click(await screen.findByRole('button', { name: 'What needs an answer today?' }));
+    await waitFor(() => expect(fake.state.seen).toContain('run asker'));
+    expect(fake.state.runs[0]).toMatchObject({ bot_slug: 'asker', input: 'What needs an answer today?' });
+    expect(await screen.findByRole('article', { name: /^Asker:/ })).toBeInTheDocument();
+  });
+
   it('runs a bot as a conversation: the task on the right, the bot’s turn, and what it asks answered in place', async () => {
     const fake = on();
     const { user } = renderApp('/bots/inbox-helper');
@@ -116,8 +131,8 @@ describe('the Bots area, as the Glyphh Bot app', () => {
     expect(question).toHaveTextContent('Inbox helper asks');
     expect(question).toHaveTextContent('Answer these emails?');
     // Its steps fold into one line.
-    await user.click(within(turnEl).getByRole('button', { name: 'Ran 2 steps' }));
-    expect(within(turnEl).getByLabelText('Steps')).toHaveTextContent('Found 2 emails.');
+    await user.click(within(turnEl).getByRole('button', { name: 'Ran 1 step' }));
+    expect(within(turnEl).getByLabelText('Steps')).toHaveTextContent('Searched the inboxGmail');
     const send = within(question).getByRole('button', { name: 'Send answers' });
     expect(send).toBeDisabled();
     await user.click(within(question).getByRole('button', { name: 'All answer' }));
@@ -289,7 +304,7 @@ describe('Recents and "Needs you" in the top bar', () => {
     expect(router.state.location.pathname + router.state.location.search).toBe('/bots/inbox-helper?run=r-old');
     expect(screen.queryByRole('dialog', { name: 'Recents' })).not.toBeInTheDocument();
     await user.click(await within(await open(user)).findByRole('button', { name: /^Make a tiny browser game/ }));
-    expect(router.state.location.pathname + router.state.location.search).toBe('/bots?run=pr-game');
+    expect(router.state.location.pathname + router.state.location.search).toBe('/bots?room=crew&run=pr-game');
     expect(await screen.findByRole('article', { name: 'Inbox helper: turn 1' })).toBeInTheDocument();
   });
 
@@ -453,11 +468,13 @@ describe('the crew: state, not a place', () => {
     await user.selectOptions(where, 'rr-studio');
     expect(within(modal).queryByText(CLOUD_NOTE)).not.toBeInTheDocument();
     // How turns are taken; no speaking order, no rounds.
-    expect(within(within(modal).getByRole('radiogroup', { name: 'How turns are taken' })).getAllByRole('radio').map((r) => r.querySelector('b')!.textContent)).toEqual(['Wait your turn', 'An orchestrator picks']);
+    expect(within(within(modal).getByRole('radiogroup', { name: 'How turns are taken' })).getAllByRole('radio').map((r) => r.querySelector('b')!.textContent)).toEqual(['Wait your turn', 'The orchestrator picks who goes next']);
     expect(modal.textContent).not.toMatch(/round|order/i);
-    await user.click(within(modal).getByRole('radio', { name: /An orchestrator picks/ }));
-    expect(within(within(modal).getByRole('combobox', { name: 'Who picks' })).getAllByRole('option').map((o) => o.textContent)).toEqual(['Claude', 'Inbox helper', 'Digest']);
-    await user.selectOptions(within(modal).getByRole('combobox', { name: 'Who picks' }), 'b-digest');
+    await user.click(within(modal).getByRole('radio', { name: /The orchestrator picks who goes next/ }));
+    // Who orchestrates is not a setting: the org's orchestrator always does. No picker of a bot or a model.
+    expect(within(modal).queryByRole('combobox', { name: 'Who picks' })).toBeNull();
+    expect(within(modal).getAllByRole('combobox').map((c) => c.getAttribute('aria-label'))).toEqual(['Where the crew runs']);
+    expect(modal.textContent).not.toMatch(/Who picks|Claude/);
     expect(within(within(modal).getByRole('radiogroup', { name: 'How pull requests are reviewed' })).getAllByRole('radio').map((r) => r.querySelector('b')!.textContent)).toEqual(['Each turn', 'At the end']);
     await user.click(within(modal).getByRole('radio', { name: /At the end/ }));
     await user.click(within(modal).getByRole('switch', { name: 'Narrate when watched' }));
@@ -473,7 +490,6 @@ describe('the crew: state, not a place', () => {
         members: ['b-inbox', 'b-digest'],
         runs_on: 'rr-studio',
         turn_mode: 'orchestrator',
-        orchestrator: 'b-digest',
         review: 'end',
         narrate: true,
         max_turns: 12,
@@ -481,7 +497,7 @@ describe('the crew: state, not a place', () => {
       }),
     );
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Crew settings' })).not.toBeInTheDocument());
-    expect(within(await rail()).getByRole('link', { name: /The Crew/ })).toHaveTextContent('2 bots, led by an orchestrator');
+    expect(within(await rail()).getByRole('link', { name: /The Crew/ })).toHaveTextContent('2 bots, led by the orchestrator');
     // The top bar's edit opens the same modal.
     await user.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Edit the crew' }));
     expect(await screen.findByRole('dialog', { name: 'Crew settings' })).toBeInTheDocument();
@@ -673,7 +689,7 @@ describe('the pages that are gone land in the Bots area', () => {
     on(twoBots, { projects: [siteCrew(), siteCrew({ id: 'p-docs', slug: 'acme-docs-trunk', name: 'acme/docs', repo_url: 'https://github.com/acme/docs', base_branch: 'trunk', updated_at: '2026-11-20T10:00:00Z' })] });
     const { router } = renderApp('/projects/acme-docs-trunk?run=pr-9');
     await waitFor(() => expect(screen.getByRole('button', { name: 'Workspace' })).toHaveTextContent('docstrunk'));
-    expect(router.state.location.pathname + router.state.location.search).toBe('/bots?run=pr-9');
+    expect(router.state.location.pathname + router.state.location.search).toBe('/bots?run=pr-9&room=crew');
   });
 
   it('has no GitHub token page in Settings', async () => {
@@ -695,7 +711,11 @@ describe('the bot editor, a modal as the Glyphh Bot app’s', () => {
     expect(within(editor).getByRole('button', { name: 'Shuffle the cat' })).toBeInTheDocument();
     expect(within(editor).getByRole('button', { name: 'Describe a new one' })).toBeInTheDocument();
     expect(within(editor).queryByLabelText(/^Look/)).not.toBeInTheDocument();
-    for (const label of ['Tell Claude what to change', 'Name', 'What it is for', 'Instructions', 'When it runs', 'Where it runs', 'Voice', 'Model', 'Effort']) expect(within(editor).getByLabelText(label)).toBeVisible();
+    for (const label of ['Tell Claude what to change', 'Name', 'What it is for', 'Instructions', 'When it runs', 'What it does when it runs on its own', 'Where it runs', 'Voice', 'Model', 'Effort']) expect(within(editor).getByLabelText(label)).toBeVisible();
+    // Its standing task sits under When it runs, before Where it runs.
+    const order = [within(editor).getByRole('combobox', { name: 'When it runs' }), within(editor).getByLabelText('What it does when it runs on its own'), within(editor).getByRole('combobox', { name: 'Where it runs' })];
+    expect(order[0]!.compareDocumentPosition(order[1]!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(order[1]!.compareDocumentPosition(order[2]!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(editor).getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['Access', 'When it runs', 'Where it runs', 'Voice, model and effort']);
     // Access: its apps, its folders, and when it must ask, in that order.
     const access = ['Apps it can use', 'Folders it can use', 'Before it acts'].map((t) => within(editor).getByText(t));
@@ -724,6 +744,7 @@ describe('the bot editor, a modal as the Glyphh Bot app’s', () => {
       name: 'Mail helper',
       summary: 'Answers the post.',
       instructions: 'Read new emails and answer the easy ones. Be brief.',
+      task: '',
       look: inbox().look,
       mascot: '',
       voice: 'bf_emma',
@@ -841,14 +862,19 @@ describe('the bot editor, a modal as the Glyphh Bot app’s', () => {
     const time = within(editor).getByLabelText('At');
     fireEvent.change(time, { target: { value: '' } }); // a cleared picker keeps its time
     fireEvent.change(time, { target: { value: '07:30' } });
-    await user.type(within(editor).getByLabelText('What it looks at each time'), 'is:unread');
+    // What it does on its own is its standing task, in one place: no second field for what a schedule gives it.
+    expect(within(editor).queryByLabelText('What it looks at each time')).toBeNull();
+    const task = within(editor).getByLabelText('What it does when it runs on its own');
+    expect(task).toHaveAttribute('maxlength', '4000');
+    await user.type(task, ' Go through my unread email and say what needs an answer. ');
     expect(within(editor).getByText('Runs on weekdays at 7:30 (America/Chicago time).')).toBeInTheDocument();
     await user.click(within(editor).getByRole('button', { name: 'Save bot' }));
     expect(await screen.findByText('Inbox helper is saved.')).toBeInTheDocument();
     expect(fake.state.bodies[0]).toMatchObject({
       permission_mode: 'connection',
       effort: 'medium',
-      schedule: { every: 'weekdays', at: '07:30', timezone: 'America/Chicago', input: 'is:unread' },
+      task: 'Go through my unread email and say what needs an answer.',
+      schedule: { every: 'weekdays', at: '07:30', timezone: 'America/Chicago' },
       spec: inbox().spec,
       skills: { tone: 'Write short, warm replies.' },
     });
@@ -888,7 +914,7 @@ describe('the bot editor, a modal as the Glyphh Bot app’s', () => {
   });
 
   it('says what a bot decides in one quiet line that opens the Decisions panel; no line when it decides nothing', async () => {
-    on({ bots: [inbox(), inbox({ id: 'b-2', slug: 'quiet', name: 'Quiet', spec: { loop: [{ step: 'work' }] }, gate_models: [] })] });
+    on({ bots: [inbox(), inbox({ id: 'b-2', slug: 'quiet', name: 'Quiet', spec: { touches: 'read_only' }, gate_models: [] })] });
     const { user, router } = renderApp('/bots/quiet?edit=1');
     const quiet = await screen.findByRole('dialog', { name: 'Edit Quiet' });
     expect(within(quiet).queryByText(/Decides:/)).not.toBeInTheDocument();
@@ -902,7 +928,7 @@ describe('the bot editor, a modal as the Glyphh Bot app’s', () => {
   });
 
   it('says the problems the server finds on save as plain sentences under Save', async () => {
-    on({ problems: ['loop[2]: no such tool gmail-send', 'gates.easy: needs options', 'The schedule needs a time'] });
+    on({ problems: ['limits.turns: no such tool gmail-send', 'gates.easy: needs options', 'The schedule needs a time'] });
     const { user } = renderApp('/bots/inbox-helper?edit=1');
     const editor = await screen.findByRole('dialog', { name: 'Edit Inbox helper' });
     await user.click(within(editor).getByRole('button', { name: 'Save bot' }));
@@ -968,9 +994,129 @@ describe('the bot editor, a modal as the Glyphh Bot app’s', () => {
   });
 });
 
+describe('the orchestrator: always there, first, and where /bots opens', () => {
+  const withIt = { bots: [inbox(), digest(), orchestrator()] };
+
+  it('is pinned first in the rail with its tag, above a bot that needs you; no other bot has a tag', async () => {
+    on({ ...withIt, runs: [waiting()] }, { projects: [] });
+    renderApp('/bots/digest');
+    const bots = await within(await rail()).findByRole('navigation', { name: 'Your bots' });
+    await waitFor(() =>
+      expect(within(bots).getAllByRole('link').map((a) => a.textContent)).toEqual([
+        'Orchestrator OrchestratorLeads the crew and asks the right bot.',
+        'Inbox helper Needs youAnswers the easy emails.',
+        'Digest Sums up the day.',
+      ]),
+    );
+    expect(Array.from(bots.querySelectorAll('i')).map((i) => [i.className, i.textContent])).toEqual([['role', 'Orchestrator'], ['needs', 'Needs you']]);
+  });
+
+  it('wears both tags when a run of its own waits on you', async () => {
+    on({ ...withIt, runs: [waiting({ bot_slug: 'orchestrator' })] }, { projects: [] });
+    renderApp('/bots/digest');
+    const bots = await within(await rail()).findByRole('navigation', { name: 'Your bots' });
+    await waitFor(() => expect(within(bots).getAllByRole('link')[0]).toHaveTextContent('Orchestrator Orchestrator Needs youLeads the crew and asks the right bot.'));
+  });
+
+  it('is the chat /bots opens on with nothing chosen, keeping what the address asked for; the crew is one click away', async () => {
+    on(withIt);
+    const { user, router } = renderApp('/bots?rail=connections');
+    await waitFor(() => expect(router.state.location.pathname + router.state.location.search).toBe('/bots/orchestrator?rail=connections'));
+    await router.navigate('/bots');
+    expect(await screen.findByRole('heading', { name: 'What should Orchestrator do?', level: 1 })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/bots/orchestrator');
+    expect(screen.queryByRole('heading', { name: 'Make your first bot' })).toBeNull();
+    // Its ideas are its own examples.
+    expect(within(screen.getByRole('group', { name: 'Things to ask' })).getAllByRole('button').map((b) => b.textContent)).toEqual(['What can my bots do?', 'Ask the right bot to sort my inbox']);
+    const side = await rail();
+    expect(within(side).getByRole('link', { name: /^Orchestrator/ })).toHaveAttribute('aria-current', 'page');
+    const card = within(side).getByRole('link', { name: /The Crew/ });
+    expect(card).not.toHaveAttribute('aria-current');
+    await user.click(card);
+    expect(await screen.findByRole('heading', { name: 'What are we making?', level: 1 })).toBeInTheDocument();
+    expect(router.state.location.pathname + router.state.location.search).toBe('/bots?room=crew');
+    expect(within(side).getByRole('link', { name: /The Crew/ })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('keeps the crew’s room the crew’s: a crew’s run, and a new chat from it', async () => {
+    on(withIt, { runs: [projectRun()] });
+    const { user, router } = renderApp('/bots?run=pr-1');
+    expect(await screen.findByRole('article', { name: 'Inbox helper: turn 1' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/bots');
+    await user.click(screen.getByRole('button', { name: /^Recents/ }));
+    await user.click(within(await screen.findByRole('dialog', { name: 'Recents' })).getByRole('button', { name: 'New chat' }));
+    expect(await screen.findByRole('heading', { name: 'What are we making?', level: 1 })).toBeInTheDocument();
+    expect(router.state.location.pathname + router.state.location.search).toBe('/bots?room=crew');
+  });
+
+  it('is edited in the same modal as any bot, without Delete bot', async () => {
+    const fake = on(withIt);
+    const { user } = renderApp('/bots/orchestrator?edit=1');
+    const editor = await screen.findByRole('dialog', { name: 'Edit Orchestrator' });
+    for (const label of ['Tell Claude what to change', 'Name', 'What it is for', 'Instructions', 'When it runs', 'What it does when it runs on its own', 'Where it runs', 'Voice', 'Model', 'Effort']) expect(within(editor).getByLabelText(label)).toBeVisible();
+    expect(within(editor).queryByRole('button', { name: 'Delete bot' })).toBeNull();
+    await user.type(within(editor).getByLabelText('Instructions'), ' Be brief.');
+    await user.click(within(editor).getByRole('button', { name: 'Save bot' }));
+    expect(await screen.findByText('Orchestrator is saved.')).toBeInTheDocument();
+    expect(fake.state.bodies[0]).toMatchObject({ instructions: 'Work out which bot should do a task, and ask it. Be brief.' });
+    // Its role is not part of what is sent, and the server keeps it whatever is asked.
+    expect(fake.state.bodies[0]).not.toHaveProperty('role');
+    expect(fake.state.bots.find((b) => b.slug === 'orchestrator')).toMatchObject({ role: 'orchestrator' });
+    // Any other bot keeps Delete bot.
+    const other = renderApp('/bots/digest?edit=1');
+    expect(await within(await within(other.container).findByRole('dialog', { name: 'Edit Digest' })).findByRole('button', { name: 'Delete bot' })).toBeInTheDocument();
+  });
+});
+
+describe('where a bot may run', () => {
+  const where = async () => {
+    const editor = await screen.findByRole('dialog', { name: /^Edit / });
+    const select = within(editor).getByRole('combobox', { name: 'Where it runs' });
+    await waitFor(() => expect(within(select).getAllByRole('option').length).toBeGreaterThan(1));
+    return { editor, select, options: within(select).getAllByRole('option').map((o) => o.textContent) };
+  };
+
+  it('offers Glyphh cloud and the rrotors to a bot that can run on both, and to one whose server does not say', async () => {
+    on({ bots: [inbox({ can_run_on: ['cloud', 'rrotor'] }), digest()] });
+    const first = renderApp('/bots/inbox-helper?edit=1');
+    expect((await where()).options).toEqual(['Glyphh cloud', 'Studio Mac', 'Acme (offline)']);
+    first.unmount();
+    renderApp('/bots/digest?edit=1');
+    expect((await where()).options).toEqual(['Glyphh cloud', 'Studio Mac', 'Acme (offline)']);
+  });
+
+  it('does not offer Glyphh cloud to a bot that needs a rrotor, and says so', async () => {
+    const fake = on({ bots: [inbox({ can_run_on: ['rrotor'], runs_on: 'rr-studio' })] });
+    const { user } = renderApp('/bots/inbox-helper?edit=1');
+    const { editor, select, options } = await where();
+    expect(options).toEqual(['Studio Mac', 'Acme (offline)']);
+    expect(select).toHaveValue('rr-studio');
+    expect(within(editor).getByText(/It needs a rrotor: it cannot run on Glyphh cloud\./)).toBeInTheDocument();
+    await user.click(within(editor).getByRole('button', { name: 'Save bot' }));
+    await waitFor(() => expect(fake.state.bodies[0]).toMatchObject({ runs_on: 'rr-studio' }));
+  });
+
+  it('asks a bot that needs a rrotor and has none yet to choose one', async () => {
+    on({ bots: [inbox({ can_run_on: ['rrotor'], runs_on: null })] });
+    renderApp('/bots/inbox-helper?edit=1');
+    const { select, options } = await where();
+    expect(options).toEqual(['Choose a rrotor', 'Studio Mac', 'Acme (offline)']);
+    expect(within(select).getByRole('option', { name: 'Choose a rrotor' })).toBeDisabled();
+  });
+
+  it('offers only Glyphh cloud to a bot that runs there alone', async () => {
+    on({ bots: [inbox({ can_run_on: ['cloud'] })] });
+    renderApp('/bots/inbox-helper?edit=1');
+    const editor = await screen.findByRole('dialog', { name: 'Edit Inbox helper' });
+    await waitFor(() => expect(within(within(editor).getByLabelText('Model')).getAllByRole('option').length).toBeGreaterThan(3));
+    expect(within(within(editor).getByRole('combobox', { name: 'Where it runs' })).getAllByRole('option').map((o) => o.textContent)).toEqual(['Glyphh cloud']);
+  });
+});
+
 describe('no word of how a bot works inside is on the screen', () => {
   // The words a business never needs: a person's own bot or repository can be called anything, the screen never is.
-  const ENGINE = /\b(gates?|loop|spec|skills?|json|swarms?|projects?)\b/i;
+  // "Orchestrator" is a product word and is allowed.
+  const ENGINE = /\b(gates?|loop|spec|skills?|plugins?|json|swarms?|projects?)\b/i;
   const shell = () => document.querySelector('.gb')!;
   const said = () => {
     // Everything a person can read or hear: the text, and what buttons, fields and pictures are called.
@@ -983,7 +1129,15 @@ describe('no word of how a bot works inside is on the screen', () => {
   };
   const stat = { by: { ada: 111, you: 18, default: 0 }, corrected: 4, confirmed: 9, accuracy: 0.9, days: [] };
   const all = () => {
-    const fake = on({ bots: [inbox({ runs_on: 'rr-studio', folders: [{ path: '/Users/chris/Desktop', access: 'read' }] }), digest()], runs: [decided(), waiting()] }, { runs: [projectRun()] });
+    // A turn that used things (one of them failed), a question that is an approval, a bot with examples and a task.
+    const used = [
+      { tool: 'gmail-find-email', title: 'Searched the inbox', app: 'Gmail', ok: true },
+      { tool: 'decide', title: 'Decided easy for 2 items', app: '', ok: true },
+      { tool: 'gmail-send-email', title: 'Sent an email', app: 'Gmail', ok: false },
+    ];
+    const asks = { question: 'Send this reply?', options: ['Yes', 'No'], batch: null, answer_with: null, approval: true, tool: 'gmail-send-email', detail: 'Send an email in Gmail to pat@example.com.' };
+    const helper = inbox({ runs_on: 'rr-studio', can_run_on: ['rrotor'], task: 'Answer the easy emails.', examples: ['What needs an answer today?'], folders: [{ path: '/Users/chris/Desktop', access: 'read' }] });
+    const fake = on({ bots: [helper, digest(), orchestrator()], runs: [{ ...decided(), steps: used }, waiting({ question: asks })] }, { runs: [projectRun()] });
     server.use(
       ...decisionsFake({
         decisions: [decision(), decision({ id: 'd-2', key: 'm2', label: 'Invoice overdue', outcome: 'leave', now: 'leave', who: 'you' })],
@@ -997,8 +1151,13 @@ describe('no word of how a bot works inside is on the screen', () => {
     all();
     const { user } = renderApp('/bots/inbox-helper');
     await screen.findByRole('article', { name: 'Inbox helper: done' });
-    await screen.findByRole('region', { name: 'Question' });
+    expect(await screen.findByRole('region', { name: 'Question' })).toHaveTextContent('Send an email in Gmail to pat@example.com.');
     await waitFor(() => expect(within(screen.getByRole('combobox', { name: 'Model' })).getAllByRole('option').length).toBeGreaterThan(3));
+    await within(await rail()).findByRole('link', { name: /^Orchestrator/ });
+    // What it used, unfolded: plain words, never a tool's own name.
+    await user.click(screen.getByRole('button', { name: 'Ran 3 steps' }));
+    expect(screen.getByRole('list', { name: 'Steps' })).toHaveTextContent('Sent an emailGmaildid not work');
+    expect(said()).not.toMatch(/gmail-find-email|gmail-send-email/);
     clean();
     await user.click(screen.getByRole('button', { name: 'Decisions' }));
     const panel = await screen.findByRole('region', { name: 'Decisions' });
@@ -1020,7 +1179,7 @@ describe('no word of how a bot works inside is on the screen', () => {
 
   it('with the crew selected, and its settings open', async () => {
     all();
-    const { user } = renderApp('/bots');
+    const { user } = renderApp('/bots?room=crew');
     await screen.findByRole('article', { name: 'Inbox helper: turn 1' });
     await within(await rail()).findByRole('group', { name: 'In the crew' });
     clean();
@@ -1041,6 +1200,12 @@ describe('no word of how a bot works inside is on the screen', () => {
     clean();
     await router.navigate('/bots/inbox-helper?new=1');
     await screen.findByRole('dialog', { name: 'New bot' });
+    clean();
+    await router.navigate('/bots/orchestrator?edit=1');
+    await screen.findByRole('dialog', { name: 'Edit Orchestrator' });
+    clean();
+    await router.navigate('/bots/orchestrator');
+    await screen.findByRole('group', { name: 'Things to ask' });
     clean();
   });
 

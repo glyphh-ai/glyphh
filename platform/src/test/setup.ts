@@ -15,6 +15,20 @@ afterAll(() => server.close());
 // jsdom draws nothing: a canvas has no context, so charts are their tables and the 3D view says WebGL is off.
 HTMLCanvasElement.prototype.getContext = (() => null) as typeof HTMLCanvasElement.prototype.getContext;
 
+// jsdom measures nothing: the programs' canvas (React Flow) watches sizes that never change here.
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+} as unknown as typeof ResizeObserver;
+globalThis.DOMMatrixReadOnly ??= class {
+  m22 = 1;
+  constructor(transform?: string) {
+    const scale = /scale\(([\d.]+)/.exec(transform ?? '');
+    this.m22 = scale ? Number(scale[1]) : 1;
+  }
+} as unknown as typeof DOMMatrixReadOnly;
+
 // jsdom has no matchMedia or modal dialog; user-event brings its own clipboard.
 window.matchMedia ??= ((query: string) =>
   ({ matches: false, media: query, addEventListener() {}, removeEventListener() {} }) as unknown as MediaQueryList) as typeof window.matchMedia;

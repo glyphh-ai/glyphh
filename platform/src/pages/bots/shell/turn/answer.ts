@@ -1,9 +1,13 @@
-// What a bot's turn says, worked out from its run: clean words first (the bot's own answer, or the server's plain
-// summary of what happened), then what its steps brought back that a person can look at (images, files). Raw JSON and
-// engine log lines are never the answer: they stay behind the turn's "Ran N steps" line and its Raw toggle.
-import type { BotRun, BotSpec } from '@/api/bots';
+// What a bot's turn says, worked out from its run: clean words first (the bot's own answer, or for a run with no
+// words the server's plain sentence of what happened), then what it brought back that a person can look at (images,
+// files). Raw data is never the answer and is never shown: what the bot used is listed, in plain words, behind the
+// turn's "Ran N steps" line.
+import type { BotRun } from '@/api/bots';
 
-/** True for text that is a JSON object or array: a step's data, not words for a person. */
+/**
+ * True for text that is a JSON object or array: a tool's data, not words for a person. A server cuts a long answer to
+ * fit, so data cut short (it opens as an object or a list of them and no longer parses) is data all the same.
+ */
 export function isJson(text: string): boolean {
   const t = text.trim();
   if (!t || !/^[[{]/.test(t)) return false;
@@ -11,7 +15,7 @@ export function isJson(text: string): boolean {
     const v: unknown = JSON.parse(t);
     return typeof v === 'object' && v !== null;
   } catch {
-    return false;
+    return /^(\{\s*"[^"]*"\s*:|\[\s*[{["])/.test(t);
   }
 }
 
@@ -24,29 +28,12 @@ const sentence = (s: string): string => {
   return t[0]!.toUpperCase() + t.slice(1) + (/[.!?]$/.test(t) ? '' : '.');
 };
 
-const named = (id: string): string => id.replace(/[_-]+/g, ' ').trim();
-
-/** The runner's own words for things, said plainly: what it calls a gate is a decision. */
-export const plainWords = (text: string): string => text.replace(/\bgates\b/gi, 'decisions').replace(/\bgate\b/gi, 'decision').replace(/\bloop\b/gi, 'steps');
-
-/** The runner's reason as a sentence: its line ("… today 0, later 0; the run ends here") never reaches a person as is. */
-export function plainReason(reason: string): string {
-  const cut = reason.replace(/[:;,]?\s*the run ends here\.?\s*$/i, '').trim();
-  const one = /^gate (\S+) said (\S+)$/i.exec(cut);
-  if (one) return `It decided ${named(one[2]!)} on ${named(one[1]!)}, so it stopped there.`;
-  const each = /^gate \S+: (.*)$/i.exec(cut);
-  if (each) {
-    const counts = [...each[1]!.matchAll(/(\d+)/g)].reduce((n, m) => n + Number(m[1]), 0);
-    return counts === 0 ? 'There was nothing to decide, so it stopped there.' : `It decided ${counts} (${named(each[1]!)}), so it stopped there.`;
-  }
-  const req = /^(\S+) requires /i.exec(cut);
-  if (req) return `${sentence(named(req[1]!)).slice(0, -1)} had nothing to work on, so it stopped there.`;
-  return sentence(plainWords(cut.replace(/^the program ended the run:\s*/i, '')));
-}
+/** A reason from the server said plainly: what it calls a gate is a decision. */
+export const plainWords = (text: string): string => text.replace(/\bgates\b/gi, 'decisions').replace(/\bgate\b/gi, 'decision');
 
 /**
- * What happened, in words, when the server did not say (`summary`, an older server): the same sentences it would
- * write, from the run's state and its engine reason.
+ * What happened, in words, for a run with no words of its own when the server did not say (`summary`): the same
+ * sentences it would write, from the run's state and its reason.
  */
 export function fallbackSummary(run: BotRun): string {
   if (run.status === 'needs_input') return run.question ? '' : 'Waiting on your answer.';
@@ -57,29 +44,21 @@ export function fallbackSummary(run: BotRun): string {
     return run.error ? `It failed: ${sentence(plainWords(run.error))}` : 'It failed.';
   }
   if (run.status !== 'done') return '';
-  return run.error ? plainReason(run.error) : 'It finished.';
+  return run.error ? sentence(plainWords(run.error)) : 'It finished.';
 }
 
-/**
- * The bot's own words in a run: its answer when that is prose, else what the last of its Claude steps wrote (a run
- * that ends by posting or filing answers with that tool's data, which is not words).
- */
-export function answerOf(run: BotRun, spec?: BotSpec): string {
-  const own = prose(run.output);
-  if (own || run.status !== 'done' || run.error) return own;
-  const wrote = (spec?.loop ?? []).filter((s) => typeof s.agent === 'string' && typeof s.id === 'string').map((s) => run.data?.[s.id as string]);
-  return prose(wrote.filter((v): v is string => typeof v === 'string').at(-1));
-}
+/** The bot's own words in a run: its answer, when that is prose (a tool's data, whole or cut short, is not words). */
+export const answerOf = (run: BotRun): string => prose(run.output);
 
-/** The turn's words: the bot's own answer and, beside or instead of it, what happened and what the bot takes. */
-export function wordsOf(run: BotRun, spec?: BotSpec): { answer: string; summary: string; hint: string } {
-  const answer = answerOf(run, spec);
+/** The turn's words: the bot's own answer, or for a run that has none, what happened in a plain sentence. */
+export function wordsOf(run: BotRun): { answer: string; summary: string } {
+  const answer = answerOf(run);
   const said = (run.summary ?? fallbackSummary(run)).trim();
-  // A run that went the whole way with an answer of its own needs no "It finished all 4 steps" beside it; a
-  // question is asked in the turn itself.
+  // A run that went the whole way with an answer of its own needs no "It finished" beside it; a question is asked in
+  // the turn itself.
   const whole = run.status === 'done' && !run.error;
   const asked = run.status === 'needs_input' && run.question !== null;
-  return { answer, summary: (answer && whole) || asked ? '' : said, hint: (run.hint ?? '').trim() };
+  return { answer, summary: (answer && whole) || asked ? '' : said };
 }
 
 export type Shot = { src: string; alt: string };

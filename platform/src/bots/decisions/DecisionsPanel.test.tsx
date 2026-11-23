@@ -5,7 +5,6 @@ import { renderApp } from '@/test/render';
 import { server } from '@/test/server';
 import { crewFake } from '@/test/projects';
 import { unescaped } from './Markdown';
-import { flatFields, itemLabel } from './readable';
 
 const many = () =>
   Array.from({ length: 30 }, (_, i) =>
@@ -138,17 +137,8 @@ describe('the Decisions panel', () => {
   });
 });
 
-describe('readable data', () => {
-  it('titles an item from its fields, never as JSON, and gives written-out line breaks back', () => {
-    expect(itemLabel({ id: 7, title: 'Fix   the\nbug' })).toBe('Fix the bug');
-    expect(itemLabel({ id: 7, repo: 'glyphh', n: 3 })).toBe('repo glyphh · n 3');
-    expect(itemLabel({ id: 7 })).toBe('An item with no fields');
-    expect(itemLabel([1, 2])).toBe('2 items');
-    expect(itemLabel(null)).toBe('Nothing');
-    expect(flatFields({ user: { login: 'ada' }, labels: ['a', 'b'], empty: '' })).toEqual([
-      ['user.login', 'ada'],
-      ['labels', 'a, b'],
-    ]);
+describe('readable words', () => {
+  it('gives written-out line breaks back', () => {
     expect(unescaped('one\\ntwo')).toBe('one\ntwo');
     expect(unescaped('one\ntwo \\n')).toBe('one\ntwo \\n');
   });

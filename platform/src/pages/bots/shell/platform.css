@@ -67,7 +67,7 @@ img.cat-svg.mascot { object-fit: contain; }
 .wsbranch input { flex: 1; min-width: 0; height: 28px; margin: 0; font: 500 12px var(--mono); }
 .wsbranch .btn.sm { padding: 0 10px; justify-content: center; }
 .recents { display: flex; align-items: center; gap: 8px; }
-/* Recents' own head and list (a run's readable steps, further down, use the same two names). */
+/* Recents' own head and list. */
 .rpanel .rhead { align-items: center; margin: 0; }
 .rpanel .rhead b { font: 600 14px var(--sans); letter-spacing: 0; text-transform: none; color: var(--text); }
 .rpanel .rlist { margin: 0; padding: 4px 6px 8px; }
@@ -93,6 +93,8 @@ img.cat-svg.mascot { object-fit: contain; }
 .mini.tick.on { opacity: 1; border-color: #fff; }
 .mini.tick:disabled { cursor: default; }
 .meta b i.needs { padding: 1px 6px; border-radius: 999px; background: #fff; color: #000; font: 600 9.5px var(--mono); text-transform: uppercase; letter-spacing: 0.08em; }
+/* The orchestrator's tag: quiet, outlined, so "Needs you" stays the loud one. */
+.meta b i.role { padding: 0 6px; border: 1px solid var(--rail); border-radius: 999px; color: var(--text-3); font: 500 9.5px var(--mono); font-style: normal; text-transform: uppercase; letter-spacing: 0.08em; }
 
 /* Connections: the catalog's cards, a connection's facts. */
 .modal h2 { display: flex; align-items: center; gap: 10px; }
@@ -158,24 +160,13 @@ button.chip { cursor: pointer; }
 .dact input { width: 130px; height: 24px; padding: 0 8px; font-size: 12px; }
 .drow .err { grid-column: 1 / -1; }
 
-/* What a run's steps found, readable, folded like its steps: each step's answer, the raw JSON behind its own toggle. */
-.rdata.open .rsteps { margin-top: 6px; }
-.rsteps { display: flex; flex-direction: column; gap: 8px; }
-.rstep { padding: 8px 12px; border: 1px solid var(--hair); border-radius: var(--radius); background: var(--surface); font-size: 13.5px; color: var(--text-2); }
+/* Recents' head and list, as they stood beside the turn's old workings (kept: Recents is laid out on them). */
 .rhead { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
 .rhead b { font: 500 11px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text); }
 .rhead span { font: 400 11px var(--mono); color: var(--text-4); }
-.rsum { margin: 0 0 4px; color: var(--text-2); }
-.rnone { margin: 0; color: var(--text-4); font: 400 12px var(--mono); }
 .rlist { margin: 0; padding-left: 22px; }
 .rlist li { margin: 2px 0; }
 .rlist a { color: var(--text); text-underline-offset: 3px; }
-.rfields { display: grid; gap: 2px; margin: 0; }
-.rfields div { display: grid; grid-template-columns: minmax(80px, 30%) minmax(0, 1fr); gap: 10px; }
-.rfields dt { font: 500 10.5px/1.9 var(--mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-4); }
-.rfields dd { margin: 0; overflow-wrap: anywhere; }
-.rstep .bubble.md { padding: 0; border: 0; background: none; }
-.rraw { margin: 0; max-height: 320px; overflow: auto; padding: 10px 12px; border: 1px solid var(--hair); border-radius: var(--radius); background: var(--surface); font: 400 11.5px/1.5 var(--mono); color: var(--text-3); white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* The editor: the card stays, the fields scroll inside the modal, Save stays in sight under them. */
 .previewbtns { display: flex; justify-content: center; gap: 4px; }

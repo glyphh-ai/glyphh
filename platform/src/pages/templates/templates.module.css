@@ -95,6 +95,67 @@
   color: var(--text-secondary);
 }
 
+/* Where a bot can run: "Cloud", "rrotor" or both, as small outlined pills. */
+.runsOn {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.runPill {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* A bot's card: the apps it needs, what it decides and things to ask it, a label beside each. */
+.cardFacts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.cardFacts > div {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+.cardFacts dt {
+  color: var(--text-muted);
+}
+
+.cardFacts dd {
+  margin: 0;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.examples {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-secondary);
+}
+
 /* What the template holds, and the way in, at the card's foot. */
 .cardFoot {
   display: flex;

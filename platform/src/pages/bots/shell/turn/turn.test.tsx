@@ -4,7 +4,7 @@ import { botsFake, inbox, waiting } from '@/test/bots';
 import { crewFake } from '@/test/projects';
 import { renderApp } from '@/test/render';
 import { http, HttpResponse, server } from '@/test/server';
-import { answerOf, fallbackSummary, fileKind, fileSize, filesOf, imagesOf, isJson, linkBadge, linkWhere, plainReason, plainWords, wordsOf } from './answer';
+import { answerOf, fallbackSummary, fileKind, fileSize, filesOf, imagesOf, isJson, linkBadge, linkWhere, plainWords, wordsOf } from './answer';
 import { framed, MAX_HEIGHT, PROTOCOL, serve, toolResult } from './bridge';
 
 const v1 = (path: string) => `*/v1${path}`;
@@ -17,18 +17,37 @@ function on(runs: BotRun[]) {
   return screen.findByRole('article', { name: /^Inbox helper:/ });
 }
 
-/** Chris's run: "fetch the latest ai news" given to a bot that ranks pull requests. */
-const offFit = () =>
+/** Several runs in one chat, as their turns: the list is newest first, the chat oldest first. */
+async function turns(runs: [BotRun, BotRun]): Promise<[HTMLElement, HTMLElement]> {
+  const fake = botsFake({ bots: [inbox()], runs });
+  server.use(...fake.handlers, ...crewFake({ botRuns: () => fake.state.runs, projects: [] }).handlers);
+  renderApp('/bots/inbox-helper');
+  await waitFor(() => expect(screen.getAllByRole('article', { name: /^Inbox helper:/ })).toHaveLength(runs.length));
+  const [first, second] = screen.getAllByRole('article', { name: /^Inbox helper:/ });
+  return [first!, second!];
+}
+
+/** Chris's run: "Hi there" typed to a bot that ranks pull requests. It answers; nothing ran. */
+const greeted = () =>
   done({
-    input: 'fetch the latest ai news',
-    output: '{"today": [], "later": [], "decisions": [], "asked": 0}',
-    error: 'gate today: today 0, later 0; the run ends here',
-    log: ['run prs', 'gate today: today 0, later 0; the run ends here'],
-    data: { input: 'fetch the latest ai news', prs: { ret: { items: [] } }, today: { today: [], later: [], decisions: [], asked: 0 }, _gates: { today: { each: true, outcome: 'today 0, later 0', by: 'ada', asked: 0, decided: 0, defaulted: 0 } } },
-    summary: 'No pull request needs your review today, so there is no digest to post.',
-    hint: 'Inbox helper does one job: Answers the easy emails. What you type is used as a GitHub search, for example: is:pr is:open review-requested:@me.',
-    input_tokens: 0,
-    output_tokens: 0,
+    input: 'Hi there',
+    output: 'Hi. I rank the pull requests waiting on you each morning. Ask me **what needs my review today?**',
+    steps: [],
+    hint: '',
+    summary: '',
+  } as Partial<BotRun>);
+
+/** A turn that used three things: one of an app, one of Ada's, one that failed. */
+const worked = () =>
+  done({
+    input: 'What needs my review today?',
+    output: 'Two pull requests need you today.',
+    steps: [
+      { tool: 'github-search-issues-and-pull-requests', title: 'Searched issues and pull requests', app: 'GitHub', ok: true },
+      { tool: 'decide', title: 'Decided urgency for 4 items', app: '', ok: true },
+      { tool: 'slack-send-message', title: 'Sent a message', app: 'Slack', ok: false },
+    ],
+    data: { 'github-search-issues-and-pull-requests': { ret: { items: [{ id: 1, title: 'Fix the login' }] } } },
   });
 
 const PNG = 'https://cdn.example.com/chart.png';
@@ -41,27 +60,53 @@ const rich = () =>
       mail: { ret: { attachments: [{ filename: 'brief.pdf', size: 2048, webViewLink: 'https://drive.google.com/file/d/1' }, { name: 'notes.txt', mimeType: 'text/plain' }] } },
     },
     links: [{ url: 'https://github.com/acme/app/pull/7', title: 'Fix the login', kind: 'Pull request' }],
-    summary: 'It finished all 3 steps: fetch, decide and reply.',
+    summary: '',
   });
 
 describe('a bot’s turn is clean', () => {
-  it('says what happened in a plain sentence and what the bot takes; never its data, its log line or the runner’s reason', async () => {
-    const turn = await on([offFit()]);
-    expect(within(turn).getByText('No pull request needs your review today, so there is no digest to post.')).toBeInTheDocument();
-    expect(within(turn).getByRole('note')).toHaveTextContent('What you type is used as a GitHub search, for example: is:pr is:open review-requested:@me.');
-    // Nothing decided: no "Ada decided" box at all. No raw data, no log line, no word of the engine's.
+  it('answers a greeting in its own words: no fold when it used nothing, no note about what it takes, no "$0.00"', async () => {
+    const skipped = done({ id: 'r-free', status: 'skipped', output: '', steps: [], summary: 'It did not run: it has run 200 times today.', input_tokens: 0, output_tokens: 0, cost_micros: 0 });
+    const [free, turn] = await turns([greeted(), skipped]);
+    expect(within(turn).getByText(/I rank the pull requests waiting on you each morning/)).toBeInTheDocument();
+    expect(within(turn).queryByRole('button', { name: /^Ran / })).toBeNull();
+    expect(within(turn).queryByRole('note')).toBeNull();
     expect(within(turn).queryByRole('table', { name: 'Decisions' })).toBeNull();
-    expect(turn.textContent).not.toMatch(/\{"today"|"decisions"|the run ends here|\bgate\b|! /);
     expect(turn.querySelector('.err')).toBeNull();
-    // The workings are one fold away, the raw data one toggle further, and the runner's word for a decision is not said.
-    fireEvent.click(within(turn).getByRole('button', { name: /Ran 2 steps/ }));
-    expect(within(turn).getByLabelText('Steps')).toHaveTextContent('decision today: today 0, later 0; the run ends here');
-    expect(within(turn).getByRole('region', { name: 'What Prs found' })).toHaveTextContent('No items.');
-    expect(within(turn).queryByLabelText('Raw data')).toBeNull();
-    fireEvent.click(within(turn).getByRole('button', { name: 'Raw' }));
-    expect(within(turn).getByLabelText('Raw data')).toHaveTextContent('"today": []');
-    fireEvent.click(within(turn).getByRole('button', { name: 'Hide raw' }));
-    expect(within(turn).queryByLabelText('Raw data')).toBeNull();
+    expect(turn.textContent).toMatch(/tokens · \$/);
+    expect(within(free).getByText('It did not run: it has run 200 times today.')).toBeInTheDocument();
+    expect(free.textContent).not.toMatch(/token|\$0/);
+  });
+
+  it('folds what it used behind "Ran N steps": each in plain words with its app, a quiet mark on one that failed; never a tool’s own name or its data', async () => {
+    const one = done({ id: 'r-one', output: 'Done.', steps: [{ tool: 'x', title: 'Read a page', app: '', ok: true }, { tool: 'y', title: ' ', app: '', ok: true }] });
+    const [single, turn] = await turns([worked(), one]);
+    expect(within(single).getByRole('button', { name: 'Ran 1 step' })).toBeInTheDocument();
+    expect(within(turn).queryByLabelText('Steps')).toBeNull();
+    fireEvent.click(within(turn).getByRole('button', { name: 'Ran 3 steps' }));
+    const lines = within(within(turn).getByRole('list', { name: 'Steps' })).getAllByRole('listitem');
+    expect(lines.map((l) => l.textContent)).toEqual(['•Searched issues and pull requestsGitHub', '•Decided urgency for 4 items', '×Sent a messageSlackdid not work']);
+    expect(lines.map((l) => l.className)).toEqual(['tool ok', 'tool ok', 'tool err']);
+    // Nothing of the engine's: no tool key, no data, no Raw.
+    expect(turn.textContent).not.toMatch(/github-search|slack-send|\bdecide\b|\{"|"ret"|Fix the login/);
+    expect(within(turn).queryByRole('button', { name: /raw/i })).toBeNull();
+    fireEvent.click(within(turn).getByRole('button', { name: 'Ran 3 steps' }));
+    expect(within(turn).queryByLabelText('Steps')).toBeNull();
+  });
+
+  it('shows what it is doing now on the fold’s line while it runs', async () => {
+    const turn = await on([done({ status: 'running', output: '', finished_at: null, steps: [{ tool: 'a', title: 'Searched the inbox', app: 'Gmail', ok: true }, { tool: 'b', title: 'Reading 3 emails', app: 'Gmail', ok: true }] })]);
+    const line = within(turn).getByRole('button', { name: 'Reading 3 emails' });
+    fireEvent.click(line);
+    expect(within(turn).getAllByRole('listitem').map((l) => l.className)).toEqual(['tool ok', 'tool run']);
+  });
+
+  it('says the action an approval asks about in plain words, never the tool’s own name', async () => {
+    const turn = await on([waiting({ steps: [], question: { question: 'Send this message to #support?', options: ['Yes', 'No'], batch: null, answer_with: null, approval: true, tool: 'slack-send-message', detail: 'Send a message in Slack: “Two tickets are urgent.”' } })]);
+    const ask = within(turn).getByRole('region', { name: 'Question' });
+    expect(ask).toHaveTextContent('Send this message to #support?');
+    expect(ask).toHaveTextContent('Send a message in Slack: “Two tickets are urgent.”');
+    expect(ask.textContent).not.toMatch(/slack-send-message/);
+    expect(within(ask).getAllByRole('button').map((b) => b.textContent)).toEqual(['Yes', 'No', 'Cancel run']);
   });
 
   it('shows the answer as markdown, with images inline, link cards and file chips', async () => {
@@ -133,18 +178,15 @@ describe('the turn’s words', () => {
   const run = (given: Partial<BotRun>) => done({ output: '', error: '', summary: undefined, ...given });
   it('tells data from words', () => {
     expect([isJson('{"a": 1}'), isJson('[1]'), isJson('{not json'), isJson('3'), isJson(''), isJson('words')]).toEqual([true, true, false, false, false, false]);
-    const spec = { loop: [{ id: 'digest', agent: 'Write' }, { id: 'slack', run: 'slack-send-message' }, { id: 'n', agent: 'x' }] };
-    expect(answerOf(run({ output: '{"ok": true}', data: { digest: 'Three need you.', slack: { ok: true }, n: { not: 'words' } } }), spec)).toBe('Three need you.');
-    expect(answerOf(run({ output: '{"ok": true}' }), {})).toBe('');
-    expect(answerOf(run({ output: '{"ok": true}', error: 'ended', data: { digest: 'x' } }), spec)).toBe('');
+    // A tool's answer cut to fit no longer parses; it is still never shown as the bot's words.
+    expect([isJson('{"os": [], "ret": [{"url": "https://api.github.com/re'), isJson('[{"id": 1}, {"id"'), isJson('[see below] and so on')]).toEqual([true, true, false]);
+    expect(answerOf(waiting({ output: '{"os": [], "ret": [{"url": "https://api.github.com/re' }))).toBe('');
+    expect(answerOf(run({ output: ' Three need you. ' }))).toBe('Three need you.');
+    // Its words are its answer alone: never something dug out of the run's data.
+    expect(answerOf(run({ output: '{"ok": true}', data: { digest: 'Three need you.' } }))).toBe('');
   });
-  it('says what happened when an older server did not', () => {
-    expect(plainReason('gate today: today 0, later 0; the run ends here')).toBe('There was nothing to decide, so it stopped there.');
-    expect(plainReason('gate today: today 0, later 2; the run ends here')).toBe('It decided 2 (today 0, later 2), so it stopped there.');
-    expect(plainReason('gate ready_to_file said hold: the run ends here')).toBe('It decided hold on ready to file, so it stopped there.');
-    expect(plainReason('page requires len($x) > 0: it does not hold, the run ends here')).toBe('Page had nothing to work on, so it stopped there.');
-    expect(plainReason('the program ended the run: no gates to open')).toBe('No decisions to open.');
-    expect(plainWords('the loop and its gate')).toBe('the steps and its decision');
+  it('says what happened to a run with no words when the server did not', () => {
+    expect(plainWords('the gates and its gate')).toBe('the decisions and its decision');
     expect(fallbackSummary(run({ status: 'needs_input', question: null }))).toBe('Waiting on your answer.');
     expect(fallbackSummary(waiting())).toBe('');
     expect(fallbackSummary(run({ status: 'skipped', error: 'the bot is paused' }))).toBe('It did not run: The bot is paused.');
@@ -153,10 +195,10 @@ describe('the turn’s words', () => {
     expect(fallbackSummary(run({ status: 'failed', error: 'interrupted by a restart' }))).toMatch(/^It was cut off by a restart/);
     expect(fallbackSummary(run({ status: 'failed' }))).toBe('It failed.');
     expect(fallbackSummary(run({ status: 'running' }))).toBe('');
-    expect(fallbackSummary(run({ error: 'gate a said no: the run ends here' }))).toBe('It decided no on a, so it stopped there.');
+    expect(fallbackSummary(run({ error: 'it ran out of time' }))).toBe('It ran out of time.');
     expect(fallbackSummary(run({}))).toBe('It finished.');
-    expect(wordsOf(run({ output: 'Words.', summary: 'It finished all 2 steps.' }))).toEqual({ answer: 'Words.', summary: '', hint: '' });
-    expect(wordsOf(run({ output: 'Words.', error: 'gate a said no: the run ends here' })).summary).toBe('It decided no on a, so it stopped there.');
+    expect(wordsOf(run({ output: 'Words.', summary: 'It finished.' }))).toEqual({ answer: 'Words.', summary: '' });
+    expect(wordsOf(run({ status: 'failed', error: 'cancelled', summary: 'Cancelled before it finished.' }))).toEqual({ answer: '', summary: 'Cancelled before it finished.' });
   });
   it('finds what a person can look at in the steps’ data, and names files and links', () => {
     const many = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`s${i}`, { image: `https://x.test/${i}.png`, file: { filename: `f${i}.csv`, size: 10 } }]));

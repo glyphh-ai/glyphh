@@ -86,14 +86,30 @@ export const botModels: BotModels = {
   ].map(({ n: _, ...m }) => m),
 };
 
+/** A bot's internal definition as the server keeps it now: what it decides, its limits; no steps. */
 export const spec = () => ({
-  loop: [
-    { step: 'fetch', tool: 'gmail-find-email' },
-    { step: 'decide', gate: 'easy' },
-    { step: 'reply', tool: 'gmail-send-email', ask: true },
-  ],
   gates: { easy: { options: ['answer', 'leave'] } },
+  limits: { turns: 25 },
 });
+
+/** The org's orchestrator: always there, first in the rail, changed like any bot and never deleted. */
+export const orchestrator = (given: Partial<Bot> = {}): Bot =>
+  inbox({
+    id: 'b-orchestrator',
+    slug: 'orchestrator',
+    name: 'Orchestrator',
+    summary: 'Leads the crew and asks the right bot.',
+    role: 'orchestrator',
+    instructions: 'Work out which bot should do a task, and ask it.',
+    task: '',
+    examples: ['What can my bots do?', 'Ask the right bot to sort my inbox'],
+    can_run_on: ['cloud', 'rrotor'],
+    spec: {},
+    skills: {},
+    gate_models: [],
+    connections: [],
+    ...given,
+  });
 
 export const inbox = (given: Partial<Bot> = {}): Bot => ({
   id: 'b-inbox',
@@ -119,15 +135,16 @@ export const triage = (): BotTemplate => ({
   summary: 'Sorts new tickets and posts the urgent ones.',
   description: 'Reads each new support email, decides how urgent it is, and posts the urgent ones in Slack.',
   look: { ...look, head: 'round' } as BotTemplate['look'],
-  model: 'claude-haiku-5-5',
-  spec: spec(),
-  skills: { urgency: 'Urgent means a customer is down.' },
-  required_apps: [
-    { slug: 'gmail', name: 'Gmail', icon: null },
-    { slug: 'notion', name: 'Notion', icon: null },
+  version: '1.0.0',
+  apps: [
+    { app: 'gmail', name: 'Gmail', tools: ['gmail-find-email'] },
+    { app: 'notion', name: 'Notion', tools: ['notion-create-page'] },
   ],
-  tools: ['gmail-find-email', 'slack-send-message'],
-  gates: ['urgent'],
+  decides: [{ name: 'urgency', question: 'How urgent is this ticket?', outcomes: ['urgent', 'normal', 'spam'] }],
+  examples: ['Which tickets are urgent right now?', 'Post the urgent ones to Slack'],
+  task: 'Go through the new support email and post the urgent ones.',
+  schedule: null,
+  runs_on: ['cloud', 'rrotor'],
 });
 export const digest = (): BotTemplate => ({
   ...triage(),
@@ -135,9 +152,22 @@ export const digest = (): BotTemplate => ({
   name: 'Daily digest',
   summary: 'A morning summary of yesterday.',
   description: 'Every morning it writes what happened yesterday.',
-  required_apps: [{ slug: 'slack', name: 'Slack', icon: null }],
-  tools: ['slack-send-message'],
-  gates: [],
+  apps: [{ app: 'slack', name: 'Slack', tools: ['slack-send-message'] }],
+  decides: [],
+  examples: [],
+});
+/** A template that needs a machine of the org's own: it runs on a rrotor only. */
+export const folderTidy = (): BotTemplate => ({
+  ...triage(),
+  slug: 'folder-tidy',
+  name: 'Folder tidy',
+  summary: 'Files what lands in a folder.',
+  description: 'Reads the files in a folder on your machine and puts each where it belongs.',
+  apps: [],
+  decides: [{ name: 'where_it_goes', question: 'Where does this file belong?', outcomes: ['invoices', 'contracts', 'bin'] }],
+  examples: ['Tidy my Downloads folder'],
+  task: 'Tidy the folder.',
+  runs_on: ['rrotor'],
 });
 
 export const waiting = (given: Partial<BotRun> = {}): BotRun => ({
@@ -147,8 +177,9 @@ export const waiting = (given: Partial<BotRun> = {}): BotRun => ({
   input: 'Check the inbox',
   output: '',
   error: '',
-  log: ['Found 2 emails.', 'Asking which to answer.'],
-  data: { emails: 2 },
+  log: [],
+  data: {},
+  steps: [{ tool: 'gmail-find-email', title: 'Searched the inbox', app: 'Gmail', ok: true }],
   question: {
     question: 'Answer these emails?',
     options: ['answer', 'leave'],
@@ -233,7 +264,7 @@ export const drafted = (given: Partial<BotDraft> = {}): BotDraft => ({
   mascot: '',
   instructions: 'You read support email and write short Slack posts for the team.',
   model: 'claude-sonnet-5-5',
-  spec: { touches: 'sends', loop: [{ id: 'mail' }, { id: 'urgency', gate: 'urgency' }, { id: 'post' }, { id: 'slack' }], gates: { urgency: {} } },
+  spec: { touches: 'sends', gates: { urgency: {} } },
   skills: { 'urgent-post': 'One block per ticket.' },
   apps: [
     { app: 'gmail', tools: ['gmail-find-email'] },
@@ -263,6 +294,8 @@ type Options = {
   problems?: string[];
   /** The bot maker's turns, in order (the last again once they run out). */
   maker?: DraftReply[];
+  /** False for an org with no rrotor linked: a template that runs only on one is refused. */
+  rrotors?: boolean;
 };
 
 export function botsFake({
@@ -274,6 +307,7 @@ export function botsFake({
   off = false,
   problems = [],
   maker = makerTurns(),
+  rrotors = true,
 }: Options = {}) {
   const state = {
     bots: structuredClone(bots),
@@ -364,7 +398,9 @@ export function botsFake({
       return HttpResponse.json(bot);
     }),
     http.delete(v1('/bots/:slug'), ({ params }) => {
-      if (!find(params.slug)) return missing();
+      const bot = find(params.slug);
+      if (!bot) return missing();
+      if (bot.role === 'orchestrator') return apiError(409, 'E_CONFLICT', 'The orchestrator is always here: you can change it, but not delete it.', { reason: 'orchestrator' });
       state.bots = state.bots.filter((b) => b.slug !== params.slug);
       state.seen.push(`delete ${params.slug}`);
       return new HttpResponse(null, { status: 204 });
@@ -404,8 +440,7 @@ export function botsFake({
         runs_on: home?.id ?? null,
         kind: 'bot',
         input,
-        log: [],
-        data: {},
+        steps: [],
         question: null,
         input_tokens: 0,
         output_tokens: 0,
@@ -427,7 +462,7 @@ export function botsFake({
       if (reads === 2 && r.status === 'queued') r.status = 'running';
       if (reads >= 3 && (r.status === 'running' || r.status === 'dispatched')) {
         const asked = waiting();
-        Object.assign(r, { status: 'needs_input', log: asked.log, data: asked.data, question: asked.question, input_tokens: 900, output_tokens: 120, cost_micros: 4200 });
+        Object.assign(r, { status: 'needs_input', steps: asked.steps, question: asked.question, input_tokens: 900, output_tokens: 120, cost_micros: 4200 });
         settle(r);
       }
       return HttpResponse.json(r);
@@ -438,7 +473,7 @@ export function botsFake({
       if (r.status !== 'needs_input') return apiError(409, 'E_CONFLICT', 'The run is not waiting on an answer.');
       const { answer } = (await request.json()) as { answer: unknown };
       state.bodies.push(answer);
-      Object.assign(r, { status: 'done', question: null, output: 'Answered 1 email.', log: [...r.log, 'Answered.'], finished_at: stamp() });
+      Object.assign(r, { status: 'done', question: null, output: 'Answered 1 email.', steps: [...(r.steps ?? []), { tool: 'gmail-send-email', title: 'Sent an email', app: 'Gmail', ok: true }], finished_at: stamp() });
       settle(r);
       state.seen.push(`answer ${r.id}`);
       return HttpResponse.json(r);
@@ -479,11 +514,7 @@ export function botsFake({
     http.get(v1('/bot-templates'), ({ request }) => {
       if (!templates) return;
       const q = (new URL(request.url).searchParams.get('q') ?? '').toLowerCase();
-      // As the server sends them: the apps a template needs are slugs.
-      const served = templates
-        .filter((t) => `${t.name} ${t.summary}`.toLowerCase().includes(q))
-        .map(({ required_apps, ...t }) => ({ ...t, apps: required_apps.map((a) => a.slug) }));
-      return HttpResponse.json({ templates: served });
+      return HttpResponse.json({ templates: templates.filter((t) => `${t.name} ${t.summary}`.toLowerCase().includes(q)) });
     }),
     http.get(v1('/bot-templates/:slug'), ({ params }) => {
       if (!templates) return;
@@ -500,11 +531,15 @@ export function botsFake({
       const slug = slugOf(name);
       if (find(slug)) return apiError(409, 'E_CONFLICT', 'A bot has that name already.');
       // As the server: every app it needs connected first, then its tools scoped to the org's first connection of each.
-      const missing = t.required_apps.map((a) => a.slug).filter((a) => !state.connections.some((c) => c.app === a));
+      const missing = t.apps.map((a) => a.app).filter((a) => !state.connections.some((c) => c.app === a));
       if (missing.length) return apiError(422, 'E_INVALID', `Connect ${missing.join(', ')} first: the bot uses it.`, { reason: 'connections', apps: missing });
-      const scopes = t.required_apps.map((a) => {
-        const c = state.connections.find((x) => x.app === a.slug)!;
-        return { connection_id: c.id, app: c.app, app_name: c.app_name, tools: t.tools.filter((k) => k.startsWith(`${a.slug}-`)) };
+      // As the server: a bot that runs only on a rrotor needs one linked first.
+      const rrotor = rrotors ? places().find((p) => p.id !== null && p.linked) : undefined;
+      if (!t.runs_on.includes('cloud') && !rrotor)
+        return apiError(422, 'E_INVALID', `${t.name} runs on a rrotor, and you have none linked yet. Set one up, then add it.`, { reason: 'rrotor', setup_url: '/runtimes?add=1' });
+      const scopes = t.apps.map((a) => {
+        const c = state.connections.find((x) => x.app === a.app)!;
+        return { connection_id: c.id, app: c.app, app_name: c.app_name, tools: a.tools };
       });
       const bot = inbox({
         id: `b-${next++}`,
@@ -513,10 +548,14 @@ export function botsFake({
         summary: t.summary,
         look: t.look,
         instructions: t.description,
-        model: t.model,
-        spec: t.spec,
-        skills: t.skills,
-        gate_models: t.gates.map((g) => `${slug}-${g}`),
+        role: 'bot',
+        task: t.task,
+        examples: t.examples,
+        can_run_on: t.runs_on,
+        runs_on: t.runs_on.includes('cloud') ? null : rrotor!.id,
+        spec: { gates: Object.fromEntries(t.decides.map((d) => [d.name, { outcomes: d.outcomes }])) },
+        skills: {},
+        gate_models: t.decides.map((d) => `${slug}-${d.name}`),
         connections: scopes,
       });
       state.bots.push(bot);

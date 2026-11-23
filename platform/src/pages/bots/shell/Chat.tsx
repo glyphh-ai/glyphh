@@ -32,7 +32,6 @@ import {
   type Review,
   type Turn,
 } from '@/api/projects';
-import { noClaudeStep } from '@/bots/decisions/RunData';
 import { ago, dollars, plural, stamp } from '@/lib/format';
 import { BotCat, effortOptions, EFFORTS, RUN_WORDS, shortModel } from './bits';
 import { Composer, SelectChip } from './Composer';
@@ -99,6 +98,8 @@ function Ask({ run, bot }: { run: BotRun; bot: Bot }) {
     <section className="ask open" aria-label="Question">
       <div className="ask-head">{bot.name} asks</div>
       <p className="ask-q">{q.question}</p>
+      {/* An approval says the action it wants to take in plain words; the server's own name for it is never shown. */}
+      {q.approval && q.detail && q.detail.trim() !== q.question.trim() && <p className="ask-detail">{q.detail}</p>}
       {batch.length === 0 ? (
         <div className="row wrap">
           {q.options.map((option, i) => (
@@ -193,7 +194,9 @@ function BotTurn({ run: listed, bot, place }: { run: BotRun; bot: Bot; place: (i
           <TurnBody run={run} bot={bot} going={going} ask={<Ask run={run} bot={bot} />} />
           {!going && (
             <small className="rmeta" title={stamp(run.created_at)}>
-              {ago(run.created_at)} · {noClaudeStep(run, bot.spec) ? 'No Claude step ran' : `${plural(run.input_tokens + run.output_tokens, 'token')} · ${dollars(run.cost_micros)}`}
+              {ago(run.created_at)}
+              {/* A run that never reached Claude (skipped, cancelled before it began) used nothing: no "$0.00" for it. */}
+              {run.input_tokens + run.output_tokens > 0 && ` · ${plural(run.input_tokens + run.output_tokens, 'token')} · ${dollars(run.cost_micros)}`}
               {where && ` · on ${where}`}
             </small>
           )}
@@ -212,7 +215,7 @@ function Hero({ cats, headline, sub, ideas, onIdea, children }: { cats: ReactNod
       <h1 className="headline">{headline}</h1>
       <p className="sub">{sub}</p>
       {ideas.length > 0 && (
-        <div className="ideas">
+        <div className="ideas" role="group" aria-label="Things to ask">
           {ideas.map((t) => (
             <button key={t} type="button" onClick={() => onIdea(t)}>
               {t}
@@ -248,7 +251,8 @@ export function BotChat({ bot, focus, fresh, onSent }: { bot: Bot; focus: string
   const effort = bot.effort ?? models.data?.default_effort ?? 'medium';
 
   const send = (text: string) => start.mutate(text, { onSuccess: onSent });
-  const ideas = [...new Set([bot.schedule?.input, 'Do today’s run', 'Run on what is new', 'Show what you would do, and change nothing'].filter((t): t is string => Boolean(t)))].slice(0, 3);
+  // Things to ask it, the bot's own (none when it has none): a click sends one.
+  const ideas = [...new Set((bot.examples ?? []).map((t) => t.trim()).filter(Boolean))].slice(0, 6);
 
   const composer = (
     <Composer

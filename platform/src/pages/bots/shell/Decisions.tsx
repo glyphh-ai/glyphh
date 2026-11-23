@@ -12,15 +12,13 @@ import { byWords, decisionsOf, outcomesOf } from '../ada';
 export type Row = { run: BotRun; gate: string; item?: number; label: string; outcome: string; by: string; p?: number | null; /** A gate over many items whose items the run did not keep: its count, not one decision to correct. */ sum?: string };
 
 /** A run's decisions, one row each: an item of a gate over many, or the gate's one decision. */
-export function rowsOf(run: BotRun, bot: Bot): Row[] {
-  return decisionsOf(run, bot.spec).flatMap((d): Row[] =>
+export function rowsOf(run: BotRun): Row[] {
+  return decisionsOf(run).flatMap((d): Row[] =>
     d.items.length
       ? d.items.map((it) => ({ run, gate: d.gate, item: it.n, label: it.label, outcome: it.outcome, by: it.by, p: it.p }))
       : [{ run, gate: d.gate, label: d.gate, outcome: d.outcome, by: d.by, p: d.p, sum: d.each ? `Ada ${d.decided ?? 0} · you ${d.asked ?? 0}` : undefined }],
   );
 }
-
-const key = (r: Row) => `${r.run.id}:${r.gate}:${r.item ?? ''}`;
 
 /** One decision: its label, outcome, who decided, and Right or Wrong (once its run is over). */
 export function DecisionRow({ row, bot, when }: { row: Row; bot: Bot; when?: boolean }) {
@@ -87,23 +85,6 @@ export function DecisionRow({ row, bot, when }: { row: Row; bot: Bot; when?: boo
         )}
       </span>
       {wrong.error && <span className="err">{wrong.error.message}</span>}
-    </div>
-  );
-}
-
-/** A run's decisions inside the bot's turn. */
-export function RunDecisions({ run, bot }: { run: BotRun; bot: Bot }) {
-  const rows = rowsOf(run, bot);
-  if (rows.length === 0) return null;
-  return (
-    <div className="dtable" role="table" aria-label="Decisions">
-      <div className="dhead2">
-        <span>Ada decided</span>
-        <span>{rows.length}</span>
-      </div>
-      {rows.map((r) => (
-        <DecisionRow key={key(r)} row={r} bot={bot} />
-      ))}
     </div>
   );
 }

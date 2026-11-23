@@ -10,7 +10,7 @@ const KEY = 'glyphh.bots.crew';
 /** The most bots the server takes in one crew. */
 export const CREW_MAX = 8;
 
-const FIRST: CrewSettings = { runs_on: null, turn_mode: 'wait', orchestrator: null, review: 'each_turn', narrate: false, max_turns: 30, max_spend_cents: null };
+const FIRST: CrewSettings = { runs_on: null, turn_mode: 'wait', review: 'each_turn', narrate: false, max_turns: 30, max_spend_cents: null };
 
 type Kept = {
   /** The workspace last used (the server's slug for it). */
@@ -32,10 +32,9 @@ function read(): Kept {
   }
 }
 
-const settingsOf = (p: Project): CrewSettings => ({
+const settingsOf = (p: CrewSettings): CrewSettings => ({
   runs_on: p.runs_on,
   turn_mode: p.turn_mode,
-  orchestrator: p.orchestrator,
   review: p.review,
   narrate: p.narrate,
   max_turns: p.max_turns,
@@ -69,7 +68,8 @@ export function useCrew(bots: Bot[] | undefined) {
   const everyone = useMemo(() => (bots ?? []).slice(0, CREW_MAX).map((b) => b.id), [bots]);
   const known = new Set((bots ?? []).map((b) => b.id));
   const members = (project ? project.members.map((m) => m.id) : (kept.members ?? everyone)).filter((id) => bots === undefined || known.has(id));
-  const settings: CrewSettings = project ? settingsOf(project) : { ...FIRST, ...kept.settings };
+  // Only today's settings are sent: what an older visit kept here (who orchestrates, once a setting) is left behind.
+  const settings: CrewSettings = project ? settingsOf(project) : settingsOf({ ...FIRST, ...kept.settings });
 
   /** Sends the crew as it should be now; with no workspace yet it is only kept. */
   const save = (next: { members?: string[]; settings?: Partial<CrewSettings> }, done?: () => void) => {
@@ -99,8 +99,7 @@ export function useCrew(bots: Bot[] | undefined) {
     toggle: (id: string) => {
       const next = members.includes(id) ? members.filter((x) => x !== id) : [...members, id];
       if (next.length === 0 || next.length > CREW_MAX) return;
-      const settingsNext = settings.orchestrator && !next.includes(settings.orchestrator) ? { orchestrator: null } : undefined;
-      save({ members: next, settings: settingsNext });
+      save({ members: next });
     },
     save,
     /** A workspace used before. */

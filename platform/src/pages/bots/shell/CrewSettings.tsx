@@ -9,7 +9,7 @@ import { CREW_MAX, type Crew } from './crew';
 
 const TURNS: ReadonlyArray<{ value: TurnMode; label: string; hint: string }> = [
   { value: 'wait', label: 'Wait your turn', hint: 'One bot at a time. The next free bot with something to do goes.' },
-  { value: 'orchestrator', label: 'An orchestrator picks', hint: 'It reads the work so far, names the next bot and says why.' },
+  { value: 'orchestrator', label: 'The orchestrator picks who goes next', hint: 'It reads the work so far, names the next bot and says why.' },
 ];
 export const REVIEWS: ReadonlyArray<{ value: Review; label: string; hint: string }> = [
   { value: 'each_turn', label: 'Each turn', hint: 'Every pull request waits for your merge or reject.' },
@@ -21,7 +21,6 @@ export function CrewSettings({ crew, bots, onClose }: { crew: Crew; bots: Bot[];
   const [members, setMembers] = useState<string[]>(crew.members);
   const [runsOn, setRunsOn] = useState(crew.settings.runs_on);
   const [mode, setMode] = useState(crew.settings.turn_mode);
-  const [orchestrator, setOrchestrator] = useState(crew.settings.orchestrator);
   const [review, setReview] = useState(crew.settings.review);
   const [narrate, setNarrate] = useState(crew.settings.narrate);
   const [turns, setTurns] = useState(String(crew.settings.max_turns));
@@ -32,7 +31,6 @@ export function CrewSettings({ crew, bots, onClose }: { crew: Crew; bots: Bot[];
     const next = members.includes(id) ? members.filter((x) => x !== id) : [...members, id];
     if (next.length > CREW_MAX) return;
     setMembers(next);
-    if (orchestrator && !next.includes(orchestrator)) setOrchestrator(null);
   };
   const maxTurns = Number(turns);
   const cents = spend.trim() === '' ? null : Math.round(Number(spend) * 100);
@@ -43,7 +41,7 @@ export function CrewSettings({ crew, bots, onClose }: { crew: Crew; bots: Bot[];
       {
         // A set: sent in the bots' own order, whatever order the cats were clicked in.
         members: bots.map((b) => b.id).filter((id) => members.includes(id)),
-        settings: { runs_on: runsOn, turn_mode: mode, orchestrator: mode === 'orchestrator' ? orchestrator : null, review, narrate, max_turns: maxTurns, max_spend_cents: cents },
+        settings: { runs_on: runsOn, turn_mode: mode, review, narrate, max_turns: maxTurns, max_spend_cents: cents },
       },
       onClose,
     );
@@ -85,21 +83,6 @@ export function CrewSettings({ crew, bots, onClose }: { crew: Crew; bots: Bot[];
             </button>
           ))}
         </div>
-        {mode === 'orchestrator' && (
-          <label>
-            Who picks
-            <select aria-label="Who picks" value={orchestrator ?? ''} onChange={(e) => setOrchestrator(e.target.value || null)}>
-              <option value="">Claude</option>
-              {bots
-                .filter((b) => members.includes(b.id))
-                .map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-            </select>
-          </label>
-        )}
 
         <label id="crew-review">How pull requests are reviewed</label>
         <div className="modes two-up" role="radiogroup" aria-labelledby="crew-review">

@@ -45,7 +45,6 @@ export const siteCrew = (given: Partial<Project> = {}): Project => ({
   instructions: '',
   instructions_path: 'PROJECT.md',
   turn_mode: 'wait',
-  orchestrator: null,
   review: 'each_turn',
   runs_on: 'rr-studio',
   max_turns: 30,

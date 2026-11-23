@@ -1,16 +1,18 @@
 /* A bot's turn (turn/TurnBody.tsx): only what the Glyphh Bot app's stylesheet (glyphh-bot.css) does not already have.
    The fold, the tool lines, the file cards, the attachment chips, the markdown and its images are the app's own. */
 
-/* what happened, in a sentence; and what the bot takes, when the task did not fit it */
+/* what happened, in a sentence, for a run with no words of its own */
 .gb .tsaid { margin: 0; max-width: 720px; color: var(--text-2); font: 400 14px/1.55 var(--sans); }
 .gb .tsaid.bad { color: var(--text); }
-.gb .tsaid.thint { padding: 10px 14px; border: 1px solid var(--hair); border-left: 2px solid var(--rail); border-radius: var(--radius); background: var(--surface); color: var(--text-3); font-size: 13.5px; }
 
-/* the fold's inside: the lines, what each step found, Raw */
-.gb .tsteps.open .tfold { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; max-width: 720px; }
-.gb .tsteps.open .tfold .tools { margin-top: 0; }
-.gb .tsteps .traw { align-self: flex-start; }
-.gb .tsteps .tfound { display: block; margin-bottom: 4px; font: 500 11px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text); }
+/* the fold's inside: what the bot used, a line each, with the app's name and a quiet mark on one that failed */
+.gb .tsteps.open .tfold { margin: 6px 0 0; padding: 0; max-width: 720px; list-style: none; }
+.gb .tsteps .tstep-side { flex: none; display: inline-flex; align-items: center; gap: 8px; margin-left: auto; padding-left: 10px; }
+.gb .tsteps .tstep-app { color: var(--text-4); }
+.gb .tsteps .tstep-failed { color: var(--text-2); }
+
+/* an approval: the action the bot wants to take, in plain words, under what it asks */
+.gb .ask-detail { margin: 0; color: var(--text-3); font: 400 13.5px/1.5 var(--sans); }
 
 /* images its steps brought back, side by side */
 .gb .tshots { display: flex; flex-wrap: wrap; gap: 8px; }

@@ -1,12 +1,16 @@
 import { createContext, useContext, useEffect, type ReactNode } from 'react';
-import type { BotRun, BotSpec, RunStatus } from '@/api/bots';
+import type { RunStatus } from '@/api/bots';
 import { Cat } from '@/bots/cat/Cat';
 import type { Look } from '@/bots/cat/look';
 import { mascotSrc } from '@/bots/cat/mascots';
-import { plural } from '@/lib/format';
-import { decisionsOf } from '../ada';
 
 export const botPath = (slug: string) => `/bots/${encodeURIComponent(slug)}`;
+/**
+ * The crew's room. `/bots` with nothing chosen opens the orchestrator's chat, so the crew says it is the crew
+ * (`room=crew`); the word is the address's only, the crew is still state and not a page.
+ */
+export const CREW_ROOM = 'crew';
+export const CREW_PATH = `/bots?room=${CREW_ROOM}`;
 
 /** What the shell's parts ask of it: say something in a toast, open Decisions, the editor or the connections. */
 export type ShellApi = {
@@ -38,15 +42,6 @@ export const RUN_WORDS: Record<RunStatus, string> = {
   failed: 'failed',
   skipped: 'cancelled',
 };
-
-/** "Ran 4 steps, asked Ada 3 times": what a run did, in a line. */
-export function runSummary(run: BotRun, spec: BotSpec): string {
-  const decided = decisionsOf(run, spec).reduce((n, d) => n + Math.max(1, d.items.length), 0);
-  const parts = [`ran ${plural(run.log.length, 'step')}`];
-  if (decided) parts.push(`asked Ada ${plural(decided, 'time')}`);
-  const s = parts.join(', ');
-  return s[0]!.toUpperCase() + s.slice(1);
-}
 
 /** A model's name cut to fit a chip: "Claude Sonnet 5.5 (default)" is "Sonnet 5.5". */
 export const shortModel = (label: string): string => label.replace(/\s*\(.*\)\s*$/, '').replace(/^Claude\s+/i, '').trim() || label;

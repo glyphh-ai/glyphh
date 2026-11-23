@@ -7,7 +7,7 @@ import { recentKeys } from './recents';
  * The crew (the server's /v1/projects and /v1/project-runs; "project" is the server's word and is never shown): the
  * org's bots working together in one GitHub repo and branch, the workspace. There is one per workspace, got or made
  * with `PUT /projects/crew`, which also sets who is in it and how it works. The crew is a set: who goes next is the
- * next free bot with something to do (`wait`), or whoever the orchestrator names. A run goes on until the crew or the
+ * next free bot with something to do (`wait`), or whoever the org's orchestrator bot names. A run goes on until the crew or the
  * orchestrator says it is done; `max_turns` and `max_spend_cents` are its safety caps. Each turn is a pull request:
  * with review `each_turn` it waits for a merge or a reject, with `end` one pull request of it all waits at the end.
  */
@@ -27,9 +27,8 @@ export type Project = {
   members: ProjectMember[];
   instructions: string;
   instructions_path: string;
+  /** `orchestrator`: the org's orchestrator bot picks who goes next (which bot that is, is not a setting). */
   turn_mode: TurnMode;
-  /** The crew bot that picks who goes next; none is Claude. */
-  orchestrator: string | null;
   review: Review;
   /** The org's rrotor it runs on; none is Glyphh cloud. */
   runs_on: string | null;
@@ -44,7 +43,6 @@ export type Project = {
 export type CrewSettings = {
   runs_on: string | null;
   turn_mode: TurnMode;
-  orchestrator: string | null;
   review: Review;
   narrate: boolean;
   max_turns: number;
