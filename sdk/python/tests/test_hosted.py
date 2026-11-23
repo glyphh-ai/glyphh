@@ -134,6 +134,10 @@ def test_templates_are_listed_read_and_installed() -> None:
     assert [t.slug for t in b.templates()] == ["news-brief"] and b.templates("news") == []
     assert b.template("news-brief").apps == ["slack"]
     assert b.install("news-brief").slug == "inbox-cat" and api.calls[3][3] == {}
+    # a server whose bots are agents answers each app as an object, and says where the template can run
+    now = glyphh.BotTemplate({"slug": "x", "apps": [{"app": "gmail", "name": "Gmail", "tools": []}], "runs_on": ["rrotor"]})
+    assert now.apps == ["gmail"] and now.runs_on == ["rrotor"]
+    assert glyphh.BotTemplate(template).runs_on == ["cloud", "rrotor"]
     b.install("news-brief", name="Morning news")
     assert api.calls[4][:2] == ("POST", f"{URL}/v1/bot-templates/news-brief/install")
     assert api.calls[4][3] == {"name": "Morning news"} and api.calls[1][1] == f"{URL}/v1/bot-templates?q=news"

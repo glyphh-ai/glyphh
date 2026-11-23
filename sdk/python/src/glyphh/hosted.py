@@ -35,8 +35,10 @@ Answer = Union[str, List[str], Mapping[str, str]]
 
 
 class BotInfo(Dict[str, Any]):
-    """A bot as the API answers it (`GET /v1/bots/{slug}`): its slug, name, summary, loop (`spec`), connections,
-    schedule, where it runs (`runs_on`: one of the org's rrotors, None for Glyphh's cloud) and its `last_run`."""
+    """A bot as the API answers it (`GET /v1/bots/{slug}`): its slug, name, summary, instructions, standing task,
+    what it decides (`spec.gates`), connections, schedule, where it runs (`runs_on`: one of the org's rrotors, None
+    for Glyphh's cloud) and its `last_run`. A hosted bot is a Claude agent you talk to: `run` it with what you would
+    say to it; with nothing, it does its standing task."""
 
     @property
     def slug(self) -> str:
@@ -53,7 +55,7 @@ class BotInfo(Dict[str, Any]):
 
 class BotTemplate(Dict[str, Any]):
     """A bot template Glyphh ships (`GET /v1/bot-templates/{slug}`): what it does, the apps it needs connected
-    (`apps`), the tools it uses and its gates."""
+    (`apps`), what it decides (`decides`), things to say to it (`examples`) and where it can run (`runs_on`)."""
 
     @property
     def slug(self) -> str:
@@ -61,7 +63,14 @@ class BotTemplate(Dict[str, Any]):
 
     @property
     def apps(self) -> List[str]:
-        return list(self.get("apps") or [])
+        """The apps it needs, by their slug (gmail, slack). The server answers each as `{app, name, tools}`; one from
+        before hosted bots were agents answers the slugs alone."""
+        return [str(a.get("app", "")) if isinstance(a, Mapping) else str(a) for a in self.get("apps") or []]
+
+    @property
+    def runs_on(self) -> List[str]:
+        """Where it can run: `cloud`, `rrotor`, or only `rrotor`; both for a server that does not say."""
+        return [str(p) for p in self.get("runs_on") or ["cloud", "rrotor"]]
 
 
 class BotRun(Dict[str, Any]):

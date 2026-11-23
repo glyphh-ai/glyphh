@@ -200,4 +200,4 @@ __all__ = [
     "VersionGoneError",
     "VersionMissingError",
 ]
-__version__ = "3.15.0"
+__version__ = "3.16.0"

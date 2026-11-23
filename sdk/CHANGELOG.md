@@ -2,6 +2,18 @@
 
 Both packages carry one version; a tag `sdk-v<version>` publishes both.
 
+## 3.16.0 — 2026-11-23
+
+Hosted bots became Claude agents you talk to (the server's `docs/specs/bot-agent-loop.md`). Python only; the
+TypeScript package carries the version unchanged.
+
+- `glyphh.hosted`: `BotTemplate.apps` reads the server's new answer (each app `{app, name, tools}`) as well as the
+  old one (slugs), and `BotTemplate.runs_on` says where a template can run (`cloud`, `rrotor`, or only `rrotor`).
+  Running, answering, cancelling and correcting a hosted bot are unchanged: `run(slug, "what you would say to it")`.
+- `glyphh bot` and `glyphh.bots` (a packaged bot's loop, run on your own Claude) are unchanged and keep working. The
+  server no longer walks a loop with them; it still uses their store, policy and Ada plumbing for what a hosted
+  bot's decisions learn.
+
 ## 3.15.0 — 2026-11-22
 
 A bot's effort: how hard Claude works on its agent steps. Python only; the TypeScript package carries the version
