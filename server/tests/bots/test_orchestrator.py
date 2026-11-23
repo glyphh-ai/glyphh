@@ -332,7 +332,9 @@ async def test_a_bot_still_working_when_the_wait_runs_out_is_said_so(
     await served.http.post(f"/v1/bot-runs/{child['id']}/cancel", headers=ana.headers)
     free.clear()
     served.agent.script = [play(ASK), play((SEND, REPLY))]
+    monkeypatch.setattr(orchestrator, "WAIT_SECONDS", 600.0)  # the bot gets to its question however slow the machine
     run, child_id = await asked(served, ana)
+    monkeypatch.setattr(orchestrator, "WAIT_SECONDS", 0.03)
     served.agent.script = [slow, play(text="It is taking longer.")]
     res = await served.http.post(f"/v1/bot-runs/{run['id']}/answer", json={"answer": "yes"}, headers=ana.headers)
     assert res.status_code == 202
