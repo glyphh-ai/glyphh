@@ -1,6 +1,6 @@
-"""The bot's gates' decisions copied from the runner's state (its runs.sqlite) into bot_decisions after each go, on the
+"""The bot's decisions copied from the runner's state (its runs.sqlite) into bot_decisions after each go, on the
 cloud and back from a rrotor alike (docs/specs/bots.md, 12): each made readable (the item's fields and a label drawn
-from them), who decided it said plainly (Ada, you, or the gate's default), and what it should have been when it was
+from them), who decided it said plainly (Ada, you, or the decision's default), and what it should have been when it was
 corrected. What only the server knows of a decision (confirmed, its precedent's id) is never overwritten."""
 
 import sqlite3
@@ -40,7 +40,7 @@ def read(state: bytes) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]
 
 
 def _items(spec: dict[str, Any], data: dict[str, Any], step: str) -> dict[str, Any]:
-    """A per-item gate's items in its run, by the key the runner gave each."""
+    """A per-item decision's items in its run, by the key the runner gave each."""
     shape = next((s for s in spec.get("loop") or [] if isinstance(s, dict) and s.get("id") == step), {})
     out = data.get(step) if isinstance(data.get(step), dict) else {}
     found: dict[str, Any] = {}

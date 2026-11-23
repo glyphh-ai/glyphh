@@ -42,10 +42,12 @@ primary_region = "iad"
     method = "GET"
     path = "/v1/health"
 
+# A bot's run is a Claude Code process beside the server (docs/specs/bot-agent-loop.md, 6.1): about 230 MB each while
+# its turn runs, GLYPHH_BOT_RUNS_AT_ONCE (4) at once, so 2 GB.
 [[vm]]
   processes = ["app"]
   size = "shared-cpu-1x"
-  memory = "1024mb"
+  memory = "2048mb"
 
 # Performance VMs, dedicated CPUs (2026-11-02): on shared CPUs, throttled under steady load, a burst of 50 decides
 # timed out at 10 s and a large learn's restatement crawled. Each group runs a worker per vCPU. A job worker holds up

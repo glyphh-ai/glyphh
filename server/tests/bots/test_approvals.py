@@ -1,94 +1,90 @@
-"""The server holds a bot's permissions for its runs on a rrotor (ops/bots/approvals.py): a token of the run calling a
-tool to ask about with no yes of the person's is refused (a rrotor taken over cannot act on its own), the person's
-yes to the step is used once, for that tool alone; a tool its connection denies is refused and never run."""
+"""The approvals a bot's runs wait on (docs/specs/bot-agent-loop.md, 5): the org's queue of runs waiting on the person,
+oldest first, each with what it asks; and the person's yes, kept on the run as the yes to that very call (its tool
+and a digest of its input, who said it and when) until the resumed agent makes that call, which takes it once. A no
+keeps nothing, and a yes to one tool is not a yes to another."""
 
 import uuid
 from typing import Any
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from glyphh_server.ops.bots import approvals
-from tests.bots.conftest import TOOLS, connected, inbox, made_bot
-from tests.bots.remote import OnRrotor, online, result, rrotor_fixture  # noqa: F401 (the fixture)
-from tests.db.helpers import Person, person
-from tests.link import Rt
+from glyphh_server.models import BotRun
+from glyphh_server.ops.bots.agent import permit
+from tests.bots.agents import play
+from tests.bots.conftest import FIND, SEND, Served, answered, asks, connected, made_bot, ran, run_of
+from tests.bots.fakes import MAIL
+from tests.db.helpers import Person
 
-SEND: dict[str, Any] = {"question": "send: send the reply. Yes?", "options": ["yes", "no"], "step": "send"}
-
-
-async def _out(r: OnRrotor, engine: AsyncEngine, **modes: str) -> tuple[Person, Rt, str, str]:
-    """A run of the inbox bot out on its rrotor, its Gmail tools asking the person (or as `modes` set them)."""
-    ada = await person(engine)
-    rt = await online(engine, ada)
-    gmail = await connected(r.s, ada, allow=False)
-    if modes:
-        put = await r.s.http.put(
-            f"/v1/connections/{gmail['id']}/permissions", json={"permissions": modes}, headers=ada.headers
-        )
-        assert put.status_code == 200, put.text
-    scopes = [{"connection_id": gmail["id"], "tools": TOOLS}]
-    await made_bot(r.s, ada, runs_on=str(rt.id), connections=scopes, spec=inbox())
-    run = (await r.s.http.post("/v1/bots/inbox-cat/runs", json={"input": "x"}, headers=ada.headers)).json()
-    return ada, rt, run["id"], r.hub.last().inputs["tool_token"]
+REPLY: dict[str, Any] = {"to": ["grace@navy.test"], "subject": "Re: Lunch", "body": "Happy to."}
+TOOLS: list[str] = ["gmail-find-email", "gmail-send-email"]
 
 
-async def _call(r: OnRrotor, run_id: str, token: str, tool: str) -> Any:
-    headers = {"authorization": f"Bearer {token}"}
-    res = await r.s.http.post(f"/v1/bots/runs/{run_id}/tool", json={"tool": tool, "input": {}}, headers=headers)
+async def kept(engine: AsyncEngine, run_id: str) -> dict[str, Any]:
+    """The yeses the run holds now."""
+    async with engine.begin() as conn:
+        found = await conn.execute(select(BotRun.approvals).where(BotRun.id == uuid.UUID(run_id)))
+        return dict(found.scalar_one())
+
+
+async def queue(s: Served, who: Person) -> list[dict[str, Any]]:
+    res = await s.http.get("/v1/bot-approvals", headers=who.headers)
     assert res.status_code == 200, res.text
-    return res.json()
+    return list(res.json()["runs"])
 
 
-def _refused(tool: str) -> dict[str, str]:
-    return {"error": approvals.UNAPPROVED.format(tool=tool)}
+async def test_the_queue_is_the_runs_waiting_on_the_person_oldest_first(served: Served, ana: Person) -> None:
+    gmail = await connected(served, ana, allow=False)
+    scopes = [{"connection_id": gmail["id"], "tools": TOOLS}]
+    sender = await made_bot(served, ana, name="Sender", connections=scopes)
+    sorter = await made_bot(served, ana, name="Sorter", connections=[])
+    assert await queue(served, ana) == []
+    served.agent.script = [play((SEND, REPLY))]
+    first = await ran(served, ana, sender["slug"], "Reply to Grace")
+    served.agent.script = [play(asks(MAIL))]
+    second = await ran(served, ana, sorter["slug"], "What is worth answering?")
+    waiting = await queue(served, ana)
+    assert [(w["id"], w["bot_slug"], w["status"]) for w in waiting] == [
+        (first["id"], "sender", "needs_input"), (second["id"], "sorter", "needs_input"),
+    ]  # fmt: skip
+    asked = waiting[0]["question"]
+    assert (asked["question"], asked["approval"], asked["tool"]) == ("Send Email in Gmail?", True, "gmail-send-email")
+    assert asked["detail"].splitlines()[0] == "to: grace@navy.test" and asked["options"] == ["yes", "no"]
+    assert waiting[1]["question"]["approval"] is False and len(waiting[1]["question"]["batch"]) == 2
+    served.agent.script = [play(text="Not sent.")]
+    await answered(served, ana, first["id"], "no")
+    assert [w["id"] for w in await queue(served, ana)] == [second["id"]]
+    assert (await served.http.post(f"/v1/bot-runs/{second['id']}/cancel", headers=ana.headers)).status_code == 200
+    assert await queue(served, ana) == []
 
 
-async def _asked(r: OnRrotor, rt: Rt, who: Person, run_id: str, answer: str) -> None:
-    await r.landed(rt, who, uuid.UUID(run_id), result("needs_input", approval=True, **SEND))
-    res = await r.s.http.post(f"/v1/bot-runs/{run_id}/answer", json={"answer": answer}, headers=who.headers)
-    assert res.status_code == 202 and res.json()["status"] == "dispatched", res.text
-
-
-async def test_a_run_token_calling_a_tool_to_ask_about_with_no_yes_is_refused(
-    on_rrotor: OnRrotor, engine: AsyncEngine
+async def test_a_yes_is_kept_as_the_yes_to_that_call_until_the_agent_makes_it(
+    served: Served, ana: Person, engine: AsyncEngine
 ) -> None:
-    _, _, run_id, token = await _out(on_rrotor, engine)
-    for tool in TOOLS:  # the rrotor's guard skipped: the server refuses, Pipedream is never called
-        assert await _call(on_rrotor, run_id, token, tool) == _refused(tool)
-    assert on_rrotor.s.pd.runs == []
-
-
-async def test_the_persons_yes_runs_that_tool_once_and_no_other(on_rrotor: OnRrotor, engine: AsyncEngine) -> None:
-    ada, rt, run_id, token = await _out(on_rrotor, engine)
-    await _asked(on_rrotor, rt, ada, run_id, "yes")
-    assert await _call(on_rrotor, run_id, token, "gmail-find-email") == _refused("gmail-find-email")
-    assert "result" in await _call(on_rrotor, run_id, token, "gmail-send-email")
-    assert [p["id"] for p in on_rrotor.s.pd.runs] == ["gmail-send-email"]
-    assert await _call(on_rrotor, run_id, token, "gmail-send-email") == _refused("gmail-send-email")  # used up
-    await _asked(on_rrotor, rt, ada, run_id, "no")
-    assert await _call(on_rrotor, run_id, token, "gmail-send-email") == _refused("gmail-send-email")
-
-
-async def test_a_tool_its_connection_denies_is_refused_and_one_it_allows_runs(
-    on_rrotor: OnRrotor, engine: AsyncEngine
-) -> None:
-    modes = {"gmail-send-email": "deny", "gmail-find-email": "allow"}
-    _, _, run_id, token = await _out(on_rrotor, engine, **modes)
-    said = await _call(on_rrotor, run_id, token, "gmail-send-email")
-    assert said == {
-        "error": "gmail-send-email is blocked on the Gmail connection: allow it there for the bot to use it"
-    }
-    assert "result" in await _call(on_rrotor, run_id, token, "gmail-find-email")
-    assert [p["id"] for p in on_rrotor.s.pd.runs] == ["gmail-find-email"]
-
-
-def test_only_a_yes_to_an_approval_of_a_tool_step_is_kept() -> None:
-    spec = inbox(loop=[*inbox()["loop"], {"id": "page", "run": "fetch", "input": "https://x.test", "approval": "go"}])
-    who = uuid.uuid4()
-    kept = approvals.granted({**SEND, "approval": True}, spec, "yes", who)
-    assert list(kept) == ["gmail-send-email"] and kept["gmail-send-email"]["by"] == str(who)
-    assert approvals.granted({**SEND, "approval": True}, spec, "yes", None)["gmail-send-email"]["by"] is None
-    assert approvals.granted({**SEND, "approval": True}, spec, "no", who) == {}
-    assert approvals.granted(SEND, spec, "yes", who) == {}  # not an approval
-    for step in ("page", "draft", "gone"):  # fetch, a step that runs no tool, no such step
-        assert approvals.granted({**SEND, "step": step, "approval": True}, spec, "yes", who) == {}
+    gmail = await connected(served, ana, allow=False)
+    bot = await made_bot(served, ana, connections=[{"connection_id": gmail["id"], "tools": TOOLS}])
+    await served.http.put(
+        f"/v1/connections/{gmail['id']}/permissions",
+        json={"permissions": {"gmail-find-email": "ask"}},
+        headers=ana.headers,
+    )
+    other = {**REPLY, "to": ["everyone@navy.test"]}
+    # asked about the send; then, the yes in hand, the agent tries another tool, another input, and at last the call
+    goes = [play((SEND, REPLY)), play((FIND, REPLY)), play((SEND, other)), play((SEND, REPLY))]
+    served.agent.script = [*goes, play((SEND, REPLY), text="Sent.")]
+    run = await ran(served, ana, bot["slug"], "Reply to Grace")
+    assert await kept(engine, run["id"]) == {}
+    again = await answered(served, ana, run["id"], "yes")
+    assert again["question"]["question"] == "Find Email in Gmail?"  # a yes to one tool is not a yes to another
+    held = await kept(engine, run["id"])
+    assert list(held) == ["gmail-send-email"] and held["gmail-send-email"]["digest"] == permit.digest(REPLY)
+    assert held["gmail-send-email"]["by"] == str(ana.user_id) and held["gmail-send-email"]["at"]
+    third = await answered(served, ana, run["id"], "no")
+    assert "everyone@navy.test" in third["question"]["detail"] and served.pd.runs == []  # nor to another input
+    assert await kept(engine, run["id"]) == {}  # each answer says what the run holds: the no holds nothing
+    fourth = await answered(served, ana, run["id"], "no")
+    assert fourth["status"] == "needs_input" and fourth["question"]["detail"] == permit.detail(REPLY)
+    assert served.pd.runs == []  # the first yes went with the answers since: the very call asks again
+    done = await answered(served, ana, run["id"], "yes")
+    assert (done["status"], done["output"]) == ("done", "Sent.") and len(served.pd.runs) == 1
+    assert await kept(engine, run["id"]) == {} and (await run_of(served, ana, run["id"]))["question"] is None

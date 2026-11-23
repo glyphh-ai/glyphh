@@ -1,13 +1,25 @@
 """Hosted bots (docs/specs/bots.md): an org's connections to other services (each a Pipedream account, signed in on
-Pipedream's own page; no sign-in is kept here), its bots (the SDK's bot package: a loop of steps, gates that learn
-in Ada, hard limits, its agent's prompt and skills; a look; per connection the tools it may use), each bot's runs, and
-the org's own Anthropic API key its bots' agent steps run on."""
+Pipedream's own page; no sign-in is kept here), its bots (the SDK's bot package: its decisions, each an Ada model
+that learns, hard limits, its agent's prompt and skills; a look; per connection the tools it may use), each bot's
+runs, and the org's own Anthropic API key its bots' agents run on."""
 
 import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import BigInteger, Boolean, CheckConstraint, DateTime, ForeignKey, Index, LargeBinary, Text, func, text
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Identity,
+    Index,
+    LargeBinary,
+    Text,
+    func,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -18,6 +30,7 @@ RUN_STATUSES: tuple[str, ...] = ("queued", "running", "dispatched", "needs_input
 LIVE: tuple[str, ...] = ("queued", "running", "dispatched", "needs_input")
 PERMISSION_MODES: tuple[str, ...] = ("ask", "connection", "auto")
 EFFORTS: tuple[str, ...] = ("low", "medium", "high", "xhigh", "max")  # the Claude API's output_config.effort
+ROLES: tuple[str, ...] = ("bot", "orchestrator")  # one orchestrator an org, always there (ops/bots/orchestrator.py)
 
 
 class Connection(Base):
@@ -45,6 +58,8 @@ class Bot(Base):
         Index("bots_due", "next_run_at", postgresql_where=text("next_run_at IS NOT NULL")),
         CheckConstraint(f"permission_mode IN {PERMISSION_MODES}", name="bots_permission_mode"),
         CheckConstraint(f"effort IN {EFFORTS}", name="bots_effort"),
+        CheckConstraint(f"role IN {ROLES}", name="bots_role"),
+        Index("bots_one_orchestrator", "org_id", unique=True, postgresql_where=text("role = 'orchestrator'")),
     )
 
     id: Mapped[uuid.UUID] = guid()
@@ -79,6 +94,12 @@ class Bot(Base):
     # Claude works on its agent steps (ops/bots/access.py)
     folders: Mapped[list[dict[str, str]]] = mapped_column(JSONB, server_default=text("'[]'::jsonb"))
     effort: Mapped[str] = mapped_column(Text, server_default="medium")
+    # docs/specs/bot-agent-loop.md: bot, or the org's one orchestrator; what it does when it runs on its own; the
+    # prompts shown as suggestions; and its spec as it was while bots were loops of steps (nothing reads it)
+    role: Mapped[str] = mapped_column(Text, server_default="bot")
+    task: Mapped[str] = mapped_column(Text, server_default="")
+    examples: Mapped[list[str]] = mapped_column(JSONB, server_default=text("'[]'::jsonb"))
+    old_spec: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = created_at()
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -119,9 +140,41 @@ class BotRun(Base):
     # the person's yes to the step it waits at, by the tool that step runs, used once (ops/bots/approvals.py)
     approvals: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
     machine: Mapped[str] = mapped_column(Text, server_default="")  # the machine running it, so its restart can end it
+    session_id: Mapped[str] = mapped_column(Text, server_default="")  # its Agent SDK session, resumed by an answer
     created_at: Mapped[datetime] = created_at()
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class BotPlugin(Base):
+    """A plugin of a bot: a Claude plugin package (a template's, or one of its own), its files kept by path at the
+    version installed (docs/specs/bot-agent-loop.md, 7)."""
+
+    __tablename__ = "bot_plugins"
+    __table_args__ = (Index("bot_plugins_one", "bot_id", "name", unique=True),)
+
+    id: Mapped[uuid.UUID] = guid()
+    org_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("orgs.id", ondelete="CASCADE"))
+    bot_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("bots.id", ondelete="CASCADE"))
+    name: Mapped[str] = mapped_column(Text)
+    version: Mapped[str] = mapped_column(Text)
+    source: Mapped[str] = mapped_column(Text)  # template:<slug>
+    files: Mapped[dict[str, str]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
+    installed_at: Mapped[datetime] = created_at()
+
+
+class BotSession(Base):
+    """One line of a live run's Agent SDK session transcript, in the order it was written."""
+
+    __tablename__ = "bot_sessions"
+    __table_args__ = (Index("bot_sessions_of_run", "run_id", "session_id", "subpath", "id"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    org_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("orgs.id", ondelete="CASCADE"))
+    run_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("bot_runs.id", ondelete="CASCADE"))
+    session_id: Mapped[str] = mapped_column(Text)
+    subpath: Mapped[str] = mapped_column(Text, server_default="")
+    entry: Mapped[dict[str, Any]] = mapped_column(JSONB)
 
 
 class BotKey(Base):

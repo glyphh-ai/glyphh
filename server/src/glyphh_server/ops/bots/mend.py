@@ -1,6 +1,6 @@
-"""What is done to a bot's runs besides running them: an answer checked against the question it answers, a gate's
-wrong call corrected (learned as a precedent), a waiting run cancelled, and what its gates learned. Each but the
-answer is a go of the runner on the bot's state, so none is done while a run of the bot is going."""
+"""What is done to a bot's runs besides running them: an answer checked against the question it answers, a
+decision's wrong call corrected (learned as a precedent), a waiting run cancelled, and what its decisions learned.
+Each but the answer is a go of the runner on the bot's state, so none is done while a run of the bot is going."""
 
 import uuid
 from typing import Any
@@ -16,6 +16,7 @@ from glyphh_server.ops.bots.views import RunView, WrongIn
 
 NOT_WAITING: str = "That run is not waiting on an answer."
 GOING: str = "The bot has a run going: wait for it to end."
+ANSWER_MAX: int = 2000
 
 
 def fits(question: dict[str, Any], answer: Any) -> Any:
@@ -27,9 +28,12 @@ def fits(question: dict[str, Any], answer: Any) -> Any:
         except ValueError as err:
             raise Invalid(str(err), reason="answer") from err
     said = " ".join(answer) if isinstance(answer, list) else answer
-    if not isinstance(said, str) or said.strip().lower() not in options:
+    if not options and isinstance(said, str) and said.strip():  # the bot's own question, answered in words
+        return said.strip()[:ANSWER_MAX]
+    by_lower = {str(o).lower(): o for o in options}
+    if not isinstance(said, str) or said.strip().lower() not in by_lower:
         raise Invalid(f"Answer with one of {', '.join(options)}.", reason="answer", options=options)
-    return said.strip().lower()
+    return by_lower[said.strip().lower()]
 
 
 async def _run(svc: Goes, who: Principal, run_id: uuid.UUID) -> Any:
@@ -53,7 +57,7 @@ async def wrong(svc: Goes, who: Principal, run_id: uuid.UUID, body: WrongIn) -> 
     found = await _run(svc, who, run_id)
     bot = await _idle(svc, who, found.slug)
     if not found.loop_run:
-        raise Invalid("That run passed no gate: there is nothing to correct.", reason="run")
+        raise Invalid("That run decided nothing with Ada: there is nothing to correct.", reason="run")
     try:
         left = await svc.go(bot, lambda r: r.wrong(found.loop_run, body.outcome, body.gate, body.item))
     except BotError as err:

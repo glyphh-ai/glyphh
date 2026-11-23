@@ -204,6 +204,17 @@ async def test_tools_name_the_panel_only_for_a_2026_client_that_shows_panels(
         "project_run_get",
         "project_run_answer",
         "project_run_cancel",
+        "programs",
+        "program_get",
+        "program_save",
+        "program_delete",
+        "program_schedule",
+        "search_tool",
+        "run_program",
+        "program_runs",
+        "program_run_get",
+        "program_run_answer",
+        "program_run_cancel",
     }
     panels = {n: t["_meta"]["ui"]["resourceUri"] for n, t in tools.items() if "_meta" in t}
     assert panels == {

@@ -1,24 +1,23 @@
 """A bot's runs in the database: made queued (a bot has one live run at a time: queued, running, dispatched to its
-rrotor, or waiting on the person), started, and ended with what the runner left: done, failed, skipped by a hard
-limit, or needs_input with the question it waits on (answered, the same run is queued again and carries on). A run
-records the machine running it: when that machine starts again, its runs still queued or running were cut off, and
-are failed; a run on a rrotor is the rrotor's, never cut off by a restart here."""
+rrotor, or waiting on the person), started, and left by its turn (ops/bots/agent/run.py) done, failed, or
+needs_input with the question it waits on (answered, the same run is queued again and its session carried on); a run
+past its bot's runs a day is skipped. A run records the machine running it: when that machine starts again, its runs
+still queued or running were cut off, and are failed; a run on a rrotor is the rrotor's, never cut off by a restart
+here."""
 
 import os
-import re
 import socket
 import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from glyphh.bots import RunResult
-from sqlalchemy import select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 from glyphh_server.db import tenancy
 from glyphh_server.errors import Conflict, NotFound
-from glyphh_server.models import Bot, BotRun
+from glyphh_server.models import Bot, BotRun, BotSession
 from glyphh_server.ops.bots import files, said, shown
 from glyphh_server.ops.bots.runs_words import INTERRUPTED
 from glyphh_server.ops.bots.views import Question, RunView
@@ -26,9 +25,10 @@ from glyphh_server.ops.bots.views import Question, RunView
 MISSING: str = "There is no such run."
 LIVE: str = "The bot has a run going or waiting on an answer: answer it, or cancel it, first."
 SHOWN: int = 50
-# A run read with its bot: what the bot is, for what the run says of itself (ops/bots/said.py)
-BOT = (Bot.slug, Bot.name.label("bot_name"), Bot.summary.label("bot_summary"), Bot.spec.label("bot_spec"))
-TOLD: frozenset[str] = frozenset({"bot_slug", "question", "runs_on", "kind", "project_slug", *shown.Shown.model_fields})
+BOT = (Bot.slug,)  # a run read with its bot's slug
+TOLD: frozenset[str] = frozenset(
+    {"bot_slug", "question", "runs_on", "kind", "project_slug", "data", *shown.Shown.model_fields}
+)
 
 
 def machine() -> str:
@@ -39,23 +39,25 @@ def now() -> datetime:
     return datetime.now(UTC)
 
 
-def view(run: Any, slug: str, name: str, about: str, spec: dict[str, Any]) -> RunView:
-    """The run as it is shown: its record, and what it says of itself (a plain summary, a hint when the text it was
-    given did not fit the bot, the pages and MCP Apps its steps brought back)."""
+def view(run: Any, slug: str) -> RunView:
+    """The run as it is shown: its record, and what it says of itself (a plain sentence when it has no words of its
+    own, what it used, the pages and MCP Apps its tools brought back, the files it touched)."""
     asked = Question(**run.question) if run.question else None
-    words = {"summary": said.summary(run, spec), "hint": said.hint(run, spec, name, about)}
-    back = {"links": shown.links(run), "apps": shown.apps(run), "files": files.of(run)}
+    back = {"links": shown.links(run), "apps": shown.apps(run), "files": files.of(run), "steps": shown.steps(run)}
     kept = {k: getattr(run, k) for k in RunView.model_fields.keys() - TOLD}
-    return RunView(bot_slug=slug, question=asked, runs_on=run.rrotor_id, **words, **back, **kept)
+    made = {k: v for k, v in (run.data or {}).items() if not k.startswith("_")}  # what its actions answered
+    return RunView(
+        bot_slug=slug, question=asked, runs_on=run.rrotor_id, summary=said.summary(run), data=made, **back, **kept
+    )
 
 
 def joined(found: Any) -> RunView:
     """A run read with its bot (BOT)."""
-    return view(found, found.slug, found.bot_name, found.bot_summary, found.bot_spec)
+    return view(found, found.slug)
 
 
 def of(run: Any, bot: Any) -> RunView:
-    return view(run, bot.slug, bot.name, bot.summary, bot.spec)
+    return view(run, bot.slug)
 
 
 async def row(conn: AsyncConnection, run_id: uuid.UUID) -> Any:
@@ -100,6 +102,26 @@ async def create(engine: AsyncEngine, org_id: uuid.UUID, bot: Any, user_id: uuid
     return of(made, bot)
 
 
+async def today(engine: AsyncEngine, bot: Any) -> int:
+    """How many runs of the bot were made since midnight (UTC)."""
+    since = now().replace(hour=0, minute=0, second=0, microsecond=0)
+    async with engine.begin() as conn:
+        await tenancy.enter(conn, bot.org_id)
+        made = select(func.count()).select_from(BotRun).where(BotRun.bot_id == bot.id, BotRun.created_at >= since)
+        return int((await conn.execute(made)).scalar_one())
+
+
+async def parent(engine: AsyncEngine, org_id: uuid.UUID, run_id: uuid.UUID) -> Any:
+    """The orchestrator's run that waits on this run (a bot it asked), when this run no longer waits itself."""
+    async with engine.begin() as conn:
+        await tenancy.enter(conn, org_id)
+        mine = (await conn.execute(select(BotRun.status).where(BotRun.id == run_id))).scalar_one()
+        if mine == "needs_input":
+            return None
+        waits = (BotRun.status == "needs_input", BotRun.question["child_run"].astext == str(run_id))
+        return (await conn.execute(select(BotRun).where(*waits))).first()
+
+
 async def put(engine: AsyncEngine, org_id: uuid.UUID, run_id: uuid.UUID, **values: Any) -> None:
     async with engine.begin() as conn:
         await tenancy.enter(conn, org_id)
@@ -119,50 +141,16 @@ async def queue(engine: AsyncEngine, org_id: uuid.UUID, run_id: uuid.UUID) -> bo
 
 
 async def start(engine: AsyncEngine, org_id: uuid.UUID, run_id: uuid.UUID, own_key: bool) -> None:
-    await put(engine, org_id, run_id, status="running", started_at=now(), own_key=own_key)
-
-
-def _question(result: RunResult, file: dict[str, str] | None = None) -> dict[str, Any]:
-    if result.status != "needs_input":
-        return {}
-    asked = {"question": result.question or result.reason, "options": result.options or []}
-    shown = re.sub(r"^glyphh bot continue \S+\s*", "", result.answer_with) if result.answer_with else None
-    where = {"step": result.step, "approval": bool(result.approval)}  # an approval's step: approvals.granted
-    change = {"file": file} if file else {}  # the change to a file it asks about (ops/bots/files.py)
-    return asked | {"batch": result.batch, "answer_with": shown} | where | change
-
-
-async def ended(
-    engine: AsyncEngine,
-    run: Any,
-    result: RunResult,
-    out: str,
-    tokens: dict[str, int],
-    charged: int,
-    file: dict[str, str] | None = None,
-    **more: Any,
-) -> None:
-    """What the runner left: the run's status, log, data, question and output; its tokens added to what it had (and
-    `more`: a run on a rrotor's own). `file`: the change to a file its question asks about."""
-    values: dict[str, Any] = {
-        "status": result.status,
-        "error": result.reason if result.status != "needs_input" else "",
-        "log": result.log,
-        "data": result.data,
-        "question": _question(result, file),
-        "output": out,
-        "loop_run": result.run_id or "",
-        "input_tokens": BotRun.input_tokens + tokens["input_tokens"],
-        "output_tokens": BotRun.output_tokens + tokens["output_tokens"],
-        "cost_micros": BotRun.cost_micros + charged,
-    }
-    if result.status != "needs_input":
-        values["finished_at"] = now()
-    await put(engine, run.org_id, run.id, **values, **more)
+    started = func.coalesce(BotRun.started_at, func.now())
+    await put(engine, org_id, run_id, status="running", started_at=started, own_key=own_key)
 
 
 async def failed(engine: AsyncEngine, org_id: uuid.UUID, run_id: uuid.UUID, error: str) -> None:
-    await put(engine, org_id, run_id, status="failed", error=error, question={}, finished_at=now())
+    await put(engine, org_id, run_id, status="failed", error=error, question={}, finished_at=now(), session_id="")
+
+
+async def skipped(engine: AsyncEngine, org_id: uuid.UUID, run_id: uuid.UUID, why: str) -> None:
+    await put(engine, org_id, run_id, status="skipped", error=why, finished_at=now())
 
 
 async def recover(engine: AsyncEngine, here: str) -> int:
@@ -170,5 +158,7 @@ async def recover(engine: AsyncEngine, here: str) -> int:
     person is not cut off: it carries on when it is answered; nor is one on a rrotor (dispatched there)."""
     async with engine.begin() as conn:
         mine = (BotRun.machine == here, BotRun.status.in_(("queued", "running")), BotRun.rrotor_id.is_(None))
-        cut = update(BotRun).where(*mine).values(status="failed", error=INTERRUPTED, finished_at=now())
-        return (await conn.execute(cut)).rowcount
+        cut = update(BotRun).where(*mine).values(status="failed", error=INTERRUPTED, finished_at=now(), session_id="")
+        ended = list((await conn.execute(cut.returning(BotRun.id))).scalars())
+        await conn.execute(delete(BotSession).where(BotSession.run_id.in_(ended)))  # its session goes with it
+        return len(ended)

@@ -1,6 +1,7 @@
-"""A bot's gates' decisions, one row per item per gate per run (docs/specs/bots.md, 12): what the SDK's runner keeps in
-the bot's runs.sqlite, copied here after each go so a person can read, search, sort and page them and train the gate
-from them. `label` and `fields` are the item made readable (never raw JSON); `body` is what the search reads."""
+"""A bot's decisions, one row per item per decision per run (docs/specs/bots.md, 12; a decision is stored as a
+`gate`): what the SDK's runner keeps in the bot's runs.sqlite, copied here after each go so a person can read,
+search, sort and page them and train the decision's Ada model from them. `label` and `fields` are the item made
+readable (never raw JSON); `body` is what the search reads."""
 
 import uuid
 from datetime import datetime
@@ -32,16 +33,16 @@ class BotDecision(Base):
     step: Mapped[str] = mapped_column(Text, server_default="")
     n: Mapped[int] = mapped_column(Integer, server_default="0")
     key: Mapped[str] = mapped_column(Text, server_default="")  # the item's key in its run
-    kind: Mapped[str] = mapped_column(Text, server_default="gate")  # gate, each, code, or case (added by hand)
+    kind: Mapped[str] = mapped_column(Text, server_default="gate")  # "gate" (one a run), each, code, case (by hand)
     label: Mapped[str] = mapped_column(Text, server_default="")
     fields: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
-    case: Mapped[Any] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))  # what the gate's Ada model read
-    outcome: Mapped[str | None] = mapped_column(Text)  # the gate's call
+    case: Mapped[Any] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))  # what the decision's Ada model read
+    outcome: Mapped[str | None] = mapped_column(Text)  # the decision's call
     who: Mapped[str] = mapped_column(Text, server_default="ada")
     mode: Mapped[str] = mapped_column(Text, server_default="")  # why it was asked (new, few, unsure, audit, shadow)
     p: Mapped[float | None] = mapped_column(Double)  # Ada's probability for its call
     guess: Mapped[str | None] = mapped_column(Text)  # Ada's guess, when the person was asked
-    recorded: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))  # a precedent of the gate
+    recorded: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))  # a precedent of the decision
     corrected: Mapped[str | None] = mapped_column(Text)  # what it should have been (a relabel, or the world's)
     confirmed: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))  # the person said it was right
     precedent: Mapped[str] = mapped_column(Text, server_default="")  # its precedent's id in Ada, when known

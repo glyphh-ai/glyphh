@@ -17,7 +17,9 @@ from glyphh_server.ops import tend
 from glyphh_server.ops.bots import due
 from glyphh_server.ops.bots.schedule import Schedule, label, next_after, summary
 from glyphh_server.ops.link.hub import Hub
-from tests.bots.conftest import BOTS, Served, made_bot
+from tests.bots.agents import play
+from tests.bots.conftest import BOTS, SEND, Served, connected, made_bot
+from tests.bots.remote import logged
 from tests.connector import granted, tool
 from tests.db.helpers import Person, person
 
@@ -73,8 +75,10 @@ async def quiet(engine: AsyncEngine) -> AsyncIterator[None]:
 
 
 async def _due(engine: AsyncEngine, who: Person, ago: timedelta) -> None:
+    """The org's bots that are on a schedule (never its orchestrator, which is on none) were due `ago`."""
+    mine = (Bot.org_id == who.org_id, Bot.next_run_at.is_not(None))
     async with engine.begin() as conn:
-        await conn.execute(update(Bot).where(Bot.org_id == who.org_id).values(next_run_at=datetime.now(UTC) - ago))
+        await conn.execute(update(Bot).where(*mine).values(next_run_at=datetime.now(UTC) - ago))
 
 
 async def _runs(engine: AsyncEngine, who: Person) -> list[Any]:
@@ -113,9 +117,9 @@ async def test_a_bot_is_made_on_a_schedule_and_the_connector_says_its_next_run(
     assert changed["structuredContent"]["schedule_summary"] == "Every day at 7:15"
 
 
-async def _scheduled(served: Served, engine: AsyncEngine) -> Person:
+async def _scheduled(served: Served, engine: AsyncEngine, **over: Any) -> Person:
     ada = await person(engine)
-    await made_bot(served, ada, schedule={**WEEKDAYS, "every": "hour"})
+    await made_bot(served, ada, schedule={**WEEKDAYS, "every": "hour"}, **over)
     return ada
 
 
@@ -126,22 +130,46 @@ async def test_a_due_bot_runs_once_however_many_ticks_were_missed(served: Served
     assert await due.fire(served.app.state.bots) == 0  # its next run is in the next hour, not five behind
     await served.settled()
     (run,) = await _runs(engine, ada)
-    assert (run.input, run.user_id, run.status) == ("is:unread", ada.user_id, "needs_input")
+    assert (run.input, run.user_id, run.status) == ("is:unread", ada.user_id, "done")
+    assert [t.message for t in served.agent.turns] == ["is:unread"]  # its schedule's input is what it is given
     async with engine.connect() as conn:
-        then = (await conn.execute(select(Bot.next_run_at).where(Bot.org_id == ada.org_id))).scalar_one()
+        mine = (Bot.org_id == ada.org_id, Bot.slug == "inbox-cat")
+        then = (await conn.execute(select(Bot.next_run_at).where(*mine))).scalar_one()
     assert datetime.now(UTC) < then <= datetime.now(UTC) + timedelta(hours=1)
 
 
-async def test_a_due_bot_whose_run_is_still_live_is_skipped(
-    served: Served, engine: AsyncEngine, caplog: pytest.LogCaptureFixture
+async def test_a_schedule_with_no_input_gives_the_run_the_bots_standing_task(
+    served: Served, engine: AsyncEngine
 ) -> None:
-    ada = await _scheduled(served, engine)
+    ada = await person(engine)
+    await made_bot(served, ada, schedule={"every": "hour"})
+    await _due(engine, ada, timedelta(minutes=1))
+    assert await due.fire(served.app.state.bots, datetime.now(UTC)) == 1
+    await served.settled()
+    (run,) = await _runs(engine, ada)
+    assert (run.input, run.status) == ("", "done")
+    assert [t.message for t in served.agent.turns] == ["Answer the mail worth answering."]
+
+
+async def test_a_due_bot_whose_run_is_still_live_is_skipped(served: Served, engine: AsyncEngine) -> None:
+    ada = await person(engine)
+    asks = await connected(served, ada, allow=False)
+    await made_bot(
+        served,
+        ada,
+        schedule={**WEEKDAYS, "every": "hour"},
+        connections=[{"connection_id": asks["id"], "tools": ["gmail-send-email"]}],
+    )
+    served.agent.script = [play((SEND, {"to": ["grace@navy.test"], "subject": "Re: Lunch"}))]
     await _due(engine, ada, timedelta(minutes=1))
     assert await due.fire(served.app.state.bots) == 1
-    await served.settled()  # its run waits on the person
+    await served.settled()  # its run waits on the person's yes
+    assert [r.status for r in await _runs(engine, ada)] == ["needs_input"]
     await _due(engine, ada, timedelta(minutes=1))
-    assert await due.fire(served.app.state.bots) == 0
-    assert len(await _runs(engine, ada)) == 1 and "skipped: The bot has a run going" in caplog.text
+    with logged() as said:
+        assert await due.fire(served.app.state.bots) == 0
+    assert len(await _runs(engine, ada)) == 1
+    assert any("skipped: The bot has a run going" in line.getMessage() for line in said), said
 
 
 async def test_the_minute_tick_fires_the_due_bots(served: Served, engine: AsyncEngine, redis: Redis) -> None:

@@ -1,7 +1,8 @@
 """A resume read (ops/bots/builtins.py): its text from the file it came in (PDF, Word's DOCX or plain text) and the
-fields Ada's gates read of it: the applicant's name and email, their years of work (the spans of the dates on it,
-overlaps counted once), their skills (the resume's own skills lines and the common skills named anywhere in it), the
-titles they held and their highest degree. Deterministic code, no model: what it reads is what the resume says."""
+fields its decisions' Ada models read of it: the applicant's name and email, their years of work (the spans of the
+dates on it, overlaps counted once), their skills (the resume's own skills lines and the common skills named
+anywhere in it), the titles they held and their highest degree. Deterministic code, no model: what it reads is
+what the resume says."""
 
 import io
 import re

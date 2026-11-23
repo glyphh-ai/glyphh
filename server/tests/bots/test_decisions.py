@@ -10,12 +10,14 @@ from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_server.models import BotDecision
-from tests.bots.conftest import Served, made_bot
-from tests.bots.test_runs import answered, started
+from tests.bots.agents import play
+from tests.bots.conftest import DECIDE, Served, answered, asks, made_bot, ran
+from tests.bots.fakes import MAIL
 from tests.db.helpers import Person, person
 
 GATE = "bot-inbox-cat-gate-worth"
 URL = "/v1/bots/inbox-cat/decisions"
+ITEMS: dict[str, Any] = {"decision": "worth", "items": MAIL}  # the agent's call of `decide` about the mail
 
 
 async def listed(s: Served, caller: Person, /, **params: Any) -> dict[str, Any]:
@@ -25,11 +27,12 @@ async def listed(s: Served, caller: Person, /, **params: Any) -> dict[str, Any]:
 
 
 async def asked_once(s: Served, engine: AsyncEngine) -> tuple[Person, dict[str, Any]]:
-    """The inbox bot run once, its gate asking about both letters and the person answering."""
+    """The inbox bot run once, its agent's `decide` asking about both letters and the person answering."""
     who = await person(engine)
     await made_bot(s, who)
-    run = await answered(s, who, await started(s, who), "1=answer 2=skip")
-    return who, run
+    s.agent.script = [play(asks(MAIL)), play(text="One to answer.")]
+    run = await ran(s, who, "inbox-cat", "What is worth answering?")
+    return who, await answered(s, who, run["id"], "1=answer 2=skip")
 
 
 async def test_a_runs_decisions_are_readable_searched_filtered_sorted_and_paged(
@@ -117,7 +120,8 @@ async def test_a_sure_call_is_confirmed_into_a_precedent_and_gates_are_one_at_a_
     bot = await made_bot(served, ada)
     served.ada.cases[GATE].append(({}, "skip"))
     served.ada.rule[GATE] = lambda case: ("answer", 0.95) if "Lunch" in case["m"]["s"]["subject"] else ("skip", 0.95)
-    await started(served, ada)
+    served.agent.script = [play((DECIDE, ITEMS), text="One to answer.")]
+    assert (await ran(served, ada, "inbox-cat", "What is worth answering?"))["status"] == "done"
     page = await listed(served, ada, who="ada")
     assert page["total"] == 2 and {d["confidence"] for d in page["decisions"]} == {0.95}
     ids = [d["id"] for d in page["decisions"]]
@@ -132,7 +136,7 @@ async def test_a_sure_call_is_confirmed_into_a_precedent_and_gates_are_one_at_a_
     other = await _row(engine, ada, bot["id"], gate="other")
     mixed = await served.http.post(f"{URL}/relabel", json={"ids": [ids[0], str(other)], "outcome": "skip"},
                                    headers=ada.headers)  # fmt: skip
-    assert mixed.status_code == 422 and "one gate at a time" in mixed.json()["error"]["message"]
+    assert mixed.status_code == 422 and "one at a time" in mixed.json()["error"]["message"]
     nogate = await served.http.post(f"/v1/bot-decisions/{other}/relabel", json={"outcome": "skip"}, headers=ada.headers)
     assert nogate.status_code == 422 and nogate.json()["error"]["reason"] == "gate"
     shown = (await served.http.get(f"/v1/bot-decisions/{other}", headers=ada.headers)).json()

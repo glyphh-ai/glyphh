@@ -1,6 +1,7 @@
-"""What reads a bot's gates as they are now, on the bot's own Ada key, never its runner's state (so it may run while a
-run of the bot is going) (docs/specs/bots.md, 12): a decision with its nearest precedents, and a backtest that replays
-recent decisions against each gate now, under its policy, saying which would change."""
+"""What reads a bot's decisions' Ada models as they are now, on the bot's own Ada key, never its runner's state (so
+it may run while a run of the bot is going) (docs/specs/bots.md, 12): a decision with its nearest precedents, and a
+backtest that replays recent decisions against their Ada models now, under each one's policy, saying which would
+change."""
 
 import asyncio
 import uuid
@@ -16,7 +17,7 @@ from glyphh_server.errors import Invalid
 from glyphh_server.models import BotDecision
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.auth.sealed import unseal
-from glyphh_server.ops.bots import decisions, package
+from glyphh_server.ops.bots import decisions, orchestrator, package
 from glyphh_server.ops.bots.decision_views import Backtest, BacktestIn, Change, DecisionDetail, Precedent
 from glyphh_server.ops.bots.goes import Goes
 
@@ -30,7 +31,10 @@ def gate_model(bot: Any, gate: str) -> str:
 
 async def on_ada(svc: Goes, bot: Any, act: Any) -> Any:
     """`act` on the bot's Ada (by its own key) in a worker thread."""
-    ada = svc.ada_for(unseal(svc.settings.secret_key, bot.ada_key))
+    async with svc.engine.begin() as conn:  # the orchestrator's key is made the first time it is needed
+        await tenancy.enter(conn, bot.org_id)
+        sealed = await orchestrator.keyed(conn, bot, svc.settings.secret_key)
+    ada = svc.ada_for(unseal(svc.settings.secret_key, sealed))
     return await asyncio.to_thread(act, ada)
 
 
@@ -43,12 +47,12 @@ def nearest(ada: Any, bot: Any, case: Any, gate: str) -> list[dict[str, Any]]:
 
 
 async def detail(svc: Goes, who: Principal, decision_id: uuid.UUID) -> DecisionDetail:
-    """The decision, its case, and the precedents its gate stands on for that case now (each named by its decision
+    """The decision, its case, and the precedents its Ada model stands on for that case now (each named by its decision
     when it is one of the bot's)."""
     async with svc.engine.begin() as conn:
         await tenancy.enter(conn, who.org_id)
         d, bot = await decisions.row(conn, decision_id)
-    live = d.gate in decisions.outcomes(bot)  # a gate since taken off the bot has no model to ask
+    live = d.gate in decisions.outcomes(bot)  # a decision since taken off the bot has no model to ask
     receipts = await on_ada(svc, bot, lambda ada: nearest(ada, bot, d.case, d.gate)) if live else []
     async with svc.engine.begin() as conn:
         await tenancy.enter(conn, who.org_id)
@@ -66,7 +70,7 @@ async def detail(svc: Goes, who: Principal, decision_id: uuid.UUID) -> DecisionD
 
 
 def judged(ada: Any, bot: Any, d: Any, counts: dict[str, int]) -> Any:
-    """The gate's call on the decision's case now, under its policy."""
+    """The Ada model's call on the decision's case now, under the decision's policy."""
     name = gate_model(bot, d.gate)
     if name not in counts:
         counts[name] = held(ada, name)
@@ -84,8 +88,8 @@ async def recent(svc: Goes, who: Principal, bot: Any, body: BacktestIn) -> list[
 
 
 async def backtest(svc: Goes, who: Principal, bot: Any, body: BacktestIn) -> Backtest:
-    """The newest decisions replayed against their gates now: which would change, and how many it would ask about
-    or now get right (what each is: its correction, else what was said). Nothing is recorded."""
+    """The newest decisions replayed against their Ada models now: which would change, and how many it would ask
+    about or now get right (what each is: its correction, else what was said). Nothing is recorded."""
     if body.gate is not None and body.gate not in decisions.outcomes(bot):
         raise Invalid(f"{bot.slug} has no gate {body.gate}.", reason="gate")
     rows = await recent(svc, who, bot, body)

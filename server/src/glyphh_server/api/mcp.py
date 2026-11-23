@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncConnection
 from starlette.responses import Response
 
+from glyphh_server.api import mcp_stream
 from glyphh_server.api.errors import error_body
 from glyphh_server.api.oauth_meta import resource_metadata_url
 from glyphh_server.db import tenancy
@@ -88,7 +89,8 @@ async def mcp(request: Request) -> Response:
         ctx = Context(conn, who, state.settings, state.http, state.hub, state.signing_key, state.ada, state.bots)
         if not registry.detached(ctx, call.method, call.params):
             return await respond(ctx, call)
-    return await respond(ctx, call)
+    streamed = mcp_stream.token(request, call)  # a detached tool that follows a run: its progress as it goes
+    return await respond(ctx, call) if streamed is None else mcp_stream.stream(ctx, call, streamed, respond)
 
 
 @router.get("/mcp", include_in_schema=False)

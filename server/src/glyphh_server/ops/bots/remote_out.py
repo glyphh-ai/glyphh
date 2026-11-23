@@ -1,23 +1,24 @@
 """A result of a bot's run on a rrotor, back over the link (ops/link/session.py): taken once (its seq past the last the
 run took, from the rrotor the run is on, while the run is out there or waits), then kept as the run's end or its
-question, as a run in the cloud is (runs.ended), the bot's state kept from it. The tokens the rrotor reports (the
-whole call's, so each result's are what is new since the last) go on the meter at the org's own key's rate, the
-markup alone: the rrotor ran them on the org's key. A run that waits and whose wait expires on the rrotor still waits
-here (its answer then goes as a fresh call); a `continue` the rrotor no longer had a run for goes as one too. A
-result of a bot with its folders' files names the files it read and changed (`data.files`), kept with the run as
-names alone (ops/bots/files.py)."""
+wait. The agent's turn ran on the machine; what it used of this server's (its tools, Ada's decisions, the question it
+stopped on) is on the run already (ops/bots/agent/desk.py), so a result adds the bot's final words, the names of the
+files it read and changed (never what is in them, ops/bots/files.py), a question about a file's change, and its
+tokens: the whole run's so far as the rrotor counts them, so what is new since the run's last result goes on the meter
+at the org's own key's rate (the markup alone: it ran on the org's key). A run that waits and whose wait expires on
+the rrotor still waits here (its answer then goes as a fresh call); a `continue` the rrotor no longer had a run for
+goes as one too."""
 
-import base64
 import logging
 from typing import Any
 
-from glyphh.bots import RunResult
 from sqlalchemy import select, update
 
 from glyphh_server.db import tenancy
 from glyphh_server.llm import meter
-from glyphh_server.models import Bot, BotRun
-from glyphh_server.ops.bots import decided, files, prices, runs
+from glyphh_server.models import BotRun
+from glyphh_server.ops.bots import files, prices, runs
+from glyphh_server.ops.bots.agent import session
+from glyphh_server.ops.bots.agent.run import OUTPUT_MAX, SILENT
 from glyphh_server.ops.bots.remote import Remote
 from glyphh_server.ops.link.presence import Runtime
 from glyphh_server.ops.link.protocol import Ran
@@ -25,6 +26,7 @@ from glyphh_server.ops.plans import org_version
 
 log = logging.getLogger("glyphh.bots")
 OUT: tuple[str, ...] = ("dispatched", "needs_input")
+FAILED: str = "The run failed on its rrotor."
 
 
 async def _taken(remote: Remote, runtime: Runtime, msg: Ran) -> tuple[bool, Any]:
@@ -61,47 +63,64 @@ def _again(result: dict[str, Any]) -> bool:
     return result.get("status") == "failed" and result.get("step") == "continue" and data.get("code") == "E_RUN_MISSING"
 
 
+def _asked(run: Any, result: dict[str, Any], said: dict[str, Any]) -> dict[str, Any]:
+    """What the run waits on: the question this server asked (on the run already), else the rrotor's own, about a
+    change to a file."""
+    if run.question:
+        return dict(run.question)
+    asked = {"question": str(result.get("prompt") or ""), "options": ["yes", "no"], "approval": True, "step": "file"}
+    return asked | {"file": files.change(said.get("file"))}
+
+
 async def _kept(remote: Remote, run: Any, result: dict[str, Any]) -> None:
     if run.status == "needs_input":  # only its wait expiring there is news: the next answer is a fresh call
         if result.get("status") == "expired":
             await runs.put(remote.svc.engine, run.org_id, run.id, remote={**run.remote, "since": None})
         return
     if _again(result):
-        await remote.send(run.org_id, run.id, run.bot_id, run.rrotor_id, None, run.remote.get("answer"))
+        message = str(run.remote.get("message") or "")
+        await remote.send(run.org_id, run.id, run.bot_id, run.rrotor_id, message, True)
         return
-    ran = RunResult.from_result(result)
-    bot = await remote.svc.bot(run.org_id, run.bot_id)
-    if ran.state:
-        await _state(remote, bot, ran.state)
-    tokens = new_tokens(run, ran.tokens or {})
-    charged = await bill(remote, bot, tokens)
-    since = runs.now().isoformat() if ran.status == "needs_input" else None
-    # a bot with its folders' files: the names of those it read and changed are kept with the run (never what is
-    # in them: the rrotor sends none), and the change its question asks about, for the person's yes to be to it
     said = result["data"] if isinstance(result.get("data"), dict) else {}
+    bot = await remote.svc.bot(run.org_id, run.bot_id)
+    tokens, again = new_tokens(run, said.get("tokens") if isinstance(said.get("tokens"), dict) else {})
+    charged = await bill(remote, bot, tokens)
+    began = {**run.remote, "in": run.input_tokens, "out": run.output_tokens} if again else dict(run.remote)
+    values: dict[str, Any] = {
+        "input_tokens": BotRun.input_tokens + tokens["input_tokens"],
+        "output_tokens": BotRun.output_tokens + tokens["output_tokens"],
+        "cost_micros": BotRun.cost_micros + charged,
+        "remote": began,
+    }
     named = files.named(said.get("files"))
     if named is not None:
-        ran.data[files.KEPT] = files.merged((run.data or {}).get(files.KEPT), named)
-    more = {"remote": {**run.remote, "since": since}, "file": files.change(said.get("file"))}
-    await runs.ended(remote.svc.engine, run, ran, ran.output or "", tokens, charged, **more)
+        values["data"] = {**run.data, files.KEPT: files.merged(run.data.get(files.KEPT), named)}
+    status = str(result.get("status") or "failed")
+    if status == "needs_input":
+        waits = {**began, "since": runs.now().isoformat()}
+        values |= {"status": status, "question": _asked(run, result, said), "remote": waits}
+    elif status == "done":
+        words = str(said.get("output") or "")[:OUTPUT_MAX]
+        values |= {"status": "done", "output": words, "error": "" if words else SILENT}
+    else:
+        values |= {"status": "failed", "error": str(said.get("reason") or FAILED)}
+    if status != "needs_input":
+        values |= {"question": {}, "finished_at": runs.now()}
+    await runs.put(remote.svc.engine, run.org_id, run.id, **values)
+    if status != "needs_input":
+        await session.drop(remote.svc.engine, run.org_id, run.id)
 
 
-async def _state(remote: Remote, bot: Any, state: str) -> None:
-    async with remote.svc.engine.begin() as conn:
-        await tenancy.enter(conn, bot.org_id)
-        kept = base64.b64decode(state)
-        await conn.execute(update(Bot).where(Bot.id == bot.id).values(state=kept))
-        await decided.sync(conn, bot, kept)
-
-
-def new_tokens(run: Any, said: dict[str, Any]) -> dict[str, int]:
-    """What the call spent since its last result: its total so far, past what the run had counted of it."""
-    began = run.remote
-    got = {k: int(said.get(f"{k}_tokens") or 0) for k in ("input", "output")}
-    return {
-        "input_tokens": max(0, int(began.get("in", 0)) + got["input"] - run.input_tokens),
-        "output_tokens": max(0, int(began.get("out", 0)) + got["output"] - run.output_tokens),
-    }
+def new_tokens(run: Any, said: dict[str, Any]) -> tuple[dict[str, int], bool]:
+    """What the rrotor's run spent since its last result, and whether the rrotor began it again. The rrotor says the
+    run's total so far, through every call of it (it keeps the count with the session); a total under what the run
+    has counted of it is a run the rrotor began again (it had lost the session), all of whose tokens are new."""
+    got = {k: max(0, int(said.get(f"{k}_tokens") or 0)) for k in ("input", "output")}
+    began = {"input": int(run.remote.get("in", 0)), "output": int(run.remote.get("out", 0))}
+    had = {"input": run.input_tokens - began["input"], "output": run.output_tokens - began["output"]}
+    again = any(got[k] < had[k] for k in got)
+    new = got if again else {k: got[k] - had[k] for k in got}
+    return {"input_tokens": new["input"], "output_tokens": new["output"]}, again
 
 
 async def bill(remote: Remote, bot: Any, tokens: dict[str, int]) -> int:

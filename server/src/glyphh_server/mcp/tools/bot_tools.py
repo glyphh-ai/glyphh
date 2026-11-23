@@ -1,8 +1,9 @@
 """The tools the org's bots add to its connector by purpose (ops/bots/exposed.py): each bot's declared tools, listed
 by their own names (a name the server's own tools or another bot's have already becomes <name>__<slug>), found by
-Claude's tool search like any tool, each calling its bot: a run on its arguments (waited on, answered with its
-verdicts), its recent runs with their verdicts, a gate's verdict corrected, a waiting run answered. They make runs, so
-each is called on transactions of its own (registry.detached), the request's having ended."""
+Claude's tool search like any tool, each calling its bot: a run with its arguments as the message (waited on, answered
+with what the bot said and what its `verdicts` decision decided), its recent runs each so, a decision's verdict
+corrected, a waiting run answered. They make runs, so each is called on transactions of its own (registry.detached),
+the request's having ended."""
 
 import asyncio
 import json
@@ -61,11 +62,13 @@ def _args(tool: ConnectorTool) -> type[BaseModel]:
     return create_model(f"Args_{tool.name}", __config__=ConfigDict(extra="forbid"), **fields)
 
 
-def verdicts(run: RunView, step: str | None) -> dict[str, Any]:
-    """The run, shortly, with its verdicts step's data (and what it asks, when it waits)."""
+def verdicts(run: RunView, decision: str | None) -> dict[str, Any]:
+    """The run, shortly: what the bot said, what its `decision` decided so far, item by item (each {id, item,
+    outcome, by, confidence}), and what it asks, when it waits."""
     shown: dict[str, Any] = {"run_id": str(run.id), "status": run.status, "input": run.input[:300]}
-    if step is not None:
-        shown["verdicts"] = run.data.get(step)
+    shown["output"] = run.output
+    if decision is not None:
+        shown["verdicts"] = (run.data.get(decision) or {}).get("decisions", [])
     if run.question is not None:
         shown["question"] = run.question.model_dump(mode="json")
     return shown | ({"error": run.error} if run.error else {})
@@ -110,7 +113,7 @@ async def _wrong(ctx: Context, slug: str, tool: ConnectorTool, args: Wrong) -> D
     said: dict[str, Any] = await ctx.bots.wrong(
         ctx.who, args.run_id, WrongIn(outcome=args.outcome, gate=tool.gate, item=args.item)
     )
-    return Done(f"Gate {said['gate']} said {said['said']}; it learned {said['now']}.", said)
+    return Done(f"Decision {said['gate']} said {said['said']}; Ada learned {said['now']}.", said)
 
 
 async def _answer(ctx: Context, slug: str, tool: ConnectorTool, args: Answer) -> Done:

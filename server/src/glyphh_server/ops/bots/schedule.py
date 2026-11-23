@@ -27,7 +27,9 @@ class Schedule(BaseModel):
     weekday: int = Field(0, ge=0, le=6, description="For every week: 0 Monday to 6 Sunday")
     day: int = Field(1, ge=1, le=31, description="For every month: the day (past the month's end, its last day)")
     timezone: str = Field("UTC", max_length=64, description="The person's time zone (IANA: America/Chicago)")
-    input: str = Field("", max_length=20_000, description="What each scheduled run is given ($input)")
+    input: str = Field(
+        "", max_length=20_000, description="What each scheduled run is given; none: the bot's standing task"
+    )
 
     @field_validator("timezone")
     @classmethod

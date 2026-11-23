@@ -23,15 +23,3 @@ def sentence(text: str) -> str:
     if not t:
         return ""
     return t[0].upper() + t[1:] + ("" if t[-1] in ".!?" else ".")
-
-
-def named(step_id: str) -> str:
-    """A step's or an outcome's id as words: `hot_leads` is "hot leads"."""
-    return step_id.replace("_", " ").replace("-", " ").strip()
-
-
-def joined(names: list[str]) -> str:
-    """Names in a sentence: "a", "a and b", "a, b and c"."""
-    if len(names) < 2:
-        return "".join(names)
-    return f"{', '.join(names[:-1])} and {names[-1]}"

@@ -1,21 +1,20 @@
 """A bot's use of the files in its folders, on its rrotor (docs/specs/bots.md, 14). The files are the machine's and
 what is in them never comes here: the rrotor's glyphh_bot gives Claude tools over exactly the bot's folders, and
-this server keeps names alone. Three things are its to do:
+this server keeps names alone. Two things are its to do:
 
-- say which rrotors do it (`uses`: rrotor 0.8.0; an older one keeps the single request a step was);
 - hold the bot's permission to change a file (`file_change`, a tool the rrotor calls before each write or move, with
   the change's action and names): allowed at once unless the bot asks first, and then only by taking the person's
   yes to that very change, once (ops/bots/approvals.py);
 - keep, with the run, the names of the files it read and changed (`data._files`, the run's own data beside its
-  steps'), shown as the turn's file chips (`of`), and the change a waiting run asks about (its question's `file`)."""
+  steps'), shown as the turn's file chips (`of`), and the change a waiting run asks about (its question's `file`).
 
-import re
+Every rrotor that runs a bot's agent (0.9.0, ops/bots/remote.py) gives it its folders' files."""
+
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
 TOOL: str = "file_change"
-RROTOR_MIN: tuple[int, int] = (0, 8)  # the first rrotor whose glyphh_bot gives a bot its folders' files
 KEPT: str = "_files"  # in a run's data: [{name, did}], names only
 DID: tuple[str, ...] = ("read", "written", "moved")
 ACTIONS: tuple[str, ...] = ("write", "move")
@@ -29,12 +28,6 @@ NO_FOLDERS: str = "{path} is not in a folder {name} may change: give it the fold
 class RunFile(BaseModel):
     name: str = Field(description="The file, as its folder's name and the way down: Invoices/March.pdf")
     did: Literal["read", "written", "moved"] = Field(description="What the run did with it")
-
-
-def uses(version: str | None) -> bool:
-    """Whether a rrotor of this version gives a bot its folders' files."""
-    found = re.match(r"(\d+)\.(\d+)", version or "")
-    return found is not None and (int(found[1]), int(found[2])) >= RROTOR_MIN
 
 
 def _text(value: Any) -> str | None:
@@ -92,10 +85,3 @@ def of(run: Any) -> list[RunFile]:
     kept = named(data.get(KEPT)) or []
     first = [f for f in kept if f["did"] != "read"] + [f for f in kept if f["did"] == "read"]
     return [RunFile(**f) for f in first[:SHOWN_MAX]]
-
-
-def used(run: Any, spec: dict[str, Any]) -> bool:
-    """Whether the run's agent steps had its folders' files: then what the person typed was put to them."""
-    data = run.data if isinstance(run.data, dict) else {}
-    steps = [s for s in spec.get("loop") or [] if isinstance(s, dict)]
-    return KEPT in data and any("agent" in s for s in steps)

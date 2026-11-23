@@ -1,5 +1,12 @@
 # Bots: Claude bots a person makes for themselves
 
+> **Two things are called a bot here.** Sections 1 to 8 are the SDK's packaged bot (`glyphh bot`, a loop of steps a
+> person runs on their own Claude); they are unchanged. Sections 9 to 14 are the platform's hosted bots, which since
+> 2026-11-22 are **not** loops: a hosted bot is a Claude agent a person talks to, each run one Claude Agent SDK turn
+> driven by its instructions, Ada two tools those instructions direct. `bot-agent-loop.md` is that engine's design and is the reference for how a hosted bot runs.
+> In sections 9 to 14, read "gate" as a decision, and where a paragraph still speaks of a loop's steps (a step's
+> `approval`, `$step.ret`, `probe_generated`, `screen_verdicts`, `hint`), `bot-agent-loop.md` replaces it.
+
 A bot is a Claude agent with Glyphh's tooling: a Claude that does one job for the person who made it, the way they
 would do it, again and again (watch a launch each morning, triage an inbox, keep a reading list, chase a PR).
 
@@ -181,11 +188,20 @@ person's own. Bots count against the plan's models (each bot's memory is three, 
 
 ## 9. Hosted bots and connections (built)
 
-The platform's bots: the packaged bots above, run by the SDK's own loop (`glyphh.bots.Runner`, `glyphh[api]`) on
-Glyphh's server, with the org's connections to other services. **No code runs in the cloud**: a cloud bot has no
-`program.py`; its run steps are `fetch` or one of its scoped tools, and a gate's case is mapped from fields. A bot with
-code runs on rrotor. They are first-class on the platform (Bots and Connections pages) and in the connector; for now
-anyone in the org may make, change and run them.
+The platform's bots: each a Claude agent a person talks to (`bot-agent-loop.md`), run on Glyphh's server or one of
+the org's rrotors, with the org's connections to other services. A run is one Claude Agent SDK turn: the system
+prompt is the bot's own (its instructions, what it is for, what Ada decides for it), the message is what the person
+typed (or, for a scheduled run, the bot's standing task), and the agent decides what to do. Its tools are exactly
+its connections' tools, `decide` (Ada), `fetch` for the hosts it names, Glyphh's built-ins it names, and on a rrotor
+the files of its folders. **No code runs in the cloud**: there the session has no shell, no web and no file tool,
+and a plugin's code runs only in a rrotor's sandbox. The SDK's runner (`glyphh.bots`, `glyphh[api]`) is still what
+holds and trains the bot's decisions (its store, its policy, its Ada models); it no longer walks a loop. Bots are
+first-class on the platform (the Bots screen) and in the connector; for now anyone in the org may make, change and
+run them.
+
+Every org has one **orchestrator** bot (`role: orchestrator`): made with the org, edited like any bot, never
+deleted (409 `orchestrator`); it sees the org's bots, hands a task to one, and starts, reads and stops the crew
+(`bot-agent-loop.md`, 8).
 
 **Connections** are Pipedream Connect accounts. The org is one external user of Glyphh's Pipedream project,
 `org_<org id>`; someone in the org signs in to a service on Pipedream's own page (a Connect link), and a sync then reads
@@ -194,12 +210,15 @@ Pipedream's account id, the app and the account's name. A connection's tools are
 
 **A bot** is a name (its slug, the org's own, at most 30 characters, fixed once made), a summary, a look (its cat:
 `head`, `tail`, `eye`, `extra`, `accessory`, `pose`, the glyphh-bot mascots' parts) or a **mascot** of its own (below),
-instructions (its `agent.md`), the Claude model its agent steps run on (one of those `GET /v1/bots/models` lists, its
-default when none is given), its **permission mode** (below), its **voice** (one of `GET /v1/bots/voices`: Kokoro-82M's,
-the open TTS model; only the choice is kept, no speech is made yet, so `samples` is false), its
-spec (`bot.json`: touches, hosts, seed, gates, loop, limits), its skills (`{name: SKILL.md}`) and **per connection, the
-tools it may use** (its scope). It is checked by the SDK when made and when changed, every problem said at once (422,
-`problems`); fetch hosts must be public names. It gets its own Ada key, made as the person who made it and revoked when
+instructions, its **standing task** (`task`: what it does when it runs on its own) and **examples** (prompts shown
+as suggestions), the Claude model it runs on (one of those `GET /v1/bots/models` lists, its default when none is
+given), its **permission mode** (below), its **voice** (one of `GET /v1/bots/voices`: Kokoro-82M's, the open TTS
+model; only the choice is kept, no speech is made yet, so `samples` is false), its spec (`gates`: its decisions,
+each an Ada model; `hosts`; `builtins`; `limits`: `turns`, `seconds`, `tokens`, `runs_per_day`; `seed`), its notes
+(`skills`, `{name: SKILL.md}`), its **plugins** (the know-how a template installed for it, `bot-agent-loop.md` 7)
+and **per connection, the tools it may use** (its scope). It is checked when made and when changed, every problem
+said at once (422, `problems`); a spec with a `loop` is refused, saying a bot is no longer a loop of steps; fetch
+hosts must be public names. It gets its own Ada key, made as the person who made it and revoked when
 it is deleted; its gate and memory models are `bot-<slug>-gate-<gate>` and `bot-<slug>-<kind>`. `bot_guide` (and
 `ops/bots/guide.py`) says how a cloud bot is written.
 
@@ -218,14 +237,19 @@ Claude on the bots' key (the org's own or Glyphh's), metered as agent steps are;
 Claude failing is 503 `claude`.
 
 **A run** is a background task in the server's own process, at most `GLYPHH_BOT_RUNS_AT_ONCE` (4) a machine, the rest
-queued; a bot has one live run at a time (queued, running or waiting on the person). The bot's package is written to a
-folder of its own with its runner state (`runs.sqlite`, kept on the bot between goes) and the SDK's runner walks its
-loop in a worker thread: tools run as Pipedream actions as the org (the app prop filled with the connection's account),
-`fetch` GETs JSON from the bot's hosts only (every address public, no redirects, 5 MB at most), gates ask Ada with the
-bot's own key. A run that stops for the person (a gate unsure, an approval) is `needs_input` with its question (a batch
-for a gate over many items, answered `1=answer 2=skip`); answered, it carries on; it can be cancelled. A gate's call
-said wrong is learned as a precedent. A run records its machine; when that machine starts again, its runs left queued
-or running are failed (`interrupted by a restart`); one waiting on the person is left waiting.
+queued; a bot has one live run at a time (queued, running or waiting on the person). It is one turn of the Claude
+Agent SDK (`ops/bots/agent/`: its bundled Claude Code CLI as a child process, in a folder of the run's own, with the
+bot's tools as one in-process MCP server and no other tool; `bot-agent-loop.md` 3, 6.1). Every tool call lands at the
+run's desk (`ops/bots/agent/desk.py`): a connection's tool runs as a Pipedream action as the org (the app prop filled
+with the connection's account), `fetch` GETs JSON from the bot's hosts only (every address public, no redirects, 5 MB
+at most), `decide` asks the decision's Ada model with the bot's own key. A run that must ask the person (items Ada is
+not sure of, or an action that waits for a yes) stops, `needs_input` with its question (a batch for items, answered
+`1=answer 2=skip`; `yes`/`no` for an approval, with `detail`, the call in plain words); answered, the same session
+is resumed from `bot_sessions` and carries on; it can be cancelled, waiting or running. A decision's call said wrong
+is learned as a precedent. A run records its machine; when that machine starts again, its runs left queued or running
+are failed (`interrupted by a restart`); one waiting on the person is left waiting, and its answer resumes it on
+whichever machine takes it. Limits: `spec.limits` (25 turns, 300 seconds, 400,000 tokens a run, 200 runs a day,
+unless the bot sets its own).
 
 **A schedule** is chosen in plain words, never as cron: `schedule: {every, at, weekday, day, timezone, input}`, `every`
 one of `off` (the default), `hour` (every hour, on the hour), `day`, `weekdays` (Monday to Friday), `week` (on
@@ -243,9 +267,13 @@ that time, as is one whose rrotor is not linked or that has no Anthropic key to 
 another's is 422 `runs_on`); `GET /v1/bots/places` lists them with whether each is linked right now (its state, set at
 its link's hello and close), and a rrotor deleted puts its bots back on the cloud.
 
-**A run on a rrotor** (`ops/bots/remote.py`, `remote_in.py`, `remote_out.py`): the server keeps the bot, its state
-and its runs; the rrotor runs it, as its built-in program `glyphh_bot` (rrotor 0.5, SDK 3.12: an older rrotor's
-glyphh_bot answers `E_SDK`). Started by the person or its schedule, the run is refused while the rrotor is not linked
+**A run on a rrotor** (`ops/bots/remote.py`, `remote_in.py`, `remote_out.py`; **as built now: `bot-agent-loop.md`
+6.2**, which replaces what the rest of this paragraph and the two after it say of packages, state, steps and
+approvals: the call is `glyphh_bot`'s `agent` (rrotor 0.9.0; an older rrotor fails the run, saying to update it),
+its inputs the turn and the server's tools; every tool call lands at the same desk as a cloud run's and may answer
+`{ask: true}`; the result carries the bot's final words, file names and tokens). Before: the server keeps the bot,
+its state and its runs; the rrotor runs it, as its built-in program `glyphh_bot` (rrotor 0.5, SDK 3.12: an older
+rrotor's glyphh_bot answers `E_SDK`). Started by the person or its schedule, the run is refused while the rrotor is not linked
 (409 `E_CONFLICT` `rrotor_offline`; its schedule skips it) or the org's tokens are spent; else it is sent down the link
 as a `call` (`{run_id, program: "glyphh_bot", version: null, function: "run", inputs}`, version null: the rrotor's
 active one) and is `dispatched`, with `rrotor_id` on the run. Its inputs: the bot's package by path (as the cloud
@@ -333,11 +361,14 @@ answers 503 `E_UNAVAILABLE` `pipedream_off`. The connector's tools: `bot_guide`,
 runs.
 
 **Permission mode.** Each tool on a connection is allowed, asked about or denied (a tool never set is unset), and the
-bot's `permission_mode` says which of its tool steps wait for the person's yes (`ops/bots/cloud.py`, `asks`): `ask`
-(the default, and what bots did before it existed): each, unless its connection allows the tool; `connection`: only
-those its connection says to ask about; `auto`: none. A step that waits does so as `use <tool>` (unless the step has
-an approval already), so it shows in the approvals queue; a denied tool fails the step that runs it, in every mode,
-saying where to allow it. A step's own `approval` in the loop always asks.
+bot's `permission_mode` ("Before it acts") says which of its agent's tool calls wait for the person's yes
+(`ops/bots/agent/permit.py`): `ask` (Ask me first, the default): each action, unless its connection allows the
+tool; `connection` (Follow each app's settings): as the connection says, one never set asks; `auto` (Act on its
+own): none. A read-only tool (its Pipedream component says so, else by its key's verb: get, list, find, search,
+read…) never asks unless its connection says ask. A call that waits stops the run with an approval ("Send Email in
+Gmail?", its `detail` the call in plain words), so it shows in the chat and the approvals queue; the yes is kept on
+the run for that very call (the tool and a digest of its input) and is used once: another input, or a second call,
+asks again. A denied tool is refused in every mode, and the agent is told so it can tell the person.
 
 **The marketplace** ships, beside Inbox Triage, Support Triage (Gmail to Slack, a three-way gate), Meeting Prep
 (Google Calendar to Notion), PR Review Digest (GitHub to Slack), Lead Scoring (`$input` read by Claude into leads, a
@@ -430,8 +461,9 @@ set), `instructions` (the brief given on the project, at most 20,000 characters)
 - **Turns** (`turn_mode`). `wait` (wait your turn, the default): one bot at a time; the turn is offered to the bot
   that has waited longest and has not just said it has nothing to do, never the bot that just went while another can
   go; a bot with nothing to do changes nothing and says `PASS`, and the turn moves on. `orchestrator`: before each
-  turn the orchestrator (`orchestrator`: a bot of the crew, in its own voice and on its model; none: Claude, on the
-  bots' default model) reads the repo and the instructions and answers `{"next": <a bot>, "why": ..., "done": ...}`:
+  turn the orchestrator (the org's orchestrator bot, always, in its own voice and on its model: section 9 and
+  `bot-agent-loop.md` 8; it is no longer chosen, so an `orchestrator` given to a project is not read, and the view
+  says the org's) reads the repo and the instructions and answers `{"next": <a bot>, "why": ..., "done": ...}`:
   the bot it names takes the turn and is told why; an answer that names nobody of the crew is taken as wait your turn
   takes it; `done` ends the run.
 - **The end.** A run is `done` (`ended` says why) when two bots in a row say `DONE` on a line of its own (a crew of

@@ -1,4 +1,4 @@
-"""A gate's item made readable for a person (docs/specs/bots.md, 12): its fields flattened to `name: text` (nested
+"""A decision's item made readable for a person (docs/specs/bots.md, 12): its fields flattened to `name: text` (nested
 names joined with a dot, lists of plain values joined), and its label, a title or summary drawn from those fields.
 A label is never raw JSON: the runner's own label is kept only when it is not JSON."""
 
@@ -40,7 +40,7 @@ def _walk(value: Any, at: str, out: dict[str, str]) -> None:
 
 
 def _common(names: list[str]) -> str:
-    """The dotted start every name shares (a gate's case is {layer: {segment: {role: value}}})."""
+    """The dotted start every name shares (a decision's case is {layer: {segment: {role: value}}})."""
     parts = [n.split(".")[:-1] for n in names]
     shared: list[str] = []
     for column in zip(*parts, strict=False):
@@ -89,6 +89,6 @@ def label(given: str | None, shown: dict[str, str]) -> str:
 
 
 def body(shown_label: str, shown: dict[str, str], *more: str | None) -> str:
-    """What the search reads: the label, every field's name and text, and the gate and outcomes."""
+    """What the search reads: the label, every field's name and text, and the decision's name and outcomes."""
     words = [shown_label, *(f"{k} {v}" for k, v in shown.items()), *(m for m in more if m)]
     return "\n".join(words)[:20_000]

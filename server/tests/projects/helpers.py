@@ -19,7 +19,7 @@ from tests.db.helpers import Person, person
 from tests.link import Rt
 from tests.projects.github import FakeGitHub
 
-FINE: dict[str, Any] = {"loop": [{"id": "a", "agent": "Hi"}]}
+FINE: dict[str, Any] = {}  # a bot that decides nothing: its instructions are all it is
 REPO: str = "https://github.com/acme/site"
 INSTALLATION: int = 7001
 
@@ -179,6 +179,17 @@ async def crew_on_rrotor(r: OnRrotor, engine: AsyncEngine, key: bool = True) -> 
     faked(r.s)
     ada, bots = await crew(r.s, engine, key)
     return ada, await online(engine, ada), bots
+
+
+async def lead(s: Served, who: Person, **change: Any) -> dict[str, Any]:
+    """The org's orchestrator bot (listed first), changed as given: the one that picks who goes next."""
+    found = (await s.http.get("/v1/bots", headers=who.headers)).json()["bots"][0]
+    assert found["role"] == "orchestrator"
+    if change:
+        res = await s.http.patch(f"/v1/bots/{found['slug']}", json=change, headers=who.headers)
+        assert res.status_code == 200, res.text
+        found = res.json()
+    return dict(found)
 
 
 def body(bots: list[dict[str, Any]], **over: Any) -> dict[str, Any]:

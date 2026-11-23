@@ -1,15 +1,16 @@
-"""Glyphh's built-in tools: steps any bot may run beside `fetch` and its connections' Pipedream actions. They are
-Glyphh's own code, the same on Glyphh cloud and for a bot on a rrotor (whose steps call them through the server's tool
-endpoint, ops/bots/tool_calls.py), so a cloud bot still runs no code of its own. The Resume Screener's:
+"""Glyphh's built-in tools: tools a bot's agent may have beside `fetch`, `decide` and its connections' Pipedream
+actions, when its spec names them (`builtins`; ops/bots/agent/tools.py). They are Glyphh's own code, the same on
+Glyphh cloud and for a bot on a rrotor (whose agent calls them through the server's tool endpoint,
+ops/bots/tool_calls.py), so a cloud bot still runs no code of its own. The Resume Screener's:
 
 - `inbox_applications` `{given?, q?, most?}`: the person's own application when `given` holds one (a resume's text,
   or `{resume, letter?, sender?, role?}`), else the new applications in the bot's Gmail (`q`, a Gmail search; at most
   `most`), each read whole and made into an applicant (ops/bots/applicants.py); `{applications, rejected, polled}`.
-- `probe_generated` `{applications, gate}`: the gate probed for each application (ops/bots/probe.py), on the runner's
-  thread with the bot's own Ada; `{generated, human, reference}`. On a rrotor (no seeded reference there) all go on.
-- `screen_verdicts` `{applications, rejected, source, fit, probe, made}`: the gates' calls put together
-  (ops/bots/verdicts.py).
-- `inbox_label` `{verdicts, rejected}`: each screened message labelled in Gmail with its verdict."""
+- `inbox_label` `{verdicts: [{id, verdict}], rejected: [{id}]}`: each screened message labelled in Gmail with its
+  verdict (ops/bots/verdicts.py); `{labelled: {label: how many}}`.
+
+What the agent does between the two is `decide`'s (ops/bots/agent/ada.py): the sender, the fit and how much was
+generated, the last probed (ops/bots/probe.py)."""
 
 import asyncio
 import contextlib
@@ -19,16 +20,31 @@ import uuid
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from glyphh_server.ops.bots import applicants, probe, verdicts
+from glyphh_server.ops.bots import applicants, verdicts
 from glyphh_server.ops.bots.gmail import Gmail
 from glyphh_server.ops.bots.pipedream import Pipedream
 
 Call = Callable[[dict[str, Any]], Awaitable[Any]]
-NAMES: tuple[str, ...] = ("inbox_applications", "probe_generated", "screen_verdicts", "inbox_label")
-ON_RUNNER: dict[str, Callable[[Any, Any], Any]] = {"probe_generated": probe.probed}
 QUERY: str = "in:inbox -label:screened newer_than:14d"
 MOST: int = 25
 NO_GMAIL: str = "The bot has no Gmail connection to read: connect Gmail and give the bot its connection."
+ABOUT: dict[str, tuple[str, str, bool]] = {  # name: (title, what it does, read-only), as the agent is told
+    "inbox_applications": (
+        "Read the applications",
+        "Read job applications: the one handed in `given` (a resume's text, or {resume, letter, sender, role}), "
+        "else the new messages of the Gmail search `q` (at most `most`, 25 unless said). Answers {applications: one "
+        "item per applicant, each with its id; rejected: [{id, from, subject, why}], the messages the sender checks "
+        "refused; polled}.",
+        True,
+    ),
+    "inbox_label": (
+        "Label the screened mail",
+        "Label each screened message in Gmail. Takes {verdicts: [{id, verdict}], rejected: [{id}]}; verdict is "
+        "strong, borderline, poor or spam (any other, such as waiting, gets no label; a rejected message is "
+        "labelled spam). Answers {labelled: {label: how many}}.",
+        False,
+    ),
+}
 
 
 def handed(given: Any) -> dict[str, Any] | None:
@@ -46,7 +62,7 @@ def _given_id(app: dict[str, Any]) -> str:
 
 
 def _answer(made: list[tuple[Any, Any]], polled: int) -> dict[str, Any]:
-    """Each (applicant, why not) made, as the step's data."""
+    """Each (applicant, why not) made, as the tool answers."""
     return {"applications": [a for a, _ in made if a], "rejected": [w for _, w in made if w], "polled": polled}
 
 
@@ -81,16 +97,7 @@ def _label(gmail: Gmail | None) -> Call:
     return call
 
 
-async def _merged(given: dict[str, Any]) -> Any:
-    return verdicts.merged(given)
-
-
-async def _unprobed(given: dict[str, Any]) -> Any:
-    return probe.unprobed(given)
-
-
 def made(pd: Pipedream, org_id: uuid.UUID, gmail_account: str | None) -> dict[str, Call]:
     """The built-in tools for one bot's go: its Gmail the first Gmail connection in its scope (None: it has none)."""
     gmail = Gmail(pd, org_id, gmail_account) if gmail_account else None
-    return {"inbox_applications": _inbox(gmail), "probe_generated": _unprobed, "screen_verdicts": _merged,
-            "inbox_label": _label(gmail)}  # fmt: skip
+    return {"inbox_applications": _inbox(gmail), "inbox_label": _label(gmail)}

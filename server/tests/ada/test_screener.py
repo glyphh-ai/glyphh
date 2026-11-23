@@ -5,6 +5,7 @@ applicants as the template does at seeding, then the test split's human applican
 by having no generated precedent as close. Its bars are the template's promise that the seed set teaches its gates
 something: they are what Ada scores from these precedents alone, before any person's answer."""
 
+import copy
 from typing import Any
 
 import httpx
@@ -12,14 +13,15 @@ from glyphh.bots.runner import fill
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_ada.process import Worker
-from glyphh_server.ops.bots import probe, seeds, templates
+from glyphh_server.ops.bots import packages, probe, seeds
 from tests.ada.conftest import an_org
 
 BARS: dict[str, float] = {"source": 0.9, "fit": 0.6, "made": 0.6, "human": 0.6}
 
 
 def _gate(name: str) -> dict[str, Any]:
-    return dict(templates.one("resume-screener").spec["gates"][name])
+    """The gate as the template ships it: a copy, so nothing done with it reaches the library the process keeps."""
+    return copy.deepcopy(packages.library()["resume-screener"].sidecar.decisions[name])
 
 
 def _humans() -> list[dict[str, Any]]:

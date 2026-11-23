@@ -6,7 +6,7 @@ plan's month reported to Stripe's ada_requests meter (ops/billing/ada_meter.py).
 (ops/traffic/pull.py); with a GitHub token (GLYPHH_GITHUB_TRAFFIC_TOKEN), once an hour, its public repositories' views
 and clones pulled from GitHub (ops/traffic/github.py). Always first, its heartbeat (obs/tick.py) and the ops events
 logged since the last tick moved to Postgres (obs/events_store.py), for the staff view. Given the hosted bots, the
-bots whose schedule is due run (ops/bots/due.py), on the ticking process.
+bots and programs whose schedule is due run (ops/bots/due.py, ops/programs/due.py), on the ticking process.
 
 Every server process runs the tick, and production runs more than one: a tick takes a Postgres advisory lock (TICK)
 in a transaction it holds for the tick, and a process that finds it held skips that minute, so no two ticks ever run
@@ -33,6 +33,7 @@ from glyphh_server.ops.cloudflare import Cloudflare
 from glyphh_server.ops.enterprise import expire
 from glyphh_server.ops.github_traffic import GitHub
 from glyphh_server.ops.link.hub import Hub
+from glyphh_server.ops.programs import due as program_due
 from glyphh_server.ops.runtime_keys import push_expired
 from glyphh_server.ops.traffic import github as github_traffic
 from glyphh_server.ops.traffic import pull as traffic
@@ -106,4 +107,5 @@ async def _tick(
         parts.append(("github traffic", lambda: github_traffic.hourly(engine, hub.redis, github, listed)))
     if bots is not None:
         parts.append(("bot schedules", lambda: due.fire(bots)))
+        parts.append(("program schedules", lambda: program_due.fire(bots.programs)))
     await _each(parts)

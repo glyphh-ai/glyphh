@@ -19,7 +19,20 @@ from glyphh_server.ops.projects import claude as claude_mod
 from glyphh_server.ops.projects import cloud
 from tests.bots.conftest import BOTS, Served, serve
 from tests.bots.fakes import FakePipedream
-from tests.projects.helpers import REPO, FakeClaude, FakeRepo, answer, crew, faked, project, run_of, say, start, use
+from tests.projects.helpers import (
+    REPO,
+    FakeClaude,
+    FakeRepo,
+    answer,
+    crew,
+    faked,
+    lead,
+    project,
+    run_of,
+    say,
+    start,
+    use,
+)
 
 
 @pytest.fixture(name="s")
@@ -167,6 +180,7 @@ async def test_a_pull_request_on_glyphh_cloud_is_rejected_or_conflicts(s: Served
 
 async def test_an_orchestrator_on_glyphh_cloud_reads_the_repo_and_says_why(s: Served, engine: AsyncEngine) -> None:
     ada, _, claude = await _set(s, engine, turn_mode="orchestrator")
+    await lead(s, ada, name="Maestro", instructions="Pick whoever is behind.", model="claude-sonnet-5-5")
     claude.then(
         use("read_file", path="README.md"),
         say('{"next": "bo-cat", "why": "The README needs a quick start.", "done": false}'),
@@ -184,7 +198,10 @@ async def test_an_orchestrator_on_glyphh_cloud_reads_the_repo_and_says_why(s: Se
     )
     assert (turn["status"], turn["input_tokens"]) == ("open", 4000) and len(waiting["turns"]) == 1
     pick = claude.asked[0]
-    assert pick["tools"] == ["list_files", "read_file"] and pick["system"] == ""
+    assert pick["tools"] == ["list_files", "read_file"]
+    # the org's orchestrator bot picks: in its own words, on its model (the bot's turn is on the bot's)
+    assert pick["system"].startswith("You are Maestro (they/them)") and "Pick whoever is behind." in pick["system"]
+    assert [model for _, model in claude.keys] == ["claude-sonnet-5-5", "claude-opus-5-5"]
     assert "through your tools (list_files, read_file)" in pick["messages"][0]["content"]
     assert "The orchestrator chose you: The README needs a quick start." in claude.asked[2]["messages"][0]["content"]
     claude.then(say('{"next": null, "why": "The README is complete.", "done": true}'))

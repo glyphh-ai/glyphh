@@ -1,6 +1,6 @@
-"""A Glyphh bot's runs (docs/specs/bots.md): running one, reading its runs, answering a run that waits on the person,
-correcting a gate's call, cancelling a waiting run, and what its gates learned. The tools that go through the runner
-make their own transactions (registry.DETACHED)."""
+"""A Glyphh bot's runs (docs/specs/bots.md, bot-agent-loop.md), each one turn of the bot's agent: saying something to
+it, reading its runs, answering a run that waits on the person, correcting a decision's call, cancelling a run, and
+what its decisions learned. The tools that go through the runner make their own transactions (registry.DETACHED)."""
 
 import uuid
 from typing import Any
@@ -17,7 +17,7 @@ from glyphh_server.ops.projects import runs as project_runs
 class RunArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
     slug: str = SLUG
-    input: str = Field("", max_length=200_000, description="What the bot is given to work on: $input to its steps")
+    input: str = Field("", max_length=200_000, description="What to say to it; empty: its standing task")
 
 
 class RunId(BaseModel):
@@ -79,7 +79,7 @@ async def answer(ctx: Context, args: Answer) -> Done:
 
 async def wrong(ctx: Context, args: Wrong) -> Done:
     said: dict[str, Any] = await ctx.bots.wrong(ctx.who, args.run_id, WrongIn(**args.model_dump(exclude={"run_id"})))
-    return Done(f"Gate {said['gate']} said {said['said']}; it learned {said['now']}.", said)
+    return Done(f"Decision {said['gate']} said {said['said']}; Ada learned {said['now']}.", said)
 
 
 async def cancel(ctx: Context, args: RunId) -> Done:
@@ -90,7 +90,7 @@ async def cancel(ctx: Context, args: RunId) -> Done:
 async def gates(ctx: Context, args: Slug) -> Done:
     found: dict[str, Any] = await ctx.bots.gates(ctx.who, args.slug)
     lines = [f"{name}: {g.get('precedents', 0)} precedents" for name, g in found.items()]
-    return Done("\n".join(lines) or "The bot has no gates.", {"gates": found})
+    return Done("\n".join(lines) or "The bot has no decisions.", {"gates": found})
 
 
 def _tool(name: str, title: str, about: str, args: type[BaseModel], handler: object, read_only: bool) -> Tool:
@@ -101,7 +101,8 @@ TOOLS: tuple[Tool, ...] = (
     _tool(
         "bot_run",
         "Run a bot",
-        "Run a bot on an input, in the background. A run that asks waits until bot_run_answer answers it.",
+        "Say something to a bot (or, with no input, have it do its standing task): one turn of its agent, in the "
+        "background. A run that asks waits until bot_run_answer answers it.",
         RunArgs,
         run,
         False,
@@ -109,14 +110,21 @@ TOOLS: tuple[Tool, ...] = (
     _tool(
         "bot_approvals",
         "Bots waiting on you",
-        "The org's approvals queue: every bot run waiting on the person (a gate unsure, an approval, a tool its "
-        "connection asks about), each with what it asks. bot_run_answer answers one.",
+        "The org's approvals queue: every bot run waiting on the person (items Ada is not sure of, or an action that "
+        "needs their yes), each with what it asks. bot_run_answer answers one.",
         NoArgs,
         approvals,
         True,
     ),
     _tool("bot_runs", "A bot's runs", "A bot's runs, the newest first.", Slug, list_runs, True),
-    _tool("bot_run_get", "A bot run", "One run: its status, log, data, question, tokens.", RunId, get_run, True),
+    _tool(
+        "bot_run_get",
+        "A bot run",
+        "One run: its status, what it said, what it used, its question, tokens.",
+        RunId,
+        get_run,
+        True,
+    ),
     _tool(
         "bot_run_answer",
         "Answer a bot",
@@ -127,15 +135,28 @@ TOOLS: tuple[Tool, ...] = (
     ),
     _tool(
         "bot_run_wrong",
-        "Correct a bot's gate",
-        "A gate called the run (or one item) wrong: say what it should have said; it is learned as a precedent.",
+        "Correct a bot's decision",
+        "A decision of the run (Ada's, or the person's) was wrong for an item: say what it should have been; its Ada "
+        "model learns it as a precedent.",
         Wrong,
         wrong,
         False,
     ),
-    _tool("bot_run_cancel", "Cancel a bot run", "End the run that waits on the person.", RunId, cancel, False),
     _tool(
-        "bot_gates", "A bot's gates", "What its gates have learned: precedents, how often they ask.", Slug, gates, True
+        "bot_run_cancel",
+        "Cancel a bot run",
+        "End a run: one that waits on the person, or one going.",
+        RunId,
+        cancel,
+        False,
+    ),
+    _tool(
+        "bot_gates",
+        "What a bot's decisions learned",
+        "What each of its decisions' Ada models has learned: precedents, how often Ada was unsure.",
+        Slug,
+        gates,
+        True,
     ),
 )
 DETACHED: frozenset[str] = frozenset({"bot_run", "bot_run_answer", "bot_run_wrong", "bot_run_cancel", "bot_gates"})

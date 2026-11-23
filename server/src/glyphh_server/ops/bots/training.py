@@ -1,4 +1,4 @@
-"""Training a bot's gates from its decisions (docs/specs/bots.md, 12), each through the gate's own Ada model on the
+"""Training a bot's decisions (docs/specs/bots.md, 12), each through the decision's own Ada model on the
 bot's key, as `wrong` is: a decision relabelled (its case recorded with the outcome it should have had, or its own
 precedent graded again), one confirmed right (recorded as a precedent, unless it is one already), a labelled case
 added by hand, and a precedent forgotten. Each is a go of the runner, so the runner's own record (its runs.sqlite)
@@ -24,9 +24,9 @@ D = BotDecision
 def outcome_of(bot: Any, gate: str, outcome: str) -> None:
     gates = decisions.outcomes(bot)
     if gate not in gates:
-        raise Invalid(f"{bot.slug} has no gate {gate} ({', '.join(gates) or 'none'}).", reason="gate")
+        raise Invalid(f"{bot.slug} has no decision {gate} ({', '.join(gates) or 'none'}).", reason="gate")
     if outcome not in gates[gate]:
-        raise Invalid(f"{outcome} is not one of gate {gate}'s outcomes ({', '.join(gates[gate])}).", reason="outcome")
+        raise Invalid(f"{outcome} is not one of {gate}'s outcomes ({', '.join(gates[gate])}).", reason="outcome")
 
 
 def precedent_id(got: Any) -> str:
@@ -84,12 +84,12 @@ async def shown(svc: Goes, who: Principal, bot: Any, ids: list[uuid.UUID], said:
 def one_gate(rows: list[Any]) -> str:
     gates = sorted({d.gate for d in rows})
     if len(gates) != 1:
-        raise Invalid(f"Those decisions are of several gates ({', '.join(gates)}): one gate at a time.", reason="gate")
+        raise Invalid(f"Those are of several decisions ({', '.join(gates)}): one at a time.", reason="gate")
     return gates[0]
 
 
 def counted(act: Any, gate: str) -> Any:
-    """`act` on the runner, and how many precedents the gate holds after it."""
+    """`act` on the runner, and how many precedents the decision's Ada model holds after it."""
 
     def both(runner: Runner) -> tuple[Any, int]:
         done = act(runner)
@@ -103,22 +103,22 @@ def plural(n: int) -> str:
 
 
 async def relabel(svc: Goes, who: Principal, bot: Any, rows: list[Any], outcome: str) -> Trained:
-    """Each decision relabelled `outcome`, learned by its gate."""
+    """Each decision relabelled `outcome`, learned by its Ada model."""
     bot, gate = await mend._idle(svc, who, bot.slug), one_gate(rows)
     outcome_of(bot, gate, outcome)
     act = counted(lambda r: {d.id: relearn(r, d, outcome) for d in rows}, gate)
     made, precedents = (await svc.go(bot, act)).answer
     for d in rows:
         await put(svc, who, [d.id], corrected=outcome, precedent=made[d.id], recorded=True, confirmed=False)
-    said = f"{plural(len(rows))} relabelled {outcome}, learned by gate {gate} ({precedents} precedents)"
+    said = f"{plural(len(rows))} relabelled {outcome}, learned by Ada for {gate} ({precedents} precedents)"
     return await shown(svc, who, bot, [d.id for d in rows], said, precedents)
 
 
 async def confirm(svc: Goes, who: Principal, bot: Any, rows: list[Any]) -> Trained:
-    """Each decision said right, kept as a precedent of its gate."""
+    """Each decision said right, kept as a precedent in its Ada model."""
     bot, gate = await mend._idle(svc, who, bot.slug), one_gate(rows)
     made, precedents = (await svc.go(bot, counted(lambda r: {d.id: confirmed(r, d) for d in rows}, gate))).answer
     for d in rows:
         await put(svc, who, [d.id], confirmed=True, recorded=True, precedent=made[d.id])
-    said = f"{plural(len(rows))} confirmed right, kept as precedents of gate {gate} ({precedents} precedents)"
+    said = f"{plural(len(rows))} confirmed right, kept as precedents of {gate} ({precedents} precedents)"
     return await shown(svc, who, bot, [d.id for d in rows], said, precedents)

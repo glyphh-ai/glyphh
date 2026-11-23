@@ -23,7 +23,9 @@ class Install(Slug):
 
 
 def _line(t: templates.BotTemplate) -> str:
-    return f"{t.name} ({t.slug}): {t.summary}; needs {', '.join(t.apps) or 'no connection'}"
+    where = "Glyphh cloud or a rrotor" if "cloud" in t.runs_on else "a rrotor only"
+    needs = ", ".join(a.name for a in t.apps) or "no connection"
+    return f"{t.name} ({t.slug}): {t.summary}; needs {needs}; runs on {where}"
 
 
 async def search(ctx: Context, args: Search) -> Done:
@@ -33,12 +35,15 @@ async def search(ctx: Context, args: Search) -> Done:
 
 async def read(ctx: Context, args: Slug) -> Done:
     t = templates.one(args.slug)
-    return Done(f"{_line(t)}.\n{t.description}\nTools: {', '.join(t.tools)}", dump(t))
+    decides = "; ".join(f"{d.name} ({', '.join(d.outcomes)})" for d in t.decides) or "nothing"
+    said = f"{_line(t)}.\n{t.description}\nDecides: {decides}\nTry: {' | '.join(t.examples)}"
+    return Done(said, dump(t))
 
 
 async def install(ctx: Context, args: Install) -> Done:
     given = templates.InstallIn(name=args.name)
-    bot = await templates.install(ctx.conn, ctx.who, ctx.settings.secret_key, args.slug, given)
+    platform = ctx.settings.platform_url.rstrip("/")
+    bot = await templates.install(ctx.conn, ctx.who, ctx.settings.secret_key, args.slug, given, platform)
     return Done(f"Added {line(bot)}. bot_run runs it.", dump(bot))
 
 
@@ -51,7 +56,9 @@ TOOLS: tuple[Tool, ...] = (
         search,
         True,
     ),
-    Tool("bot_template", "A bot template", "One bot template: what it does, its tools and gates.", Slug, read, True),
+    Tool(
+        "bot_template", "A bot template", "One bot template: what it does, its tools and decisions.", Slug, read, True
+    ),
     Tool(
         "bot_template_install",
         "Add a bot from the marketplace",

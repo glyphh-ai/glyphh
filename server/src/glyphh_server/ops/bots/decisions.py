@@ -1,7 +1,7 @@
-"""Reading a bot's decisions (docs/specs/bots.md, 12): one row per item per gate per run, searched (every word, as a
-prefix, over its label and fields), filtered (gate, outcome, who, corrected, a time range), sorted (time, confidence,
-gate, outcome, either way) and paged by cursor (the last row's sort value and id, so a page never repeats or skips a
-row as new ones arrive)."""
+"""Reading a bot's decisions (docs/specs/bots.md, 12): one row per item per decision per run, searched (every word,
+as a prefix, over its label and fields), filtered (decision, stored as `gate`; outcome, who, corrected, a time
+range), sorted (time, confidence, gate, outcome, either way) and paged by cursor (the last row's sort value and id,
+so a page never repeats or skips a row as new ones arrive)."""
 
 import base64
 import json

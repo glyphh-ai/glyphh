@@ -3,7 +3,7 @@
 from glyphh_server.models.ada_usage import AdaMeterEvent, AdaModelDay, AdaUsage
 from glyphh_server.models.app import STATES, TYPES, App
 from glyphh_server.models.base import Base
-from glyphh_server.models.bot import RUN_STATUSES, Bot, BotKey, BotRun, Connection
+from glyphh_server.models.bot import RUN_STATUSES, Bot, BotKey, BotPlugin, BotRun, BotSession, Connection
 from glyphh_server.models.bot_decision import BotDecision
 from glyphh_server.models.connector_grant import ConnectorGrant
 from glyphh_server.models.connector_token import TOKEN_KINDS, ConnectorToken
@@ -21,6 +21,7 @@ from glyphh_server.models.oauth_code import OAuthCode
 from glyphh_server.models.org import BILLING_STATUSES, Org
 from glyphh_server.models.org_sso import OrgSso, SsoDomain
 from glyphh_server.models.plan import Plan, PlanVersion
+from glyphh_server.models.program import Program, ProgramEvent, ProgramRun
 from glyphh_server.models.project import Project, ProjectRun, ProjectTurn, RunMark
 from glyphh_server.models.rrotor import MODES, Rrotor
 from glyphh_server.models.runtime_key import RuntimeKey
@@ -62,7 +63,9 @@ __all__ = [
     "Bot",
     "BotDecision",
     "BotKey",
+    "BotPlugin",
     "BotRun",
+    "BotSession",
     "Connection",
     "ConnectorGrant",
     "ConnectorToken",
@@ -87,6 +90,9 @@ __all__ = [
     "OrgSso",
     "Plan",
     "PlanVersion",
+    "Program",
+    "ProgramEvent",
+    "ProgramRun",
     "Project",
     "ProjectRun",
     "ProjectTurn",

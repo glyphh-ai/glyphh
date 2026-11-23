@@ -20,7 +20,8 @@ log = logging.getLogger("glyphh.bots")
 
 
 async def fire(bots: Bots, at: datetime | None = None) -> int:
-    """Every bot due by `at` (now) queued a run with its schedule's input: how many were."""
+    """Every bot due by `at` (now) queued a run with its schedule's input (none: the run is given the bot's standing
+    task): how many were."""
     at = at or schedule.now()
     async with bots.engine.begin() as conn:
         due = (await conn.execute(select(Bot).where(Bot.next_run_at <= at).with_for_update(skip_locked=True))).all()

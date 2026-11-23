@@ -10,9 +10,11 @@ import logging
 import uuid
 from typing import Any
 
+from sqlalchemy import select
+
 from glyphh_server.db import tenancy
 from glyphh_server.errors import GlyphhError
-from glyphh_server.models import ProjectTurn
+from glyphh_server.models import Bot, ProjectTurn
 from glyphh_server.ops.bots import prices
 from glyphh_server.ops.bots.runs import machine
 from glyphh_server.ops.link import calls
@@ -107,9 +109,12 @@ class Steps(Engine):
         await self.step(run, turn_id, call_id, "turn", inputs | {"bot_id": bot.slug, "bot_name": bot.name})
 
     async def pick(self, run: Any, taken: list[Any], crew: list[Any]) -> None:
-        """The orchestrator asked who goes next: a bot of the crew in its own voice, or Claude."""
+        """The orchestrator asked who goes next: the org's orchestrator bot, in its own voice and on its model
+        (Claude, on the bots' default model, for an org whose orchestrator is not made yet)."""
         n, call_id = len(taken) + 1, uuid.uuid4()
-        lead = next((b for b in crew if b.id == run.orchestrator), None)
+        async with self.engine.begin() as conn:
+            await tenancy.enter(conn, run.org_id)
+            lead = (await conn.execute(select(Bot).where(Bot.role == "orchestrator"))).first()
         values = {"run_id": run.id, "n": n, "bot_slug": "", "bot_name": ORCHESTRATOR, "branch": ""}
         values |= {"call_id": call_id, "status": "picking", "picked_by": "orchestrator"}
         turn_id = await self._row(run.org_id, None, values)

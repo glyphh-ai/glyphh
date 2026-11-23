@@ -6,28 +6,27 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from glyphh_server.ops.bots.access import Chosen, ChosenIn, ChosenPatch
 from glyphh_server.ops.bots.exposed import ABOUT as TOOLS_ABOUT
 from glyphh_server.ops.bots.exposed import ConnectorTool
 from glyphh_server.ops.bots.schedule import Schedule
+from glyphh_server.ops.bots.shape import Shaped, ShapedIn, ShapedPatch
 from glyphh_server.ops.bots.shown import Shown
 
 LOOK_PARTS: tuple[str, ...] = ("head", "tail", "eye", "extra", "accessory", "pose")
 
 
 SPEC_ABOUT: str = (
-    "The bot's loop, as the SDK's bot.json has it but its slug, name and agent (bot_guide says how): loop (its "
-    "steps: run a tool, a gate that learns in Ada, an agent step Claude does, a ladder), gates, touches, hosts, "
-    "limits, seed"
+    "What it decides and may reach (bot_guide says how): gates (its decisions, each an Ada model that learns), "
+    "hosts (what fetch may read), builtins, limits (turns, seconds, tokens, runs_per_day), seed"
 )
-SKILLS_ABOUT: str = "Its skills, by name: each a SKILL.md, how its agent does one kind of step"
-INSTRUCTIONS_ABOUT: str = "Its agent's prompt: who it is and how it works (agent.md's body)"
+SKILLS_ABOUT: str = "Its own notes, by name: each a SKILL.md, how it does one kind of work"
+INSTRUCTIONS_ABOUT: str = "Who it is and how it works: its agent's own instructions"
 MASCOT_ABOUT: str = "Its own drawn mascot (black-and-white SVG, made safe), shown in place of its cat; empty: the cat"
 MASCOT_MAX: int = 30_000
 Mode = Literal["ask", "connection", "auto"]
 MODE_ABOUT: str = (
-    "Which tool steps wait for the person's yes: ask (each, unless its connection allows the tool), connection (only "
-    "those its connection says to ask about) or auto (none); a tool its connection denies always fails"
+    "Before it acts: ask (each action asks, unless its connection allows it), connection (as each connection "
+    "says) or auto (none asks); a tool its connection denies is always refused; reading never asks unless told to"
 )
 VOICE_ABOUT: str = "The voice it speaks in, one GET /v1/bots/voices lists; empty for none"
 SCHEDULE_ABOUT: str = "When it runs on its own, in plain words (every: off, hour, day, weekdays, week, month)"
@@ -53,7 +52,7 @@ class LastRun(BaseModel):
     created_at: datetime
 
 
-class BotView(Chosen):  # with its folders and effort (ops/bots/access.py)
+class BotView(Shaped):  # with its folders, effort, role, task, examples and plugins (access.py, shape.py)
     id: uuid.UUID
     slug: str
     name: str
@@ -61,12 +60,12 @@ class BotView(Chosen):  # with its folders and effort (ops/bots/access.py)
     look: dict[str, str] = Field(description="Its cat: head, tail, eye, extra, accessory, pose")
     mascot: str = Field(description=MASCOT_ABOUT)
     instructions: str = Field(description=INSTRUCTIONS_ABOUT)
-    model: str = Field(description="The Claude model its agent steps run on")
+    model: str = Field(description="The Claude model it runs on")
     permission_mode: Mode = Field(description=MODE_ABOUT)
     voice: str = Field(description=VOICE_ABOUT)
     spec: dict[str, Any] = Field(description=SPEC_ABOUT)
     skills: dict[str, str] = Field(description=SKILLS_ABOUT)
-    gate_models: list[str] = Field(description="Its own Ada models: one per gate, and its memory")
+    gate_models: list[str] = Field(description="Its own Ada models: one per decision, and its memory")
     connections: list[Scope]
     schedule: Schedule = Field(description=SCHEDULE_ABOUT)
     schedule_summary: str = Field(description="Its schedule in plain words: Every day at 9:00")
@@ -83,7 +82,7 @@ class Bots(BaseModel):
     bots: list[BotView]
 
 
-class BotIn(ChosenIn):
+class BotIn(ShapedIn):
     model_config = ConfigDict(extra="forbid")
     name: str = Field(min_length=1, max_length=80)
     summary: str = Field("", max_length=500)
@@ -95,15 +94,13 @@ class BotIn(ChosenIn):
     voice: str = Field("", max_length=40, description=VOICE_ABOUT)
     spec: dict[str, Any] = Field(description=SPEC_ABOUT)
     skills: dict[str, str] = Field(default_factory=dict, max_length=30, description=SKILLS_ABOUT)
-    connections: list[ScopeIn] = Field(
-        default_factory=list, max_length=50, description="Per connection, the tools it may use (its steps name them)"
-    )
+    connections: list[ScopeIn] = Field(default_factory=list, max_length=50, description="The tools it may use")
     schedule: Schedule = Field(default_factory=Schedule, description=SCHEDULE_ABOUT)
     runs_on: uuid.UUID | None = Field(None, description=RUNS_ON_ABOUT)
     connector_tools: list[ConnectorTool] = Field(default_factory=list, max_length=20, description=TOOLS_ABOUT)
 
 
-class BotPatch(ChosenPatch):
+class BotPatch(ShapedPatch):
     model_config = ConfigDict(extra="forbid")
     name: str | None = Field(None, min_length=1, max_length=80, description="Its name; its slug stays")
     summary: str | None = Field(None, max_length=500)
@@ -127,16 +124,19 @@ class ScopesIn(BaseModel):
 
 class RunIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    input: str = Field("", max_length=200_000, description="What the bot is given to work on: $input to its steps")
+    input: str = Field("", max_length=200_000, description="What the person says to it; empty: its standing task")
 
 
 class Question(BaseModel):
     question: str = Field(description="What the run asks the person")
     options: list[str] = Field(description="The answers it takes")
-    batch: list[dict[str, Any]] | None = Field(None, description="For a gate over many items: each item, numbered")
+    batch: list[dict[str, Any]] | None = Field(None, description="For a decision over many items: each item, numbered")
     answer_with: str | None = Field(None, description="How a batch is answered: N=option for each, rest=option")
-    step: str | None = Field(None, description="The step of its loop it waits at")
-    approval: bool = Field(False, description="An approval: the person's yes (or no) before the step acts")
+    step: str | None = Field(None, description="The decision or the tool it waits at")
+    approval: bool = Field(False, description="An approval: the person's yes (or no) before it acts")
+    tool: str | None = Field(None, description="An approval: the tool it would use (never shown)")
+    detail: str | None = Field(None, description="An approval: what it would do, in plain words")
+    decision: str | None = Field(None, description="A question about items: the decision it is for")
 
 
 class RunView(Shown):
@@ -147,15 +147,15 @@ class RunView(Shown):
         "failed or skipped"
     )
     input: str
-    output: str = Field(description="Its last step's answer, as text")
+    output: str = Field(description="The bot's final words, as markdown")
     error: str = Field(description="Why it failed, ended early or was skipped")
-    log: list[str] = Field(description="What it did, line by line")
-    data: dict[str, Any] = Field(description="Each step's answer, by step id")
+    log: list[str] = Field(description="What it used, line by line")
+    data: dict[str, Any] = Field(description="What its actions answered (for its link cards)")
     question: Question | None = Field(description="What it waits on, when it needs input")
     input_tokens: int
     output_tokens: int
     cost_micros: int = Field(description="Its tokens' charge, microdollars (the markup alone on the org's own key)")
-    own_key: bool = Field(description="Its agent steps ran on the org's own Anthropic key")
+    own_key: bool = Field(description="It ran on the org's own Anthropic key")
     runs_on: uuid.UUID | None = Field(None, description="The org's rrotor it ran on; none for Glyphh cloud")
     kind: Literal["bot", "project"] = Field("bot", description="In the approvals queue: a bot's run, or a project's")
     project_slug: str | None = Field(
@@ -179,9 +179,9 @@ class AnswerIn(BaseModel):
 
 class WrongIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    outcome: str = Field(min_length=1, max_length=200, description="What the gate should have said")
-    gate: str | None = Field(None, max_length=100, description="Which gate, when the run had more than one")
-    item: str | None = Field(None, max_length=200, description="Which item, for a gate over many: its key")
+    outcome: str = Field(min_length=1, max_length=200, description="What the decision should have said")
+    gate: str | None = Field(None, max_length=100, description="Which decision, when the run had more than one")
+    item: str | None = Field(None, max_length=200, description="Which item, for a decision over many: its key")
 
 
 class KeyIn(BaseModel):
@@ -197,4 +197,4 @@ class KeyView(BaseModel):
 
 
 class Gates(BaseModel):
-    gates: dict[str, Any] = Field(description="Each gate: its model, precedents, how often it asked and was right")
+    gates: dict[str, Any] = Field(description="Each decision: its Ada model, precedents, how often asked and right")

@@ -12,7 +12,7 @@ from glyphh_server.models import BotRun, ProjectRun, RunMark
 from tests.bots.conftest import Served, made_bot
 from tests.db.helpers import Person, member, person
 
-FINE: dict[str, Any] = {"loop": [{"id": "a", "agent": "Hi"}]}
+FINE: dict[str, Any] = {}  # a bot of instructions alone: no decisions, no connections
 T0: datetime = datetime(2026, 11, 20, 10, 0, tzinfo=UTC)
 
 

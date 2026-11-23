@@ -1,32 +1,29 @@
-"""A bot's use of the files in its folders, on its rrotor (docs/specs/bots.md, 14; ops/bots/files.py): which rrotors
-are told to give its agent steps those files, the server's word on each change (`file_change`: at once, or by the
-person's yes to that very change, once), and what is kept with the run: the names of the files it read and changed,
-and nothing of what is in them."""
+"""A bot's use of the files in its folders, on its rrotor (docs/specs/bots.md, 14; ops/bots/files.py): each call
+carries the folders and tells the rrotor to give the agent its file tools, the server's word on each change
+(`file_change`: at once, or by the person's yes to that very change, once), and what is kept with the run: the names
+of the files it read and changed, and nothing of what is in them."""
 
 import uuid
 from types import SimpleNamespace
 from typing import Any
 
-import pytest
-from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from glyphh_server.models import Rrotor
-from glyphh_server.ops.bots import approvals, files, said, tool_calls
+from glyphh_server.ops.bots import approvals, files, tool_calls
 from glyphh_server.ops.link.protocol import Call, Continue
-from tests.bots.conftest import made_bot
-from tests.bots.remote import OnRrotor, online, result, rrotor_fixture  # noqa: F401 (the fixture)
-from tests.db.helpers import Person, person
+from tests.bots.remote import EXPIRED, OnRrotor, left, out, rrotor_fixture  # noqa: F401 (the fixture)
+from tests.db.helpers import Person
+from tests.link import Rt
 
 DOCS: dict[str, str] = {"path": "/Users/ana/Invoices", "access": "read"}
 NOTES: dict[str, str] = {"path": "/Users/ana/Notes", "access": "write"}
 KEPT: dict[str, str] = {"path": "/Users/ana/Notes/kept", "access": "read"}
-SPEC: dict[str, Any] = {"loop": [{"id": "work", "agent": "Do your filing."}]}
 FILER: dict[str, Any] = {
     "name": "Filer",
     "summary": "Keeps the invoices in order",
     "instructions": "File.",
-    "spec": SPEC,
+    "spec": {},
+    "folders": [DOCS, NOTES, KEPT],
 }
 WRITE: dict[str, str] = {"action": "write", "path": "/Users/ana/Notes/Summary.md", "name": "Notes/Summary.md"}
 MOVE: dict[str, str] = {
@@ -36,66 +33,49 @@ MOVE: dict[str, str] = {
     "to": "/Users/ana/Notes/done/a.txt",
     "to_name": "Notes/done/a.txt",
 }
-ASK: dict[str, Any] = {"question": "Write Notes/Summary.md?", "options": ["yes", "no"], "approval": True}
+ASKS: str = "Write Notes/Summary.md?"
 
 
-async def _on(r: OnRrotor, engine: AsyncEngine, version: str | None = "0.8.0", **over: Any) -> tuple[Person, Any, Any]:
-    ada = await person(engine)
-    rt = await online(engine, ada)
-    async with engine.begin() as conn:
-        await conn.execute(update(Rrotor).where(Rrotor.id == rt.id).values(image_version=version))
-    await made_bot(r.s, ada, runs_on=str(rt.id), **{**FILER, "folders": [DOCS, NOTES, KEPT], **over})
-    task = {"input": "Summarise my invoices"}
-    run = await r.s.http.post("/v1/bots/filer/runs", json=task, headers=ada.headers)
-    assert run.status_code == 202, run.text
-    return ada, rt, run.json()
+async def _on(r: OnRrotor, engine: AsyncEngine, **over: Any) -> tuple[Person, Rt, dict[str, Any]]:
+    return await out(r, engine, "Summarise my invoices", **{**FILER, **over})
 
 
-def _with(base: dict[str, Any], **data: Any) -> dict[str, Any]:
-    """A rrotor's Result with what glyphh_bot adds beside the runner's own: the files named, the change asked about."""
-    return {**base, "data": {**base["data"], **data}}
+def _asks(change: dict[str, str], **data: Any) -> dict[str, Any]:
+    """The rrotor's Result when the server did not allow a change: it asks the person about it (agent_tools.py)."""
+    return left("needs_input", ASKS, options=["yes", "no"], approval=True, file=change, **data)
 
 
 async def _change(r: OnRrotor, run_id: str, given: Any) -> Any:
-    call = next(sent for _, sent in reversed(r.hub.sent) if isinstance(sent, Call))  # the run's last call: its token
-    headers = {"authorization": f"Bearer {call.inputs['tool_token']}"}
-    body = {"tool": "file_change", "input": given}
-    res = await r.s.http.post(f"/v1/bots/runs/{run_id}/tool", json=body, headers=headers)
-    assert res.status_code == 200, res.text
-    return res.json()
+    return await r.tool(run_id, "file_change", given)
 
 
-async def _run(r: OnRrotor, who: Person, run_id: str) -> dict[str, Any]:
-    return dict((await r.s.http.get(f"/v1/bot-runs/{run_id}", headers=who.headers)).json())
+# With each call
 
 
-# Which rrotors
-
-
-def test_which_rrotors_give_a_bot_its_folders_files() -> None:
-    assert [files.uses(v) for v in ("0.8.0", "0.8.1-rc1", "0.10.2", "1.0.0")] == [True] * 4
-    assert [files.uses(v) for v in ("0.7.0", "0.6.9", "", None, "latest")] == [False] * 5
-
-
-async def test_a_rrotor_new_enough_is_told_to_give_the_bot_its_files(on_rrotor: OnRrotor, engine: AsyncEngine) -> None:
-    _, _, run = await _on(on_rrotor, engine)
+async def test_a_call_carries_the_bots_folders_and_gives_it_their_files(
+    on_rrotor: OnRrotor, engine: AsyncEngine
+) -> None:
+    ada, rt, run = await _on(on_rrotor, engine)
     sent = on_rrotor.hub.last()
     assert isinstance(sent, Call) and run["status"] == "dispatched" and sent.folders == [DOCS, NOTES, KEPT]
-    assert sent.inputs["file_tools"] is True and sent.inputs["given"] == "Summarise my invoices"
+    assert sent.inputs["file_tools"] is True and sent.inputs["message"] == "Summarise my invoices"
+    named = [t["name"] for t in sent.inputs["tools"]]
+    assert named == ["ask_person"]  # the file tools are the machine's own: the server names none of them
+    await on_rrotor.landed(rt, ada, run["id"], left(output="Nothing to file."))
+    ended = await on_rrotor.run(ada, run["id"])
+    assert (ended["status"], ended["files"], ended["data"]) == ("done", [], {})
 
 
-@pytest.mark.parametrize(("version", "over"), [("0.7.0", {}), ("0.8.0", {"folders": []})])
-async def test_an_older_rrotor_or_a_bot_with_no_folders_keeps_the_single_request(
-    on_rrotor: OnRrotor, engine: AsyncEngine, version: str, over: dict[str, Any]
-) -> None:
-    ada, rt, run = await _on(on_rrotor, engine, version, **over)
+async def test_a_bot_with_no_folders_is_given_no_file_tools(on_rrotor: OnRrotor, engine: AsyncEngine) -> None:
+    ada, rt, run = await _on(on_rrotor, engine, folders=[], permission_mode="auto")
     sent = on_rrotor.hub.last()
-    assert run["status"] == "dispatched" and "file_tools" not in sent.inputs
-    # and its typed task still gets the hint: nothing read it
-    await on_rrotor.landed(rt, ada, uuid.UUID(run["id"]), result(output="Filed."))
-    ended = await _run(on_rrotor, ada, run["id"])
-    assert ended["hint"].startswith("Filer does one job") and ended["files"] == []
-    assert "_files" not in ended["data"]
+    assert run["status"] == "dispatched" and "file_tools" not in sent.inputs and sent.folders is None
+    said = await _change(on_rrotor, run["id"], WRITE)  # and it may change nothing
+    assert said == {"error": files.NO_FOLDERS.format(path=WRITE["path"], name="Filer")}
+    done = {"status": "done", "step": None, "prompt": None, "data": {"output": "Filed."}}  # a result naming no files
+    await on_rrotor.landed(rt, ada, run["id"], done)
+    ended = await on_rrotor.run(ada, run["id"])
+    assert (ended["output"], ended["files"]) == ("Filed.", [])
 
 
 # The server's word on a change
@@ -114,7 +94,7 @@ async def test_a_bot_that_acts_on_its_own_may_change_at_once_within_its_folders(
     assert outside["error"].startswith("/Users/ana/Invoices/a.txt is not in a folder Filer may change")
     for bad in (None, "x", {"action": "delete", **{k: v for k, v in WRITE.items() if k != "action"}}):
         assert await _change(on_rrotor, run["id"], bad) == {"error": files.BAD}
-    await on_rrotor.landed(rt, ada, uuid.UUID(run["id"]), result())
+    await on_rrotor.landed(rt, ada, run["id"], left())
     assert await _change(on_rrotor, run["id"], WRITE) == {"error": tool_calls.NOT_OUT}
 
 
@@ -122,43 +102,45 @@ async def test_a_bot_that_asks_first_changes_only_by_the_persons_yes_to_that_cha
     on_rrotor: OnRrotor, engine: AsyncEngine
 ) -> None:
     ada, rt, run = await _on(on_rrotor, engine)
-    run_id = uuid.UUID(run["id"])
     assert await _change(on_rrotor, run["id"], WRITE) == {"result": {"allowed": False}}  # the rrotor asks
+    outside = await _change(on_rrotor, run["id"], {**WRITE, "path": "/etc/passwd"})
+    assert "is not in a folder Filer may change" in outside["error"]  # never asked about
     seen = [{"name": "Invoices/March.pdf", "did": "read"}]
-    await on_rrotor.landed(rt, ada, run_id, _with(result("needs_input", **ASK), file=WRITE, files=seen))
-    waiting = await _run(on_rrotor, ada, run["id"])
-    assert waiting["status"] == "needs_input" and waiting["question"]["question"] == "Write Notes/Summary.md?"
+    await on_rrotor.landed(rt, ada, run["id"], _asks(WRITE, files=seen))
+    waiting = await on_rrotor.run(ada, run["id"])
+    assert waiting["status"] == "needs_input" and waiting["question"]["question"] == ASKS
     assert waiting["question"]["approval"] is True and waiting["question"]["options"] == ["yes", "no"]
-    assert waiting["files"] == seen and waiting["hint"] == ""
-    res = await on_rrotor.s.http.post(f"/v1/bot-runs/{run_id}/answer", json={"answer": "yes"}, headers=ada.headers)
-    assert res.status_code == 202 and isinstance(on_rrotor.hub.last(), Continue)
+    assert waiting["question"]["step"] == "file" and waiting["files"] == seen
+    assert (await on_rrotor.answer(ada, run["id"], "yes"))["status"] == "dispatched"
+    carried = on_rrotor.hub.last()
+    assert isinstance(carried, Continue) and carried.answer.startswith("The person said yes to that.")
     # the yes is to that change alone, and is used up by it
     assert await _change(on_rrotor, run["id"], MOVE) == {"result": {"allowed": False}}
-    assert await _change(on_rrotor, run["id"], {**WRITE, "path": "/Users/ana/Notes/Other.md"}) == {
-        "result": {"allowed": False}
-    }
+    other = {**WRITE, "path": "/Users/ana/Notes/Other.md"}
+    assert await _change(on_rrotor, run["id"], other) == {"result": {"allowed": False}}
     assert await _change(on_rrotor, run["id"], WRITE) == {"result": {"allowed": True}}
     assert await _change(on_rrotor, run["id"], WRITE) == {"result": {"allowed": False}}
     # a move, asked and answered the same way; a no keeps nothing
-    await on_rrotor.landed(rt, ada, run_id, _with(result("needs_input", **ASK), file=MOVE, files=[]))
-    await on_rrotor.s.http.post(f"/v1/bot-runs/{run_id}/answer", json={"answer": "yes"}, headers=ada.headers)
-    assert await _change(on_rrotor, run["id"], {**MOVE, "to": "/Users/ana/Notes/else.txt"}) == {
-        "result": {"allowed": False}
-    }
+    await on_rrotor.landed(rt, ada, run["id"], _asks(MOVE))
+    await on_rrotor.answer(ada, run["id"], "yes")
+    elsewhere = {**MOVE, "to": "/Users/ana/Notes/else.txt"}
+    assert await _change(on_rrotor, run["id"], elsewhere) == {"result": {"allowed": False}}
     assert await _change(on_rrotor, run["id"], MOVE) == {"result": {"allowed": True}}
-    await on_rrotor.landed(rt, ada, run_id, _with(result("needs_input", **ASK), file=WRITE, files=[]))
-    await on_rrotor.s.http.post(f"/v1/bot-runs/{run_id}/answer", json={"answer": "no"}, headers=ada.headers)
+    await on_rrotor.landed(rt, ada, run["id"], _asks(WRITE))
+    await on_rrotor.answer(ada, run["id"], "no")
+    assert on_rrotor.hub.last().answer.startswith("The person said no to that.")
     assert await _change(on_rrotor, run["id"], WRITE) == {"result": {"allowed": False}}
 
 
 def test_a_yes_to_a_change_is_kept_as_the_yes_to_that_change() -> None:
     who = uuid.uuid4()
-    kept = approvals.granted({**ASK, "step": None, "file": MOVE}, SPEC, "yes", who)
-    assert list(kept) == ["file_change"] and kept["file_change"]["by"] == str(who)
+    kept = approvals.granted_file({"question": ASKS, "file": MOVE}, "yes", who)
+    assert list(kept) == ["file_change"] and kept["file_change"]["by"] == str(who) and kept["file_change"]["at"]
     assert {k: kept["file_change"][k] for k in MOVE} == MOVE
-    assert approvals.granted({**ASK, "file": MOVE}, SPEC, "no", who) == {}
-    assert approvals.granted({**ASK, "approval": False, "file": MOVE}, SPEC, "yes", who) == {}
-    assert approvals.granted({**ASK, "step": "work", "file": {"action": "delete"}}, SPEC, "yes", who) == {}
+    assert approvals.granted_file({"file": MOVE}, "yes", None)["file_change"]["by"] is None
+    assert approvals.granted_file({"file": MOVE}, "no", who) == {}
+    assert approvals.granted_file({"file": {"action": "delete"}}, "yes", who) == {}
+    assert approvals.granted_file({}, "yes", who) == {}
 
 
 # What is kept with the run
@@ -168,20 +150,19 @@ async def test_a_run_keeps_the_names_of_its_files_and_the_turn_shows_them(
     on_rrotor: OnRrotor, engine: AsyncEngine
 ) -> None:
     ada, rt, run = await _on(on_rrotor, engine)
-    run_id = uuid.UUID(run["id"])
     read = [{"name": "Invoices/March.pdf", "did": "read"}, {"name": "Invoices/April.pdf", "did": "read"}]
     junk = [{"name": "x", "did": "deleted"}, {"name": 7, "did": "read"}, "y", {"name": "z", "did": "read", "text": "!"}]
-    await on_rrotor.landed(rt, ada, run_id, _with(result("needs_input", **ASK), file=WRITE, files=[*read, *junk]))
-    await on_rrotor.landed(rt, ada, run_id, {"status": "expired", "step": "wait", "data": {}})
-    await on_rrotor.s.http.post(f"/v1/bot-runs/{run_id}/answer", json={"answer": "yes"}, headers=ada.headers)
-    fresh = on_rrotor.hub.last()  # the wait expired there: a fresh call, the task with it again
-    assert isinstance(fresh, Call) and fresh.inputs["answer"] == "yes" and fresh.inputs["file_tools"] is True
-    assert fresh.inputs["given"] == "Summarise my invoices"
-    # the fresh call starts the step again: what it names is added to what the run had
+    await on_rrotor.landed(rt, ada, run["id"], _asks(WRITE, files=[*read, *junk]))
+    await on_rrotor.landed(rt, ada, run["id"], EXPIRED)
+    await on_rrotor.answer(ada, run["id"], "yes")
+    fresh = on_rrotor.hub.last()  # the wait expired there: a fresh call, its folders and file tools with it again
+    assert isinstance(fresh, Call) and fresh.inputs["resume"] is True and fresh.inputs["file_tools"] is True
+    assert fresh.folders == [DOCS, NOTES, KEPT] and fresh.inputs["message"].startswith("The person said yes")
+    assert await _change(on_rrotor, run["id"], WRITE) == {"result": {"allowed": True}}  # the yes went with it
+    # what the rrotor names after is added to what the run had
     after = [{"name": "Invoices/March.pdf", "did": "read"}, {"name": "Notes/Summary.md", "did": "written"}]
-    done = _with(result(output="Summarised in **Summary.md**.", data={"work": "Summarised."}), files=after)
-    await on_rrotor.landed(rt, ada, run_id, done)
-    ended = await _run(on_rrotor, ada, run["id"])
+    await on_rrotor.landed(rt, ada, run["id"], left(output="Summarised in **Summary.md**.", files=after))
+    ended = await on_rrotor.run(ada, run["id"])
     assert ended["status"] == "done" and ended["question"] is None
     assert ended["files"] == [  # what it changed first
         {"name": "Notes/Summary.md", "did": "written"},
@@ -189,9 +170,7 @@ async def test_a_run_keeps_the_names_of_its_files_and_the_turn_shows_them(
         {"name": "z", "did": "read"},
         {"name": "Invoices/March.pdf", "did": "read"},
     ]
-    assert ended["data"] == {"work": "Summarised.", "_files": [read[1], {"name": "z", "did": "read"}, *after]}
-    assert ended["hint"] == ""  # the task was read by its step: no "it does not read what you type"
-    assert ended["links"] == [] and ended["apps"] == []
+    assert ended["data"] == {} and ended["links"] == [] and ended["apps"] == []  # names only, and not as its data
 
 
 def test_the_changes_a_rrotor_may_name() -> None:
@@ -210,14 +189,12 @@ def test_the_changes_a_rrotor_may_name() -> None:
         assert files.change(bad) is None, bad
 
 
-def test_the_files_kept_and_shown_and_whether_a_run_had_them() -> None:
+def test_the_files_kept_and_shown() -> None:
     many = [{"name": f"f{n}", "did": "read"} for n in range(300)]
     assert files.named(None) is None and files.named({}) is None and files.named([]) == []
     assert len(files.named(many) or []) == 200 and len(files.merged(many, many[:5])) == 200
     assert files.merged("junk", many[:2]) == many[:2]
-    run = SimpleNamespace(data={"_files": many}, input="x", status="done", error="")
-    assert len(files.of(run)) == 12 and files.of(SimpleNamespace(data=None)) == []
-    assert files.used(run, SPEC) and not files.used(run, {"loop": [{"id": "a", "run": "fetch"}, "junk"]})
-    assert not files.used(SimpleNamespace(data=None), SPEC) and not files.used(run, {})
-    assert said.hint(run, SPEC, "Filer", "Files") == ""
-    assert said.hint(SimpleNamespace(data={}, input="x", status="done", error=""), SPEC, "Filer", "Files") != ""
+    run = SimpleNamespace(data={"_files": [*many[:20], {"name": "new.md", "did": "written"}]})
+    shown = files.of(run)
+    assert len(shown) == 12 and (shown[0].name, shown[0].did) == ("new.md", "written")
+    assert files.of(SimpleNamespace(data=None)) == []

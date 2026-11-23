@@ -1,0 +1,44 @@
+{
+  "slug": "inbox-triage",
+  "name": "Inbox Triage",
+  "summary": "Picks the unread mail worth your time and sends you a short digest of it",
+  "look": {"head": "round", "eye": "wink", "pose": "sit"},
+  "model": "claude-sonnet-5-5",
+  "instructions": "You are Inbox Triage. You write short, plain digests of email: who wrote, what they want, and a one-line suggested reply. Never invent facts or dates.",
+  "skills": {
+    "digest": "---\nname: digest\ndescription: How a digest is written\n---\n\nOne line per email: sender, what they want, a suggested reply. Most urgent first. No preamble.\n"
+  },
+  "spec": {
+    "takes": "the email address the digest is sent to",
+    "try": "you@example.com",
+    "touches": "sends",
+    "seed": {"personality": ["Short and plain."]},
+    "gates": {
+      "worth": {
+        "case": {"m": {"s": {"subject": "$item.subject", "from": "$item.from", "id": "$item.id"}}},
+        "outcomes": ["read", "skip"],
+        "question": "Worth your time?",
+        "spec": {
+          "name": "worth",
+          "layers": [{"name": "m", "segments": [{"name": "s", "roles": [
+            {"name": "subject", "text_encoding": "bag_of_words"},
+            {"name": "from", "text_encoding": "bag_of_words"},
+            {"name": "id", "key_part": true, "similarity_weight": 0}
+          ]}]}],
+          "output": {"ask_below": 0.7}
+        }
+      }
+    },
+    "loop": [
+      {"id": "mail", "run": "gmail-find-email", "input": {"q": "is:unread newer_than:1d"}},
+      {"id": "worth", "gate": "worth", "each": "$mail.ret", "label": "subject", "key": "id",
+       "on": {"empty:read": "end"},
+       "empty": "No unread mail from the last day is worth your time, so there is no digest."},
+      {"id": "digest", "agent": "Write the digest of these emails: $worth.read", "skill": "digest"},
+      {"id": "send", "run": "gmail-send-email", "approval": "email you the digest",
+       "input": {"to": ["$input"], "subject": "Your inbox digest", "body": "$digest"}}
+    ]
+  },
+  "apps": ["gmail"],
+  "tools": ["gmail-find-email", "gmail-send-email"]
+}

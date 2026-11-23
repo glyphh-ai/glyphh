@@ -1,5 +1,5 @@
-"""How a bot's gates are doing, from their decisions (docs/specs/bots.md, 12), per gate and day by day: how many it
-decided and who decided them, its ask rate (the share the person was asked), its agreement (of the person's answers
+"""How a bot's decisions are doing, from their rows (docs/specs/bots.md, 12), per decision and day by day: how many
+it decided and who decided them, its ask rate (the share the person was asked), its agreement (of the person's answers
 where Ada had a guess, the share Ada guessed right) and its accuracy (of Ada's own calls the person checked, by
 confirming or correcting, the share that were right). Counting only: nothing here learns."""
 

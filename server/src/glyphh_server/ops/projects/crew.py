@@ -39,7 +39,7 @@ NAME_MAX: int = 80
 
 class CrewIn(BaseModel):
     """The workspace, the bots and the crew settings. A setting left out is left as it is (a new project: its
-    default); `runs_on`, `orchestrator` and `max_spend_cents` given as null are cleared."""
+    default); `runs_on` and `max_spend_cents` given as null are cleared; an `orchestrator` given is not read."""
 
     model_config = ConfigDict(extra="forbid")
     repo: str = Field(pattern=REPO, description="The workspace's GitHub repo: owner/name, or its github.com address")

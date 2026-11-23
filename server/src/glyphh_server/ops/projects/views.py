@@ -39,7 +39,10 @@ MODE_ABOUT: str = (
     "How the next turn is taken. wait (wait your turn): one bot at a time, the bot that has waited longest and has "
     "something to do; orchestrator: the orchestrator reads the repo and the instructions and names the next bot"
 )
-ORCHESTRATOR_ABOUT: str = "With turn_mode orchestrator: the bot of the crew that picks who goes next; none: Claude"
+ORCHESTRATOR_ABOUT: str = (
+    "The org's orchestrator bot: it picks who goes next with turn_mode orchestrator. "
+    "Never chosen: one given is not read"
+)
 REVIEW_ABOUT: str = (
     "each_turn: each pull request waits for the person's merge or reject before the next turn; end: the turns merge "
     "into the run's own branch as they go, and one pull request of it all waits for the person at the end"
@@ -104,7 +107,7 @@ class ProjectIn(BaseModel):
 
 
 class ProjectPatch(BaseModel):
-    """What is given is changed; `runs_on`, `orchestrator` and `max_spend_cents` given as null are cleared."""
+    """What is given is changed; `runs_on` and `max_spend_cents` given as null are cleared."""
 
     model_config = ConfigDict(extra="forbid")
     name: str | None = Field(None, min_length=1, max_length=80, description="Its name; its slug stays")

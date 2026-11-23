@@ -1,0 +1,54 @@
+{
+  "slug": "lead-scoring",
+  "name": "Lead Scoring",
+  "summary": "Scores the leads you give it as hot, warm or cold and adds the hot ones to your Google Sheet",
+  "look": {"head": "tall", "tail": "long", "eye": "star", "extra": "bolt", "accessory": "cap", "pose": "hop"},
+  "model": "claude-sonnet-5-5",
+  "instructions": "You are Lead Scoring. You read leads exactly as given and never invent a company, a role or a need. For a hot lead you suggest one honest first line for the call.",
+  "skills": {
+    "rows": "---\nname: rows\ndescription: How a lead becomes a sheet row\n---\n\nEach row is, in order: date (today, YYYY-MM-DD), name, company, role, what they asked for, a suggested first line for the call. Empty cells stay empty strings.\n"
+  },
+  "spec": {
+    "takes": "the leads to score, pasted in any form",
+    "try": "Ana Ruiz, ana@acme.com, VP Engineering at Acme, asked for a demo",
+    "touches": "sends",
+    "seed": {"personality": ["Honest and quick."], "instructions": ["A lead who asked for pricing or a demo is at least warm."]},
+    "gates": {
+      "score": {
+        "case": {"l": {"s": {"company": "$item.company", "role": "$item.role", "asked": "$item.asked", "id": "$item.email"}}},
+        "outcomes": ["hot", "warm", "cold"],
+        "question": "How hot is this lead?",
+        "ask_below": 0.8,
+        "default": "warm",
+        "spec": {
+          "name": "score",
+          "layers": [{"name": "l", "segments": [{"name": "s", "roles": [
+            {"name": "company", "text_encoding": "bag_of_words"},
+            {"name": "role", "text_encoding": "bag_of_words"},
+            {"name": "asked", "text_encoding": "bag_of_words"},
+            {"name": "id", "key_part": true, "similarity_weight": 0}
+          ]}]}],
+          "output": {"ask_below": 0.8}
+        }
+      }
+    },
+    "loop": [
+      {"id": "leads", "agent": "Read these leads into a list, one object per lead: $input",
+       "schema": {"type": "object", "required": ["leads"], "properties": {"leads": {"type": "array", "items": {
+         "type": "object", "required": ["name", "email"],
+         "properties": {"name": {"type": "string"}, "email": {"type": "string"}, "company": {"type": "string"},
+                        "role": {"type": "string"}, "asked": {"type": "string"}}}}}}},
+      {"id": "score", "gate": "score", "each": "$leads.leads", "label": "name", "key": "email",
+       "on": {"empty:hot": "end"},
+       "empty": "None of these leads scored hot, so nothing was added to your sheet."},
+      {"id": "rows", "agent": "Write one sheet row for each of these hot leads: $score.hot", "skill": "rows",
+       "schema": {"type": "object", "required": ["rows"],
+                  "properties": {"rows": {"type": "array", "items": {"type": "array", "items": {"type": "string"}}}}}},
+      {"id": "sheet", "run": "google_sheets-add-multiple-rows", "approval": "add the hot leads to your sheet",
+       "input": {"sheetId": "Leads", "worksheetId": "Hot", "rows": "$rows.rows"}}
+    ],
+    "limits": {"seconds": 300, "agent_turns": 3, "max_items": 50}
+  },
+  "apps": ["google_sheets"],
+  "tools": ["google_sheets-add-multiple-rows"]
+}

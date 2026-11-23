@@ -27,7 +27,7 @@ async def test_claude_trains_a_bot_through_the_connector(served: Served, engine:
     assert text.startswith("2 decisions; next page: cursor ") and "by you" in text
     rest = await tool(served.http, auth, "bot_decisions", slug="inbox-cat", q="won")
     won = rest["structuredContent"]["decisions"][0]
-    assert rest["content"][0]["text"].splitlines()[1].startswith("[skip] You won! (gate worth, by you;")
+    assert rest["content"][0]["text"].splitlines()[1].startswith("[skip] You won! (decision worth, by you;")
     served.ada.rule[GATE] = lambda case: ("answer", 0.9)
     one = (await tool(served.http, auth, "bot_decision", decision_id=won["id"]))["content"][0]["text"]
     assert "subject: You won!" in one and "p1: answer, 100% alike" in one and "Outcomes: answer, skip" in one
@@ -41,9 +41,9 @@ async def test_claude_trains_a_bot_through_the_connector(served: Served, engine:
     assert "confirmed right" in sure["content"][0]["text"]
     item = {"id": "m7", "subject": "Invoice due"}
     added = await tool(served.http, auth, "bot_add_case", slug="inbox-cat", gate="worth", outcome="answer", item=item)
-    assert "[answer] Invoice due (gate worth, by you" in added["content"][0]["text"]
+    assert "[answer] Invoice due (decision worth, by you" in added["content"][0]["text"]
     gone = await tool(served.http, auth, "bot_forget_case", slug="inbox-cat", gate="worth", precedent_id="p1")
-    assert gone["content"][0]["text"].startswith("Gate worth forgot p1; it holds ")
+    assert gone["content"][0]["text"].startswith("Decision worth forgot p1; it holds ")
     stats = await tool(served.http, auth, "bot_gate_stats", slug="inbox-cat")
     assert stats["content"][0]["text"].startswith("worth: 2 decisions (Ada 0, you 2, default 0); asks 100%")
     served.ada.rule[GATE] = lambda case: ("answer", 0.5)

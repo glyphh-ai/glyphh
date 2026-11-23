@@ -1,5 +1,5 @@
-"""What an application's words show of how it was written, for the Resume Screener's `made` gate (how much of it was
-generated) and `source` gate: counts, not a model. Ada learns from the person's precedents what these counts mean
+"""What an application's words show of how it was written, for the Resume Screener's `made` decision (how much of it
+was generated) and `source` one: counts, not a model. Ada learns from the person's precedents what these counts mean
 for them; this only measures. Stock phrases (the stock words of generated job applications) per thousand words and
 which ones, how evenly long its sentences are (people's vary more), how many specific numbers it gives, its long
 dashes, and its links."""

@@ -25,8 +25,10 @@ class BotDraft(BaseModel):
     mascot: str = Field("", description="Its own drawn mascot (SVG), in place of the cat; empty for the cat")
     instructions: str
     model: str
-    spec: dict[str, Any]
-    skills: dict[str, str] = Field(default_factory=dict)
+    spec: dict[str, Any] = Field(default_factory=dict, description="What it decides and may reach")
+    task: str = Field("", description="What it does when it runs on its own")
+    examples: list[str] = Field(default_factory=list, description="Prompts a person might type")
+    skills: dict[str, str] = Field(default_factory=dict, description="Its notes: its know-how, each a SKILL.md")
     apps: list[AppNeed] = Field(default_factory=list, description="The services it needs a connection to")
     connections: list[ScopeIn] = Field(
         default_factory=list, description="Its apps' tools scoped to the org's connections: POST /v1/bots takes them"

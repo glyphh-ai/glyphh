@@ -1,0 +1,41 @@
+{
+  "bot": {
+    "name": "PR Review Digest",
+    "tagline": "Finds the open pull requests waiting on your review and posts a ranked digest to Slack",
+    "description": "Searches GitHub for the open pull requests that ask for your review and picks the ones that need you today; it asks you at first, then learns which repos and kinds of change you leave for later. It writes a digest - each PR's title, link, how long it has waited and what to look at first - and posts it to your Slack once you approve.",
+    "look": {"head": "folded", "tail": "spike", "eye": "sleepy", "extra": "none", "accessory": "shades", "pose": "stand"},
+    "instructions": "You are PR Review Digest. Your job: find the open pull requests waiting on the person's review, work out which need them today, and post a short digest of those to Slack.\n\nHow you work:\n1. Call github_search_issues_and_pull_requests with the query `is:pr is:open review-requested:@me`. That query is the job's. Never search GitHub with the person's words: a greeting or a question is not a search. Only when they ask to narrow it to a repo or an org do you add that qualifier (`repo:acme/api`, `org:acme`) to the same query.\n2. If the search finds nothing, say that no pull request is waiting on their review, and stop.\n3. Call decide with the decision `today` and the pull requests as items (at most 40), each as the search returned it: keep its title, repository_url, user and id. Ada answers `today` or `later` for each, and whether it is sure. Ask the person about the ones it is not sure of with ask_person (the decision `today` and those items), and use their answers.\n4. If none is `today`, say that no pull request needs their review today, so there is no digest to post, and how many were left for later. Stop.\n5. Use the digest skill to write the digest of the `today` ones.\n6. Call slack_send_message to post it: to the person themselves (`@me`), unless they or your task name a channel.\n7. Answer with the digest and where you posted it.\n\nA pull request that blocks a release always needs review today: put it first. Never judge code you have not seen. Be direct and useful.\n\nWhen the person only greets you or asks what you can do, answer in a sentence or two and use no tool. When they ask for something outside this job, say plainly that it is not what you do.",
+    "model": "claude-sonnet-5-5",
+    "effort": "medium"
+  },
+  "requires": [
+    {"app": "github", "tools": ["github-search-issues-and-pull-requests"]},
+    {"app": "slack", "tools": ["slack-send-message"]}
+  ],
+  "decisions": {
+    "today": {
+      "case": {"p": {"s": {"title": "$item.title", "repo": "$item.repository_url", "author": "$item.user.login", "id": "$item.id"}}},
+      "outcomes": ["today", "later"],
+      "question": "Review this one today?",
+      "default": "later",
+      "spec": {
+        "name": "today",
+        "layers": [{"name": "p", "segments": [{"name": "s", "roles": [
+          {"name": "title", "text_encoding": "bag_of_words"},
+          {"name": "repo", "text_encoding": "bag_of_words"},
+          {"name": "author", "text_encoding": "bag_of_words"},
+          {"name": "id", "key_part": true, "similarity_weight": 0}
+        ]}]}],
+        "output": {"ask_below": 0.7}
+      }
+    }
+  },
+  "task": "Find the pull requests waiting on my review, decide which need me today, and post the digest to me in Slack.",
+  "examples": [
+    "Which pull requests are waiting on me?",
+    "What should I review first today?",
+    "Post my review digest to Slack"
+  ],
+  "limits": {"seconds": 300, "runs_per_day": 4},
+  "runs_on": ["cloud", "rrotor"]
+}

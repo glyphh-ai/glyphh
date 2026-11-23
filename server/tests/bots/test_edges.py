@@ -1,6 +1,5 @@
-"""The bots' edges: Pipedream failing every way it can, a run failing before or while it runs, an answer that came too
-late or does not fit, a bot busy with a run, a connection gone since it was scoped, and a run cut off by the server
-stopping."""
+"""The bots' edges: Pipedream failing every way it can, a run that fails outside its turn, a run cut off by the server
+stopping (and one that waited, carried on after it), and a server that starts without its database."""
 
 import asyncio
 import uuid
@@ -13,25 +12,27 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from glyphh_server.config import Settings
 from glyphh_server.errors import Unavailable
 from glyphh_server.ops.bots import props, runs
+from glyphh_server.ops.bots.agent import session
+from glyphh_server.ops.bots.agent.turn import Ended, Turn
 from glyphh_server.ops.bots.pipedream import Pipedream
-from tests.bots.conftest import BOTS, Served, connected, made_bot, serve
-from tests.bots.fakes import FakePipedream
-from tests.bots.test_runs import answered, started
-from tests.db.helpers import person
+from tests.bots.agents import SESSION, play
+from tests.bots.conftest import BOTS, DECIDE, SEND, Served, answered, connected, made_bot, ran, run_of, serve
+from tests.bots.fakes import MAIL, FakePipedream
+from tests.db.helpers import Person
+
+REPLY: dict[str, Any] = {"to": ["grace@navy.test"], "subject": "Re: Lunch", "body": "Happy to."}
+LINE: dict[str, Any] = {"type": "user", "uuid": "u-1"}
 
 
-async def test_pipedream_down_or_unreachable_is_unavailable_and_a_refusal_invalid(
-    served: Served, engine: AsyncEngine
-) -> None:
-    ada = await person(engine)
-    gmail = await connected(served, ada)
+async def test_pipedream_down_or_unreachable_is_unavailable_and_a_refusal_invalid(served: Served, ana: Person) -> None:
+    gmail = await connected(served, ana)
     for mode, status in (("down", 503), ("broken", 503), ("refusing", 422)):
         served.pd.mode = mode
-        res = await served.http.delete(f"/v1/connections/{gmail['id']}", headers=ada.headers)
+        res = await served.http.delete(f"/v1/connections/{gmail['id']}", headers=ana.headers)
         assert res.status_code == status, (mode, res.text)
     served.pd.mode = ""
     served.pd.accounts = []  # gone at Pipedream already: deleting it here still works
-    assert (await served.http.delete(f"/v1/connections/{gmail['id']}", headers=ada.headers)).status_code == 204
+    assert (await served.http.delete(f"/v1/connections/{gmail['id']}", headers=ana.headers)).status_code == 204
 
 
 async def test_pipedream_off_refuses_before_any_call() -> None:
@@ -45,75 +46,71 @@ def test_an_action_without_an_app_prop_is_run_with_the_callers_values_only() -> 
     assert props.configured(defined, "apn_1", {"q": "x", "other": 1}) == {"q": "x"}
 
 
-async def test_a_run_failing_before_its_loop_says_why_and_has_no_gate_to_correct(
-    served: Served, engine: AsyncEngine
+async def test_a_run_that_fails_outside_its_turn_says_why_and_its_session_goes(
+    served: Served, ana: Person, engine: AsyncEngine
 ) -> None:
-    ada = await person(engine)
-    await made_bot(served, ada)
-    bots = served.app.state.bots
+    bot = await made_bot(served, ana, connections=[])
+    seen: list[Any] = []
 
     def no_ada(key: str) -> Any:
         raise RuntimeError("socket closed")
 
-    bots.ada_for = no_ada
-    run = await started(served, ada)
+    async def go(turn: Turn) -> Ended:
+        await turn.store.append({"session_id": SESSION}, [LINE])  # as the SDK mirrors the turn while it runs
+        seen.append(await turn.store.load({"session_id": SESSION}))
+        return await play((DECIDE, {"decision": "worth", "items": MAIL}))(turn)
+
+    served.app.state.bots.ada_for = no_ada
+    served.agent.script = [go]
+    run = await ran(served, ana, bot["slug"], "What is worth answering?")
     assert (run["status"], run["error"]) == ("failed", "The run failed: RuntimeError: socket closed")
-    res = await served.http.post(f"/v1/bot-runs/{run['id']}/wrong", json={"outcome": "skip"}, headers=ada.headers)
-    assert res.status_code == 422 and "passed no gate" in res.json()["error"]["message"]
-
-    async def off(bot: Any) -> Any:
-        raise Unavailable("Anthropic is off.", reason="anthropic_off")
-
-    bots.claude_of = off
-    assert (await started(served, ada))["error"] == "Anthropic is off."
+    assert run["summary"] == "It failed: The run failed: RuntimeError: socket closed." and run["finished_at"]
+    store = session.Sessions(engine, ana.org_id, uuid.UUID(run["id"]))
+    assert seen == [[LINE]] and await store.load({"session_id": SESSION}) is None
+    res = await served.http.post(f"/v1/bot-runs/{run['id']}/wrong", json={"outcome": "skip"}, headers=ana.headers)
+    assert res.status_code == 422 and "decided nothing with Ada" in res.json()["error"]["message"]
 
 
-async def test_an_answer_that_does_not_fit_or_comes_too_late_is_refused(
-    served: Served, engine: AsyncEngine, monkeypatch: pytest.MonkeyPatch
+async def test_a_stopped_server_cuts_off_the_run_that_was_going_and_one_that_waited_carries_on_after(
+    engine: AsyncEngine, ana: Person
 ) -> None:
-    ada = await person(engine)
-    await made_bot(served, ada)
-    run = await answered(served, ada, await started(served, ada), "1=answer 2=skip")
-    res = await served.http.post(f"/v1/bot-runs/{run['id']}/answer", json={"answer": "maybe"}, headers=ada.headers)
-    assert res.status_code == 422 and res.json()["error"]["options"] == ["yes", "no"]
+    begun = asyncio.Event()
 
-    async def taken(*_: Any) -> bool:
-        return False  # another answer carried it on first
-
-    monkeypatch.setattr(runs, "queue", taken)
-    res = await served.http.post(f"/v1/bot-runs/{run['id']}/answer", json={"answer": "yes"}, headers=ada.headers)
-    assert res.status_code == 409
-    assert (await served.http.get(f"/v1/bot-runs/{uuid.uuid4()}", headers=ada.headers)).status_code == 404
-
-
-async def test_a_connection_gone_since_it_was_scoped_fails_the_step_that_uses_it(
-    served: Served, engine: AsyncEngine
-) -> None:
-    ada = await person(engine)
-    bot = await made_bot(served, ada)
-    served.pd.accounts = []
-    await served.http.post("/v1/connections/sync", headers=ada.headers)
-    gone = bot["connections"][0]["connection_id"]
-    assert (await served.http.delete(f"/v1/connections/{gone}", headers=ada.headers)).status_code in (204, 404)
-    run = await started(served, ada)
-    assert run["status"] == "failed" and "gmail-find-email" in run["error"]
-
-
-async def test_a_bot_with_a_run_going_is_busy_and_a_stopped_server_cuts_the_run_off(engine: AsyncEngine) -> None:
-    held = asyncio.Event()
-
-    async def holding(bot: Any) -> Any:
-        held.set()
+    async def holding(turn: Turn) -> Ended:
+        await turn.store.append({"session_id": SESSION}, [LINE])
+        begun.set()
         await asyncio.Event().wait()  # never: the server stops first
+        raise AssertionError("unreachable")
 
     async for s in serve(BOTS, FakePipedream()):
-        ada = await person(engine)
-        await made_bot(s, ada)
-        s.app.state.bots.claude_of = holding
-        res = await s.http.post("/v1/bots/inbox-cat/runs", json={"input": "x"}, headers=ada.headers)
-        await held.wait()
-        busy = await s.http.get("/v1/bots/inbox-cat/gates", headers=ada.headers)
-        assert busy.status_code == 409 and "has a run going" in busy.json()["error"]["message"]
-    async for s in serve(BOTS, FakePipedream()):
-        run = (await s.http.get(f"/v1/bot-runs/{res.json()['id']}", headers=ada.headers)).json()
-        assert run["status"] == "failed" and run["error"] == "interrupted by a restart"
+        gmail = await connected(s, ana, allow=False)
+        scopes = [{"connection_id": gmail["id"], "tools": ["gmail-send-email"]}]
+        asker = await made_bot(s, ana, name="Asker", connections=scopes)
+        s.agent.script = [play((SEND, REPLY))]
+        waits = await ran(s, ana, asker["slug"], "Reply to Grace")
+        assert waits["status"] == "needs_input"
+        worker = await made_bot(s, ana, name="Worker", connections=[])
+        s.agent.script = [holding]
+        going = await s.http.post(f"/v1/bots/{worker['slug']}/runs", json={"input": "x"}, headers=ana.headers)
+        await begun.wait()
+    kept = session.Sessions(engine, ana.org_id, uuid.UUID(going.json()["id"]))
+    assert await kept.load({"session_id": SESSION}) == [LINE]
+    async for s in serve(BOTS, FakePipedream()):  # the server starts again (a deploy, a restart)
+        cut = await run_of(s, ana, going.json()["id"])
+        assert (cut["status"], cut["error"]) == ("failed", "interrupted by a restart") and cut["finished_at"]
+        assert cut["summary"] == "It was cut off by a restart before it finished. Run it again."
+        assert await kept.load({"session_id": SESSION}) is None  # its session went with it
+        assert (await run_of(s, ana, waits["id"]))["status"] == "needs_input"  # a run that waits is not cut off
+        s.agent.script = [play((SEND, REPLY), text="Sent.")]
+        done = await answered(s, ana, waits["id"], "yes")
+        assert (done["status"], done["output"]) == ("done", "Sent.") and len(s.pd.runs) == 1
+        assert s.agent.turns[0].session == SESSION and "said yes" in s.agent.turns[0].message  # its own session
+        assert await s.app.state.bots.recover() == 0  # nothing more of this machine's was cut off
+
+
+async def test_a_server_whose_database_is_away_starts_anyway(served: Served, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def away(*_: Any) -> int:
+        raise ConnectionRefusedError("the database is away")
+
+    monkeypatch.setattr(runs, "recover", away)
+    assert await served.app.state.bots.recover() == 0

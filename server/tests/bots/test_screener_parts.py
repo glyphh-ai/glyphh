@@ -1,7 +1,7 @@
 """The Resume Screener's parts one at a time: Gmail read through the proxy (text or HTML, attachments inline or
 fetched, the kinds and sizes left out, labels kept), resumes read and their fields, the signals, the sender checks,
-what the person hands in, the probe with no reference or no precedent, the verdicts put together, a seed set named
-that Glyphh does not ship, and built-in tools called by a bot on a rrotor."""
+what the person hands in, the probe's reference measured (and a decision with no precedent), the verdicts as inbox
+labels, a seed set named that Glyphh does not ship, and the built-in tools called by a bot on a rrotor."""
 
 import json
 import uuid
@@ -15,10 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from glyphh_server.errors import Invalid
 from glyphh_server.ops.bots import applicants, builtins, gmail, probe, resumes, seeds, signals, verdicts
 from glyphh_server.ops.bots.pipedream import Pipedream
-from tests.bots.conftest import BOTS
+from tests.bots.conftest import BOTS, inbox
 from tests.bots.mailbox import FakeGmail, b64, docx, message, pdf
-from tests.bots.remote import OnRrotor, rrotor_fixture  # noqa: F401 (the fixture)
-from tests.bots.test_tool_calls import _call, _out
+from tests.bots.remote import OnRrotor, out, rrotor_fixture  # noqa: F401 (the fixture)
 
 
 def _gmail(fake: FakeGmail) -> gmail.Gmail:
@@ -115,14 +114,18 @@ async def test_the_inbox_tools_without_gmail_say_so() -> None:
     assert (handed["applications"][0]["has_resume"], handed["polled"]) == ("no", 0)
 
 
-def test_verdicts_waiting_and_confidence_unknown() -> None:
-    apps = [{"id": "a"}, {"id": "b"}, {"id": "c"}]
-    got = verdicts.merged({"applications": apps, "source": [{"key": "b", "outcome": "real", "by": "default"},
-                                                          {"key": "c", "outcome": "real", "by": "ada", "p": 0.8}],
-                           "fit": [{"key": "c", "outcome": None, "by": "deferred"}]})  # fmt: skip
-    assert [v["verdict"] for v in got["verdicts"]] == ["waiting", "waiting", "waiting"]
-    assert got["verdicts"][1]["source"] == {"outcome": "real", "confidence": None, "by": "default"}
-    assert got["summary"] == "3 waiting" and verdicts.marks(got) == {}
+def test_verdicts_become_inbox_labels_and_what_is_not_a_screened_message_gets_none() -> None:
+    given = {
+        "verdicts": [{"id": "m1", "verdict": "strong"}, {"id": "m2", "verdict": "spam"}, {"id": 7, "verdict": "poor"},
+                     {"id": "m3", "verdict": "waiting"}, {"id": "given-1", "verdict": "poor"}, {"verdict": "poor"},
+                     "m9", None],
+        "rejected": [{"id": "m4", "why": "it has no sender"}, {"id": "given-2"}, {}, "m8"],
+    }  # fmt: skip
+    assert verdicts.marks(given) == {
+        "Screened": ["m1", "m2", "7", "m4"], "Screened/Strong": ["m1"], "Screened/Poor": ["7"],
+        "Screened/Spam": ["m2", "m4"],
+    }  # fmt: skip
+    assert verdicts.marks({}) == {} and verdicts.marks({"verdicts": "all strong", "rejected": None}) == {}
 
 
 def test_a_seed_set_glyphh_does_not_ship_is_refused() -> None:
@@ -131,22 +134,31 @@ def test_a_seed_set_glyphh_does_not_ship_is_refused() -> None:
         seeds.named({"gates": {"g": {"seed_from": "nope"}, "h": {"seed_from": "resume-screener"}}})
 
 
-def test_the_probe_unseeded_sends_all_on_and_one_with_no_precedent_is_human() -> None:
+def test_the_probes_reference_is_measured_over_cases_and_a_decision_with_no_precedent_has_no_nearest() -> None:
     held: dict[str, str] = {}
-    model = SimpleNamespace(decide=lambda case: SimpleNamespace(receipts=[{"sim": "x"}]))
-    bot = SimpleNamespace(gates={"made": {"case": {"x": "$item.id"}}}, gate_model=lambda name: "m")
-    ctx = SimpleNamespace(bot=bot, state=held.get, ada=SimpleNamespace(model=lambda name: model))
-    apps = {"applications": [{"id": "a"}, "junk"], "gate": "made"}
-    assert probe.probed(ctx, apps) == {"generated": [{"id": "a"}], "human": [], "reference": None}
-    assert probe.probed(ctx, "junk") == {"generated": [], "human": [], "reference": None}
-    held[probe.KEY + "made"] = json.dumps({"p5": 0.5, "n": 3})
-    assert probe.probed(ctx, apps)["human"] == [{"id": "a", "nearest": None}]
+    sims = {"a": [{"sim": 0.2}, {"sim": 0.9}, "junk"], "b": [{"sim": 0.4}], "c": [{"sim": "x"}], "d": None}
+    model = SimpleNamespace(decide=lambda case: SimpleNamespace(receipts=sims[case["id"]]))
+    runner = SimpleNamespace(
+        ada=SimpleNamespace(model=lambda name: model),
+        bot=SimpleNamespace(gate_model=lambda name: f"bot-x-gate-{name}"),
+        store=SimpleNamespace(set_state=held.__setitem__),
+    )
+    assert probe.nearest(model, {"id": "a"}) == 0.9 and probe.nearest(model, {"id": "c"}) is None
+    assert probe.nearest(model, {"id": "d"}) is None  # it holds no precedent: nothing is near
+    reference = probe.measure(runner, "made", [{"data": {"id": k}} for k in sims])
+    assert reference == {"p5": 0.4, "p25": 0.4, "p50": 0.4, "p75": 0.9, "p95": 0.9, "n": 2}
+    assert json.loads(held[probe.KEY + "made"]) == reference
     assert probe.spread([]) == {"n": 0} and probe.spread([0.2, 0.9])["p5"] == 0.2
 
 
 async def test_a_bot_on_a_rrotor_calls_a_built_in_tool(on_rrotor: OnRrotor, engine: AsyncEngine) -> None:
-    _, _, run_id, token = await _out(on_rrotor, engine)
-    status, got = await _call(on_rrotor, run_id, token, "screen_verdicts", {"applications": []})
-    assert (status, got["result"]["summary"]) == (200, "no new applications")
-    status, got = await _call(on_rrotor, run_id, token, "probe_generated", {"applications": [{"id": "a"}]})
-    assert (status, got["result"]["generated"], got["result"]["reference"]) == (200, [{"id": "a"}], None)
+    spec = inbox(builtins=["inbox_applications", "inbox_label", "probe_generated", "screen_verdicts"])
+    _, _, run = await out(on_rrotor, engine, spec=spec)
+    assert {"inbox_applications", "inbox_label"} <= {t["name"] for t in on_rrotor.call().inputs["tools"]}
+    got = await on_rrotor.tool(run["id"], "inbox_applications", {"given": {"letter": "I'd like the job."}})
+    assert (got["result"]["applications"][0]["has_resume"], got["result"]["polled"]) == ("no", 0)
+    assert "no Gmail connection" in (await on_rrotor.tool(run["id"], "inbox_applications", {}))["error"]
+    asked = await on_rrotor.tool(run["id"], "inbox_label", {"verdicts": [{"id": "m1", "verdict": "poor"}]})
+    assert asked == {"ask": True, "question": "Label the screened mail?"}  # an action: the person is asked first
+    for gone in ("probe_generated", "screen_verdicts"):  # no longer tools: the agent decides with `decide`
+        assert (await on_rrotor.tool(run["id"], gone, {"applications": []}))["error"].startswith("There is no tool")

@@ -1,0 +1,5 @@
+{
+  "name": "inbox-triage",
+  "version": "1.0.0",
+  "description": "Inbox Triage: picks the unread mail worth your time and sends you a short digest of it."
+}

@@ -1,8 +1,8 @@
 """Who is calling the bots' routes (/v1/bots*, /v1/bot-runs*, /v1/bot-approvals, /v1/bot-templates*): a person signed
 in as anywhere else (api/auth.py), or a live Ada API key of theirs (glyphh_ak_, glyphh_ada/keys.py), so their own
 code reaches their bots with the key it reaches Ada with (the SDK's bots client). The key acts as the person who made
-it, in their org. A bot's own Ada key (the one its gates use, held where the bot runs, a rrotor too) is never a
-person: refused, as an unknown, revoked or expired key is, with the same answer."""
+it, in their org. A bot's own Ada key (the one its decisions' Ada models use, held where the bot runs, a rrotor
+too) is never a person: refused, as an unknown, revoked or expired key is, with the same answer."""
 
 from typing import Annotated
 

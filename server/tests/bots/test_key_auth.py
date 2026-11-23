@@ -6,9 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_ada import keys
 from glyphh_server.db import tenancy
-from tests.bots.conftest import Served, made_bot
+from tests.bots.agents import play
+from tests.bots.conftest import Served, asks, made_bot
+from tests.bots.fakes import MAIL
 from tests.db.helpers import Person, person
 from tests.link import principal
+
+ASKS = asks(MAIL)  # the person is asked
 
 
 async def _key(engine: AsyncEngine, who: Person) -> tuple[str, object]:
@@ -25,6 +29,7 @@ async def test_a_persons_ada_key_reaches_their_bots(served: Served, engine: Asyn
     bearer = {"authorization": f"Bearer {key}"}
     listed = await served.http.get("/v1/bots", params={"q": "inbox"}, headers=bearer)
     assert listed.status_code == 200 and [b["slug"] for b in listed.json()["bots"]] == ["inbox-cat"]
+    served.agent.script = [play(ASKS)]
     run = await served.http.post("/v1/bots/inbox-cat/runs", json={"input": "x"}, headers=bearer)
     assert run.status_code == 202, run.text
     await served.settled()
@@ -39,9 +44,10 @@ async def test_a_persons_ada_key_reaches_their_bots(served: Served, engine: Asyn
 async def test_an_unknown_key_and_a_bots_own_key_are_refused(served: Served, engine: AsyncEngine) -> None:
     ada = await person(engine)
     await made_bot(served, ada)
+    served.agent.script = [play(ASKS)]
     await served.http.post("/v1/bots/inbox-cat/runs", json={"input": "x"}, headers=ada.headers)
     await served.settled()
-    own = served.ada.keys[0]  # the bot's own Ada key, as its gates use it
+    own = served.ada.keys[0]  # the bot's own Ada key, as its decisions use it
     for key in ("glyphh_ak_nope", own):
         for path in ("/v1/bots", "/v1/bot-approvals"):
             res = await served.http.get(path, headers={"authorization": f"Bearer {key}"})

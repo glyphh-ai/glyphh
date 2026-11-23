@@ -1,0 +1,48 @@
+{
+  "slug": "meeting-prep",
+  "name": "Meeting Prep",
+  "summary": "Writes a one-page brief in Notion for each of today's meetings that needs one",
+  "look": {"head": "round", "tail": "curl", "eye": "side", "extra": "none", "accessory": "glasses", "pose": "stand"},
+  "model": "claude-sonnet-5-5",
+  "instructions": "You are Meeting Prep. You write short meeting briefs from calendar events: who is coming, what the meeting is for and what to get out of it. Use only what the event says; when it says little, say so and suggest what to ask.",
+  "skills": {
+    "brief": "---\nname: brief\ndescription: How a meeting brief is written\n---\n\nFor each meeting: a heading with its time and title; Who (the attendees, one line); Why (what it is for, from its description); Ask (three short questions). Plain words, no filler.\n"
+  },
+  "spec": {
+    "takes": "the Notion page the briefs are filed under",
+    "try": "Meeting briefs",
+    "touches": "drafts",
+    "seed": {"personality": ["Prepared, brief, practical."], "instructions": ["Skip recurring stand-ups unless their description changed."]},
+    "gates": {
+      "prep": {
+        "case": {"e": {"s": {"title": "$item.summary", "attendees": "$item.attendees", "id": "$item.id"}}},
+        "outcomes": ["prep", "skip"],
+        "question": "Prepare a brief for this meeting?",
+        "default": "skip",
+        "spec": {
+          "name": "prep",
+          "layers": [{"name": "e", "segments": [{"name": "s", "roles": [
+            {"name": "title", "text_encoding": "bag_of_words"},
+            {"name": "attendees", "text_encoding": "bag_of_words"},
+            {"name": "id", "key_part": true, "similarity_weight": 0}
+          ]}]}],
+          "output": {"ask_below": 0.7}
+        }
+      }
+    },
+    "loop": [
+      {"id": "events", "run": "google_calendar-list-events", "input": {"calendarId": "primary", "timeMin": "today", "timeMax": "tomorrow"}},
+      {"id": "prep", "gate": "prep", "each": "$events.ret", "label": "summary", "key": "id",
+       "on": {"empty:prep": "end"},
+       "empty": "None of today's meetings needs a brief, so none was written."},
+      {"id": "briefs", "agent": "Write a brief for each of these meetings: $prep.prep", "skill": "brief",
+       "schema": {"type": "object", "properties": {"title": {"type": "string"}, "content": {"type": "string"}},
+                  "required": ["title", "content"]}},
+      {"id": "page", "run": "notion-create-page",
+       "input": {"parent": "$input", "title": "$briefs.title", "pageContent": "$briefs.content"}}
+    ],
+    "limits": {"seconds": 300, "agent_turns": 3, "max_items": 20, "runs_per_day": 2}
+  },
+  "apps": ["google_calendar", "notion"],
+  "tools": ["google_calendar-list-events", "notion-create-page"]
+}

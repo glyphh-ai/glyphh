@@ -88,3 +88,20 @@ def test_a_result_naming_a_ui_resource_comes_back_without_a_page() -> None:
     assert shown.apps(run(a=bad)) == []
     many = {f"s{n}": result for n in range(9)}
     assert len(shown.apps(run(**many))) == shown.APPS_MAX
+
+
+def test_the_steps_a_run_used_are_what_its_desk_noted_in_order() -> None:
+    noted = [
+        {"tool": "gmail-find-email", "title": "Find Email", "app": "Gmail", "ok": True},
+        {"tool": "decide", "title": "Decided worth for 2 items", "app": "Ada", "ok": True},
+        {"tool": "gmail-send-email", "title": "Send Email", "app": "Gmail", "ok": False},
+    ]
+    got = shown.steps(run(_steps=noted, worth={"decisions": []}))
+    assert [(s.tool, s.title, s.app, s.ok) for s in got] == [
+        ("gmail-find-email", "Find Email", "Gmail", True),
+        ("decide", "Decided worth for 2 items", "Ada", True),
+        ("gmail-send-email", "Send Email", "Gmail", False),
+    ]
+    assert shown.steps(run()) == [] and shown.steps(run(_steps=None)) == []
+    assert shown.steps(SimpleNamespace(data=None)) == []  # a run with nothing kept
+    assert shown.links(run(_steps=[{"url": PR}])) == []  # what the desk noted is not what the run made

@@ -1,4 +1,4 @@
-"""An application as the Resume Screener's gates read it (ops/bots/builtins.py): one email (or a resume the person
+"""An application as the Resume Screener's decisions read it (ops/bots/builtins.py): one email (or a resume the person
 hands it) made into one item: who sent it and whether their domain vouched for it (SPF, DKIM, DMARC), whether it was
 sent in bulk, the role it is for (from its subject), the resume's fields (ops/bots/resumes.py) and how its words
 were written (ops/bots/signals.py). The hard checks come first, in code: a message whose sender's domain did not

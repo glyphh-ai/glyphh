@@ -1,4 +1,4 @@
-"""A bot's decisions read and its gates trained, for the routes and the connector's tools alike (docs/specs/bots.md,
+"""A bot's decisions read and trained, for the routes and the connector's tools alike (docs/specs/bots.md,
 11): each on transactions of its own, the person's org entered, so a tool runs it as a route does."""
 
 import uuid

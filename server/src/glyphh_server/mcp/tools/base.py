@@ -31,6 +31,7 @@ class Context:
     signing_key: Ed25519PrivateKey
     ada: Any = None  # the Ada app's state (glyphh_ada.api.make_app) while Ada Cloud is on: its tools call through it
     bots: Any = None  # the hosted bots (ops/bots/service.py): Pipedream, the runs
+    progress: Any = None  # async (str) -> None: a progress notification streamed to the client (api/mcp_stream.py)
 
     def stripe(self) -> StripeClient:
         cfg = self.settings

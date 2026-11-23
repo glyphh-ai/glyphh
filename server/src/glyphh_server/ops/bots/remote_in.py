@@ -1,27 +1,21 @@
-"""What a bot's run on a rrotor is sent (glyphh_bot's `run`, docs/specs/bots.md, 9): its package as files by path (as
-the cloud writes it, ops/bots/package.py, with the approvals its permission mode adds: cloud.guarded), the runner's
-state, what it is given or the answer it carries on with, its Ada by its own key, its Claude (the rrotor's: the org's
-Anthropic key set there) and how hard it works (the bot's effort), and where its tools are: POST tool_url (this
-server, https) with tool_token, a token minted for this run alone, short-lived (it is kept in the run's record on the
-machine): its run and org, signed."""
+"""What a bot's run on a rrotor is sent (glyphh_bot's `agent`, rrotor 0.9.0; docs/specs/bot-agent-loop.md, 6.2): the
+turn itself (the bot's system prompt, the message, its model, effort and limits), the tools that live on this server
+(each by name, with what it does and takes: the rrotor calls them at tool_url), its plugins as files by path, and
+where its tools are: POST tool_url (this server, https) with tool_token, a token minted for this run alone,
+short-lived (it is kept in the run's record on the machine): its run and org, signed."""
 
-import base64
-import tempfile
 import uuid
-from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
 
 from glyphh_server.config import Settings
 from glyphh_server.errors import GlyphhError, Invalid, Unauthorized
 from glyphh_server.ops.auth import signed
-from glyphh_server.ops.auth.sealed import unseal
-from glyphh_server.ops.bots import package
+from glyphh_server.ops.bots.agent.turn import Turn
 
 TOKEN_SECONDS: int = 6 * 3600  # a call's tool token: past its run's 30 minutes and its 15-minute waits
 KIND: str = "bot-tool"
 BAD_TOKEN: str = "That is not a tool token of this run."
-NOT_HTTPS: str = "A rrotor reaches this server only over https: its public address and Ada's must be https://."
+NOT_HTTPS: str = "A rrotor reaches this server only over https: its public address must be https://."
 
 
 def mint(secret: str, run_id: uuid.UUID, org_id: uuid.UUID) -> str:
@@ -39,56 +33,32 @@ def opened(secret: str, token: str, run_id: uuid.UUID) -> uuid.UUID:
     return uuid.UUID(said["org"])
 
 
-def files(bot: Any) -> dict[str, str]:
-    """The bot's package by path (the bot as cloud.guarded gives it), as the cloud writes it, without its state (sent
-    beside it)."""
-    with tempfile.TemporaryDirectory(prefix="glyphh-bot-") as d:
-        folder = package.write(Path(d) / "bot", SimpleNamespace(**{**vars(bot), "state": None}))
-        return {
-            p.relative_to(folder).as_posix(): p.read_text("utf-8") for p in sorted(folder.rglob("*")) if p.is_file()
-        }
-
-
-def state(bot: Any) -> str | None:
-    return base64.b64encode(bot.state).decode() if bot.state else None
-
-
 def tool_url(settings: Settings, run_id: uuid.UUID) -> str:
     return f"{settings.base_url}/v1/bots/runs/{run_id}/tool"
 
 
-def inputs(
-    settings: Settings,
-    bot: Any,
-    run_id: uuid.UUID,
-    given: str | None,
-    answer: Any,
-    effort: bool = True,
-    file_tools: bool = False,
-) -> dict[str, Any]:
-    """glyphh_bot's inputs for one call: from the bot's first step (`given`), or carrying on with `answer`. `effort`
-    false leaves the bot's effort out: for a rrotor whose glyphh_bot does not know it (ops/bots/access.py).
-    `file_tools` tells it to give the bot's agent steps the files of its folders (ops/bots/files.py): only for a
-    rrotor whose glyphh_bot knows the input."""
+def inputs(settings: Settings, org_id: uuid.UUID, run_id: uuid.UUID, turn: Turn, found: list[Any]) -> dict[str, Any]:
+    """glyphh_bot's inputs for one call of `agent`: the turn (`turn.session` set: it carries a waiting run on) and
+    the bot's plugins (`found`)."""
     url = tool_url(settings, run_id)
-    if not url.startswith("https://") or not settings.ada_base.startswith("https://"):
+    if not url.startswith("https://"):
         raise Invalid(NOT_HTTPS, reason="not_https")
+    tools = [
+        {"name": t.name, "description": t.description, "input_schema": t.schema, "read_only": t.read_only}
+        for t in turn.tools
+    ]
     sent: dict[str, Any] = {
-        "package": files(bot),
-        "state": state(bot),
-        "ada_base": settings.ada_base,
-        "ada_key": unseal(settings.secret_key, bot.ada_key),
+        "system": turn.system,
+        "message": turn.message,
+        "tools": tools,
+        "plugins": [{"name": p.name, "files": p.files, "code": p.code} for p in found],
+        "skills": turn.skills,
+        "model": turn.model,
+        "effort": turn.effort,
+        "limits": {"turns": turn.turns, "seconds": int(turn.seconds)},
+        "resume": bool(turn.session),
         "tool_url": url,
-        "tool_token": mint(settings.secret_key, run_id, bot.org_id),
-        "model": bot.model,
+        "tool_token": mint(settings.secret_key, run_id, org_id),
         "claude": "api",
     }
-    if effort:
-        sent["effort"] = bot.effort
-    if file_tools:
-        sent["file_tools"] = True
-    if given:
-        sent["given"] = given
-    if answer is not None:
-        sent["answer"] = answer
     return sent

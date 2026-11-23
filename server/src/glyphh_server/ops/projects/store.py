@@ -1,7 +1,7 @@
 """An org's projects (docs/specs/bots.md, 10): made, read, changed and deleted on the request's transaction (the org
-entered). A project's crew is the org's own bots, each once, in no order; its orchestrator, when it has one, is a bot
-of its crew (none: Claude); it runs on Glyphh cloud (runs_on none) or one of the org's rrotors (GET /v1/bots/places).
-Its slug comes from its name and stays; a second of the same slug is refused."""
+entered). A project's crew is the org's own bots, each once, in no order; its orchestrator is the org's orchestrator
+bot, always (one given is not read); it runs on Glyphh cloud (runs_on none) or one of the org's rrotors (GET
+/v1/bots/places). Its slug comes from its name and stays; a second of the same slug is refused."""
 
 import uuid
 from typing import Any
@@ -19,8 +19,7 @@ from glyphh_server.ops.projects.views import Member, ProjectIn, ProjectPatch, Pr
 
 MISSING: str = "There is no such project."
 FIELDS: frozenset[str] = frozenset(ProjectView.model_fields) - {"members", "github_connected"}
-CLEARED: frozenset[str] = frozenset({"runs_on", "orchestrator", "max_spend_cents"})  # null in a patch clears these
-NOT_CREW: str = "A project's orchestrator is a bot of its crew (or none: Claude)."
+CLEARED: frozenset[str] = frozenset({"runs_on", "max_spend_cents"})  # null in a patch clears these
 
 
 def repo(url: str) -> str:
@@ -43,9 +42,10 @@ async def _members(conn: AsyncConnection, given: list[uuid.UUID]) -> list[str]:
     return ids
 
 
-def _led(members: list[str], orchestrator: uuid.UUID | None) -> None:
-    if orchestrator is not None and str(orchestrator) not in members:
-        raise Invalid(NOT_CREW, reason="orchestrator")
+async def _led(conn: AsyncConnection) -> uuid.UUID | None:
+    """Who picks the next bot when a project's turns are the orchestrator's: the org's orchestrator bot, always
+    (docs/specs/bot-agent-loop.md, 8). It is no longer chosen: an `orchestrator` given is not read."""
+    return (await conn.execute(select(Bot.id).where(Bot.role == "orchestrator"))).scalar()
 
 
 async def view(conn: AsyncConnection, project: Any) -> ProjectView:
@@ -80,9 +80,9 @@ async def _saved(conn: AsyncConnection, statement: Any, slug: str) -> Any:
 async def create(conn: AsyncConnection, who: Principal, body: ProjectIn, slug: str = "") -> ProjectView:
     slug = slug or slugify(body.name)
     members = await _members(conn, body.members)
-    _led(members, body.orchestrator)
     values: dict[str, Any] = {
-        **body.model_dump(exclude={"members", "runs_on"}),
+        **body.model_dump(exclude={"members", "runs_on", "orchestrator"}),
+        "orchestrator": await _led(conn),
         "repo_url": body.repo_url.rstrip("/"),
         "slug": slug,
         "members": members,
@@ -95,8 +95,8 @@ async def create(conn: AsyncConnection, who: Principal, body: ProjectIn, slug: s
 
 async def patch(conn: AsyncConnection, slug: str, body: ProjectPatch) -> ProjectView:
     project = await row(conn, slug)
-    given = body.model_dump(exclude_unset=True)
-    changes = {k: v for k, v in given.items() if v is not None or k in CLEARED}
+    given = body.model_dump(exclude_unset=True, exclude={"orchestrator"})
+    changes = {k: v for k, v in given.items() if v is not None or k in CLEARED} | {"orchestrator": await _led(conn)}
     if "members" in changes:
         changes["members"] = await _members(conn, body.members or [])
     if "runs_on" in changes:
@@ -105,7 +105,6 @@ async def patch(conn: AsyncConnection, slug: str, body: ProjectPatch) -> Project
         changes["repo_url"] = changes["repo_url"].rstrip("/")
     if changes.get("repo_url", project.repo_url) != project.repo_url:
         changes["github_installation_id"] = None  # another repo: connected again by its next run
-    _led(changes.get("members", project.members), changes.get("orchestrator", project.orchestrator))
     statement = Project.__table__.update().where(Project.id == project.id).values(**changes, updated_at=func.now())
     return await view(conn, await _saved(conn, statement, slug))
 

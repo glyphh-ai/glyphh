@@ -1,0 +1,5 @@
+{
+  "name": "weekly-report",
+  "version": "1.0.0",
+  "description": "Weekly Report: writes the team's weekly report from the week's merged pull requests and files it in Notion."
+}

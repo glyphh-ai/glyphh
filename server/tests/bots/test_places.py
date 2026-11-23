@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from glyphh_server.models import Rrotor
 from glyphh_server.ops.bots import due
 from tests.bots.conftest import Served, made_bot
+from tests.bots.remote import logged
 from tests.bots.test_schedules import _due, _runs, quiet  # noqa: F401 (quiet: no bot left due after a test)
 from tests.connector import granted, tool
 from tests.db.helpers import person
@@ -55,7 +56,9 @@ async def test_a_bot_on_an_offline_rrotor_is_refused_and_its_schedule_skips(
 
     await served.http.patch("/v1/bots/inbox-cat", json={"schedule": {"every": "hour"}}, headers=ada.headers)
     await _due(engine, ada, timedelta(minutes=1))
-    assert await due.fire(served.app.state.bots) == 0 and await _runs(engine, ada) == []  # its schedule waits too
+    with logged() as said:
+        assert await due.fire(served.app.state.bots) == 0 and await _runs(engine, ada) == []  # its schedule waits too
+    assert any("skipped: Acme is not linked to Glyphh right now" in line.getMessage() for line in said), said
 
     res = await served.http.patch("/v1/bots/inbox-cat", json={"runs_on": None}, headers=ada.headers)
     assert res.json()["runs_on"] is None

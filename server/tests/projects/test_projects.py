@@ -23,6 +23,7 @@ from tests.projects.helpers import (
     answer,
     body,
     github_of,
+    lead,
     picked,
     project,
     run_of,
@@ -39,11 +40,12 @@ async def test_a_project_is_made_read_changed_and_deleted(on_rrotor: OnRrotor, e
     made = await project(r.s, ada, bots, repo_url=REPO + "/")
     assert made["slug"] == "site-crew" and made["repo_url"] == REPO and made["base_branch"] == "main"
     assert sorted(m["slug"] for m in made["members"]) == ["ada-cat", "bo-cat"]
+    mine = (await lead(r.s, ada))["id"]  # the org's orchestrator bot: every project's, never chosen
     assert (made["review"], made["turn_mode"], made["runs_on"], made["orchestrator"]) == (
         "each_turn",
         "wait",
         None,
-        None,
+        mine,
     )
     assert (made["instructions"], made["instructions_path"], made["max_turns"]) == ("", "PROJECT.md", 30)
     assert made["max_spend_cents"] is None and made["narrate"] is False
@@ -55,7 +57,6 @@ async def test_a_project_is_made_read_changed_and_deleted(on_rrotor: OnRrotor, e
         (body(bots, name="D", base_branch="a..b"), 422, None),
         (body(bots, name="E", repo_url="https://gitlab.com/a/b"), 422, None),
         (body(bots, name="F", instructions_path="../etc/passwd"), 422, None),
-        (body(bots, name="G", orchestrator=str(uuid.uuid4())), 422, "orchestrator"),
         (body(bots, name="H", rounds=2), 422, None),
     ):
         res = await post("/v1/projects", json=given, headers=ada.headers)
@@ -69,20 +70,23 @@ async def test_a_project_is_made_read_changed_and_deleted(on_rrotor: OnRrotor, e
     patch |= {"instructions": "Ship it.", "instructions_path": "docs/PLAN.md", "max_turns": 5, "max_spend_cents": 250}
     changed = (await r.s.http.patch("/v1/projects/site-crew", json=patch, headers=ada.headers)).json()
     assert changed["slug"] == "site-crew" and changed["repo_url"] == REPO + "2"
-    assert {k: changed[k] for k in patch if k not in ("repo_url",)} == {
-        k: v for k, v in patch.items() if k != "repo_url"
-    }
+    said = {k: v for k, v in patch.items() if k not in ("repo_url", "orchestrator")}
+    assert {k: changed[k] for k in said} == said
+    assert changed["orchestrator"] == mine  # a bot of the crew given as its orchestrator is not read
     gone = {"members": [bots[0]["id"]]}
     res = await r.s.http.patch("/v1/projects/site-crew", json=gone, headers=ada.headers)
-    assert res.status_code == 422 and res.json()["error"]["reason"] == "orchestrator"  # its orchestrator left the crew
+    assert res.status_code == 200 and res.json()["orchestrator"] == mine  # the bot given leaving the crew is nothing
     cleared = {**gone, "orchestrator": None, "runs_on": None, "max_spend_cents": None, "name": None}
     back = (await r.s.http.patch("/v1/projects/site-crew", json=cleared, headers=ada.headers)).json()
     assert (back["orchestrator"], back["runs_on"], back["max_spend_cents"], back["name"]) == (
-        None,
+        mine,  # null does not clear it
         None,
         None,
         "The crew",
     )
+    res = await post("/v1/projects", json=body(bots, name="G", orchestrator=str(uuid.uuid4())), headers=ada.headers)
+    assert res.status_code == 201 and res.json()["orchestrator"] == mine  # nor is one that is no bot at all refused
+    assert (await r.s.http.delete("/v1/projects/g", headers=ada.headers)).status_code == 204
     assert [m["slug"] for m in back["members"]] == ["ada-cat"]
     listed = (await r.s.http.get("/v1/projects", headers=ada.headers)).json()["projects"]
     assert [p["slug"] for p in listed] == ["site-crew"]
@@ -248,6 +252,7 @@ async def test_a_crew_with_nothing_left_to_do_or_a_cap_ends_the_run(on_rrotor: O
 async def test_an_orchestrator_on_a_rrotor_picks_who_goes(on_rrotor: OnRrotor, engine: AsyncEngine) -> None:
     r = on_rrotor
     ada, rt, bots = await _on(r, engine)
+    await lead(r.s, ada, name="Maestro", instructions="Pick whoever is behind.", model="claude-sonnet-5-5")
     await project(r.s, ada, bots, runs_on=str(rt.id), turn_mode="orchestrator", orchestrator=bots[0]["id"])
     run = (await start(r.s, ada)).json()
     assert (run["turns"][0]["status"], run["turns"][0]["bot_name"], run["turns"][0]["bot_slug"]) == (
@@ -266,7 +271,10 @@ async def test_an_orchestrator_on_a_rrotor_picks_who_goes(on_rrotor: OnRrotor, e
     }
     assert "- Ada Cat [ada-cat] (they/them): Ada Cat work" in pick.inputs["prompt"]
     assert "You are this project's orchestrator. Turn 1 is next." in pick.inputs["prompt"]
-    assert pick.inputs["persona"].startswith("You are Ada Cat (they/them)")
+    # the org's orchestrator bot picks, in its own words and on its model: never the bot of the crew that was given
+    assert pick.inputs["persona"].startswith("You are Maestro (they/them)")
+    assert "Personality: Pick whoever is behind." in pick.inputs["persona"]
+    assert pick.inputs["model"] == "claude-sonnet-5-5"
     await r.landed(rt, ada, pick.run_id, picked('{"next": "bo-cat", "why": "Tests are missing.", "done": false}'))
     turn = r.hub.last()
     assert turn.function == "turn" and turn.inputs["bot_id"] == "bo-cat" and turn.run_id != pick.run_id
@@ -297,13 +305,15 @@ async def test_an_orchestrator_on_a_rrotor_picks_who_goes(on_rrotor: OnRrotor, e
     assert (last["bot_name"], last["status"], last["done"], last["said"]) == ("Orchestrator", "unchanged", True, "")
 
 
-async def test_an_orchestrator_needs_a_rrotor_that_knows_pick_and_claude_can_be_it(
+async def test_an_orchestrator_needs_a_rrotor_that_knows_pick_and_claude_is_it_for_an_org_with_none(
     on_rrotor: OnRrotor,
     engine: AsyncEngine,
 ) -> None:
     r = on_rrotor
     ada, rt, bots = await _on(r, engine)
     await project(r.s, ada, bots, runs_on=str(rt.id), turn_mode="orchestrator")
+    async with engine.begin() as conn:  # an org whose orchestrator is not made yet (the conversion makes it)
+        await conn.execute(delete(Bot).where(Bot.role == "orchestrator", Bot.org_id == ada.org_id))
     run = (await start(r.s, ada)).json()
     pick = r.hub.last()
     assert pick.inputs["persona"] == "" and pick.inputs["model"] == "claude-opus-5-5"

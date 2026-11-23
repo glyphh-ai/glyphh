@@ -1,0 +1,47 @@
+{
+  "slug": "pr-review-digest",
+  "name": "PR Review Digest",
+  "summary": "Finds the open pull requests waiting on your review and posts a ranked digest to Slack",
+  "look": {"head": "folded", "tail": "spike", "eye": "sleepy", "extra": "none", "accessory": "shades", "pose": "stand"},
+  "model": "claude-sonnet-5-5",
+  "instructions": "You are PR Review Digest. You write a short review digest for an engineer: the pull requests that need them, the most blocking first, each with its link and what to look at first. Never judge the code you have not seen.",
+  "skills": {
+    "digest": "---\nname: digest\ndescription: How a review digest is written\n---\n\nOne line per pull request: <link|title> - who asked, how long it has waited, what to look at first. Blocking work first. End with how many were left for later.\n"
+  },
+  "spec": {
+    "takes": "a GitHub search for the pull requests to rank",
+    "try": "is:pr is:open review-requested:@me",
+    "touches": "sends",
+    "seed": {"personality": ["Direct and useful."], "instructions": ["A pull request that blocks a release always needs review today."]},
+    "gates": {
+      "today": {
+        "case": {"p": {"s": {"title": "$item.title", "repo": "$item.repository_url", "author": "$item.user.login", "id": "$item.id"}}},
+        "outcomes": ["today", "later"],
+        "question": "Review this one today?",
+        "default": "later",
+        "spec": {
+          "name": "today",
+          "layers": [{"name": "p", "segments": [{"name": "s", "roles": [
+            {"name": "title", "text_encoding": "bag_of_words"},
+            {"name": "repo", "text_encoding": "bag_of_words"},
+            {"name": "author", "text_encoding": "bag_of_words"},
+            {"name": "id", "key_part": true, "similarity_weight": 0}
+          ]}]}],
+          "output": {"ask_below": 0.7}
+        }
+      }
+    },
+    "loop": [
+      {"id": "prs", "run": "github-search-issues-and-pull-requests", "input": {"query": "$input"}},
+      {"id": "today", "gate": "today", "each": "$prs.ret", "label": "title", "key": "id",
+       "on": {"empty:today": "end"},
+       "empty": "No pull request needs your review today, so there is no digest to post."},
+      {"id": "digest", "agent": "Write the review digest of these pull requests: $today.today", "skill": "digest"},
+      {"id": "slack", "run": "slack-send-message", "approval": "post your review digest to Slack",
+       "input": {"conversation": "@me", "text": "$digest"}}
+    ],
+    "limits": {"seconds": 300, "agent_turns": 3, "max_items": 40, "runs_per_day": 4}
+  },
+  "apps": ["github", "slack"],
+  "tools": ["github-search-issues-and-pull-requests", "slack-send-message"]
+}

@@ -1,12 +1,13 @@
-"""Create with AI: the bot maker's turns (a question, a draft checked and scoped, a wrong draft sent back once), a
-mascot drawn and made safe, kept on a bot, and both through the connector."""
+"""Create with AI: the bot maker's turns (a question, then the bot drafted as an agent: its instructions, standing
+task, examples, decisions and notes, checked and scoped; a wrong draft sent back once), a mascot drawn and made safe,
+kept on a bot, and both through the connector."""
 
 import json
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from glyphh_server.ops.bots import maker
+from glyphh_server.ops.bots import maker, store
 from tests.bots.conftest import BOTS, TOOLS, Served, connected, inbox, serve
 from tests.bots.fakes import FakePipedream
 from tests.connector import granted, tool
@@ -14,6 +15,7 @@ from tests.db.helpers import person
 
 SKILLS = {"replies": "---\nname: replies\ndescription: How\n---\n\nOne paragraph.\n"}
 CAT = '<svg viewBox="0 0 200 200"><path d="M10 10 L90 90 Z" fill="#0b0a0f" stroke="white" stroke-width="12"/></svg>'
+LOOP: dict[str, Any] = {"loop": [{"id": "mail", "run": "gmail-find-email"}]}
 
 
 def drafted(reply: str = "Here it is.", **over: Any) -> str:
@@ -21,8 +23,10 @@ def drafted(reply: str = "Here it is.", **over: Any) -> str:
         "name": "Inbox Cat",
         "summary": "Answers the mail worth answering",
         "look": {"head": "tall", "eye": "heart", "hat": "no"},
-        "instructions": "You are Inbox Cat. Short, kind replies.",
+        "instructions": "You are Inbox Cat. Find the mail with gmail_find_email, decide worth, write short replies.",
         "model": "claude-sonnet-5-5",
+        "task": "Answer the mail worth answering.",
+        "examples": ["Anything worth answering?", "Reply to Grace"],
         "spec": inbox(),
         "skills": SKILLS,
         "apps": [{"app": "gmail", "tools": TOOLS}],
@@ -49,7 +53,10 @@ async def test_the_maker_asks_then_drafts_a_checked_bot_scoped_to_the_orgs_conne
         "missing_apps": [],
     }
     sent = served.claude.requests[0]
-    assert "Glyphh's bot maker" in sent["system"] and "none yet" in sent["system"] and "$id.path" in sent["system"]
+    assert "Glyphh's bot maker" in sent["system"] and "none yet" in sent["system"]
+    assert '"task": "<what it does when it runs on its own>"' in sent["system"]
+    assert "A Glyphh bot is a Claude agent a person talks to" in sent["system"]  # the guide, as bot_guide says it
+    assert '"loop"' not in sent["system"] and "$id.path" not in sent["system"]  # a bot is no loop of steps
     assert sent["model"] == "claude-opus-5-5" and "Person: A bot for my inbox" in sent["messages"][0]["content"]
 
     res = await served.http.post(
@@ -58,6 +65,9 @@ async def test_the_maker_asks_then_drafts_a_checked_bot_scoped_to_the_orgs_conne
     got = res.json()
     assert got["problems"] == [] and got["missing_apps"] == ["gmail"] and got["draft"]["connections"] == []
     assert got["draft"]["look"] == {"head": "tall", "eye": "heart"} and got["draft"]["model"] == "claude-sonnet-5-5"
+    assert got["draft"]["task"] == "Answer the mail worth answering." and got["draft"]["skills"] == SKILLS
+    assert got["draft"]["examples"] == ["Anything worth answering?", "Reply to Grace"]
+    assert sorted(got["draft"]["spec"]) == ["gates", "seed"]
 
     gmail = await connected(served, ada)
     served.claude.texts = [drafted(model="gpt-9")]
@@ -73,22 +83,26 @@ async def test_the_maker_asks_then_drafts_a_checked_bot_scoped_to_the_orgs_conne
         "/v1/bots", json={k: v for k, v in got["draft"].items() if k != "apps"}, headers=ada.headers
     )
     assert made.status_code == 201, made.text
-    assert made.json()["mascot"].startswith('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">')
+    bot = made.json()
+    assert bot["mascot"].startswith('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">')
+    assert (bot["task"], bot["examples"]) == (got["draft"]["task"], got["draft"]["examples"])
+    assert bot["plugins"][0]["name"] == "notes" and bot["connections"][0]["tools"] == TOOLS
 
 
 async def test_a_wrong_draft_is_sent_back_once_and_what_is_still_wrong_is_said(
     served: Served, engine: AsyncEngine
 ) -> None:
     ada = await person(engine)
-    wrong = drafted(apps=[])
+    wrong = drafted(spec=LOOP)  # Claude drafted the bot as it used to be: a loop of steps
     served.claude.texts = [wrong, drafted("Fixed it.")]
     got = (await served.http.post("/v1/bots/draft", json=said("Inbox"), headers=ada.headers)).json()
-    assert got["reply"] == "Fixed it." and got["problems"] == []
-    assert "fix them all" in served.claude.requests[-1]["messages"][0]["content"]
+    assert got["reply"] == "Fixed it." and got["problems"] == [] and "loop" not in got["draft"]["spec"]
+    fix = served.claude.requests[-1]["messages"][0]["content"]
+    assert "fix them all:\n- A bot is no longer a loop of steps" in fix
 
     served.claude.texts = [wrong, "I cannot."]
     got = (await served.http.post("/v1/bots/draft", json=said("Inbox"), headers=ada.headers)).json()
-    assert got["reply"] == "Here it is." and "gmail-find-email is neither fetch nor a tool" in got["problems"][0]
+    assert got["reply"] == "Here it is." and got["problems"] == [store.NO_LOOP]
 
     ada = await person(engine)  # the meter lets an org's plan 5 calls a second: another org for the rest
     served.claude.texts = [drafted(instructions=None, name="9")]
@@ -98,6 +112,22 @@ async def test_a_wrong_draft_is_sent_back_once_and_what_is_still_wrong_is_said(
     served.claude.texts = [drafted(name="99"), drafted(name="99")]
     got = (await served.http.post("/v1/bots/draft", json=said("Inbox"), headers=ada.headers)).json()
     assert got["problems"] == ["A bot's name needs a letter."]
+
+
+async def test_a_drafts_task_and_examples_are_held_to_a_bots_limits(served: Served, engine: AsyncEngine) -> None:
+    ada = await person(engine)
+    long = drafted(task="x" * 4001, examples=["Hi"] * 6 + ["y" * 201], skills={"Bad Name": "x"})
+    served.claude.texts = [long, long]
+    got = (await served.http.post("/v1/bots/draft", json=said("Inbox"), headers=ada.headers)).json()
+    assert got["problems"] == [
+        "A note's name is lower case letters, digits and -: 'Bad Name' is not.",
+        "The standing task is at most 4,000 characters.",
+        "A bot has at most 6 example prompts: this has 7.",
+        "An example prompt is at most 200 characters.",
+    ]
+    served.claude.texts = [drafted(task="", examples=[], spec={}, skills={}, apps=[])]  # the least a draft may be
+    got = (await served.http.post("/v1/bots/draft", json=said("Inbox"), headers=ada.headers)).json()
+    assert got["problems"] == [] and got["missing_apps"] == [] and got["draft"]["task"] == ""
 
 
 async def test_the_maker_says_when_claude_cannot_answer(served: Served, engine: AsyncEngine) -> None:
@@ -129,7 +159,7 @@ async def test_a_mascot_is_drawn_made_safe_and_kept_on_a_bot(served: Served, eng
     res = await served.http.post("/v1/bots/mascot", json={"prompt": "nothing"}, headers=ada.headers)
     assert res.status_code == 503 and res.json()["error"]["reason"] == "mascot"
 
-    body = {"name": "Plain", "instructions": "Be kind.", "spec": {"loop": [{"id": "a", "agent": "Hi"}]}}
+    body = {"name": "Plain", "instructions": "Be kind.", "spec": {}}
     made = await served.http.post("/v1/bots", json={**body, "mascot": drawn}, headers=ada.headers)
     assert made.status_code == 201 and made.json()["mascot"] == drawn
     bad = await served.http.patch("/v1/bots/plain", json={"mascot": "<svg><!ENTITY x></svg>"}, headers=ada.headers)
@@ -141,13 +171,15 @@ async def test_a_mascot_is_drawn_made_safe_and_kept_on_a_bot(served: Served, eng
 async def test_the_maker_and_the_mascot_through_the_connector(served: Served, engine: AsyncEngine) -> None:
     ada = await person(engine)
     _, auth = await granted(engine, ada)
-    served.claude.texts = [drafted(apps=[]), drafted(apps=[])]
+    served.claude.texts = [drafted(spec=LOOP, apps=[]), drafted(spec=LOOP, apps=[])]
     got = await tool(served.http, auth, "bot_draft", messages=[{"role": "user", "content": "Inbox"}])
     text = got["content"][0]["text"]
-    assert got["isError"] is False and "Still wrong: step mail" in text and "Connect first" not in text
+    assert got["isError"] is False and "Still wrong: A bot is no longer a loop of steps" in text
+    assert "Connect first" not in text
     served.claude.texts = [drafted()]
     got = await tool(served.http, auth, "bot_draft", messages=[{"role": "user", "content": "Inbox"}])
     assert "Connect first: gmail (connection_link)." in got["content"][0]["text"]
+    assert got["structuredContent"]["draft"]["task"] == "Answer the mail worth answering."
     served.claude.texts = [CAT]
     drawn = await tool(served.http, auth, "bot_mascot", prompt="a cat")
     assert drawn["structuredContent"]["mascot"].endswith("</svg>") and "bot_create" in drawn["content"][0]["text"]

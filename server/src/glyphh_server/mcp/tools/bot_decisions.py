@@ -1,7 +1,8 @@
 """A Glyphh bot's decisions, read and trained through the connector (docs/specs/bots.md, 12), enough for Claude to
 train a bot end to end: find its decisions (search, filter, sort, page), read one with the precedents behind it,
-relabel what a gate got wrong (one or many), confirm what it got right, add a labelled case, forget a precedent, see
-how each gate is doing, and backtest the gates now. The tools that reach Ada make their own transactions."""
+relabel what Ada got wrong (one or many), confirm what it got right, add a labelled case, forget a precedent, see
+how each decision is doing, and backtest them now. A decision is named `gate` in these tools' fields: a storage name
+kept from the first engine. The tools that reach Ada make their own transactions."""
 
 import uuid
 from datetime import datetime
@@ -27,9 +28,9 @@ class Find(BaseModel):
     model_config = ConfigDict(extra="forbid")
     slug: str = SLUG
     q: str | None = Field(None, max_length=200, description="Words its label or fields have (each a prefix)")
-    gate: str | None = Field(None, max_length=100)
-    outcome: str | None = Field(None, max_length=200, description="What the gate said")
-    who: Who | None = Field(None, description="ada (its gate decided), you (the person was asked) or default")
+    gate: str | None = Field(None, max_length=100, description="The decision's name")
+    outcome: str | None = Field(None, max_length=200, description="What was decided")
+    who: Who | None = Field(None, description="ada (Ada decided), you (the person was asked) or default")
     corrected: bool | None = Field(None, description="true: only those corrected; false: only those not")
     since: datetime | None = None
     until: datetime | None = None
@@ -87,7 +88,7 @@ def line(d: DecisionView) -> str:
     who = {"ada": f"Ada {pct(d.confidence)}", "you": "you", "default": "its default"}[d.who]
     fixed = f", corrected to {d.corrected}" if d.corrected and d.corrected != d.outcome else ""
     right = ", confirmed right" if d.confirmed else ""
-    return f"[{d.outcome}] {d.label} (gate {d.gate}, by {who}{fixed}{right}; {d.at:%Y-%m-%d %H:%M}; id {d.id})"
+    return f"[{d.outcome}] {d.label} (decision {d.gate}, by {who}{fixed}{right}; {d.at:%Y-%m-%d %H:%M}; id {d.id})"
 
 
 def trained(done: Trained) -> Done:
@@ -138,7 +139,7 @@ async def add_case(ctx: Context, args: AddCase) -> Done:
 
 async def forget(ctx: Context, args: Forget) -> Done:
     gone = await cases.forget(ctx.bots, ctx.who, args.slug, args.gate, args.precedent_id)
-    return Done(f"Gate {gone.gate} forgot {gone.id}; it holds {gone.precedents} precedents.", dump(gone))
+    return Done(f"Decision {gone.gate} forgot {gone.id}; it holds {gone.precedents} precedents.", dump(gone))
 
 
 async def stats(ctx: Context, args: StatsArgs) -> Done:
@@ -149,7 +150,7 @@ async def stats(ctx: Context, args: StatsArgs) -> Done:
         f"{g.corrected} corrected, {g.confirmed} confirmed"
         for g in found.gates
     ]
-    return Done("\n".join(lines) or "The bot has no gates.", dump(found))
+    return Done("\n".join(lines) or "The bot has no decisions.", dump(found))
 
 
 async def backtest(ctx: Context, args: Backtest) -> Done:
@@ -157,7 +158,7 @@ async def backtest(ctx: Context, args: Backtest) -> Done:
     head = (f"Replayed {done.replayed}: {done.same} the same, {len(done.changed)} would change or ask; it would ask "
             f"about {done.would_ask} and now gets {done.right_now} right.")  # fmt: skip
     rows = [
-        f"{c.decision.label} (gate {c.decision.gate}): {c.then} -> {c.now}{' (asks)' if c.ask else ''}"
+        f"{c.decision.label} (decision {c.decision.gate}): {c.then} -> {c.now}{' (asks)' if c.ask else ''}"
         for c in done.changed
     ]
     return Done("\n".join([head, *rows]), dump(done))

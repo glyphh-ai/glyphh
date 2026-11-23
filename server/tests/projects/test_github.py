@@ -22,6 +22,7 @@ from tests.projects.helpers import (
     crew,
     faked,
     github_of,
+    lead,
     project,
     run_of,
     say,
@@ -52,15 +53,19 @@ async def test_the_crews_project_is_found_or_made_for_a_workspace(s: Served, eng
     assert made["slug"].startswith("crew-") and made["name"] == "acme/site (main)" and made["github_connected"] is True
     assert (made["repo_url"], made["base_branch"], [m["slug"] for m in made["members"]]) == (REPO, "main", ["ada-cat"])
     assert (made["review"], made["turn_mode"], made["runs_on"], made["max_turns"]) == ("each_turn", "wait", None, 30)
-    settings = {"review": "end", "turn_mode": "orchestrator", "orchestrator": ids[1], "narrate": True}
+    mine = (await lead(s, ada))["id"]  # the org's orchestrator bot leads every project: one given is not read
+    assert made["orchestrator"] == mine
+    settings = {"review": "end", "turn_mode": "orchestrator", "narrate": True}
     settings |= {"max_turns": 5, "max_spend_cents": 100, "runs_on": None}
-    again = (await _put(s, ada, repo=REPO + "/", branch="main", members=ids, **settings)).json()
+    again = (await _put(s, ada, repo=REPO + "/", branch="main", members=ids, orchestrator=ids[1], **settings)).json()
     assert (again["id"], again["slug"]) == (made["id"], made["slug"])  # the same project, set to what is given
     assert {k: again[k] for k in settings} == settings and len(again["members"]) == 2
+    assert again["orchestrator"] == mine
     kept = (await _put(s, ada, repo="acme/site", members=ids)).json()  # a setting left out is left as it is
     assert {k: kept[k] for k in settings} == settings
-    other = (await _put(s, ada, repo="acme/site", branch="dev", members=ids)).json()
+    other = (await _put(s, ada, repo="acme/site", branch="dev", members=ids, orchestrator=ids[0])).json()
     assert other["slug"] != made["slug"] and other["base_branch"] == "dev" and other["name"] == "acme/site (dev)"
+    assert other["orchestrator"] == mine
     listed = (await s.http.get("/v1/projects", headers=ada.headers)).json()["projects"]
     assert sorted(p["slug"] for p in listed) == sorted([made["slug"], other["slug"]])
     for bad in ({"repo": "acme"}, {"repo": "https://gitlab.com/acme/site"}, {"repo": "acme/site", "name": "Mine"}):

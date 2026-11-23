@@ -30,6 +30,8 @@ from glyphh_server.mcp.tools import (
     connections,
     grants,
     people,
+    program_runs,
+    programs,
     projects,
     runtime,
     self_hosted,
@@ -48,9 +50,12 @@ ADA: dict[str, Tool] = {t.name: t for t in (*_WORKERS, *ada_keys.TOOLS, *templat
 DETACHED: frozenset[str] = frozenset(t.name for t in _WORKERS) | templates.DETACHED
 # The bots' tools that call Pipedream or make a run: on transactions of their own too.
 DETACHED |= bot_runs.DETACHED | connections.DETACHED | bot_maker.DETACHED | projects.DETACHED | bot_training.DETACHED
+DETACHED |= programs.DETACHED | program_runs.DETACHED
+STREAMED: frozenset[str] = program_runs.STREAMED  # tools whose progress is streamed to a client that asks for it
 MINE: str = "glyphh_"
 _BOTS = (*bots.TOOLS, *bot_maker.TOOLS, *bot_runs.TOOLS, *bot_training.TOOLS, *bot_market.TOOLS, *connections.TOOLS)
-_OWN = (*account.TOOLS, *billing.TOOLS, *people.TOOLS, *grants.TOOLS, *_BOTS, *projects.TOOLS)
+_PROGRAMS = (*programs.TOOLS, *program_runs.TOOLS)
+_OWN = (*account.TOOLS, *billing.TOOLS, *people.TOOLS, *grants.TOOLS, *_BOTS, *projects.TOOLS, *_PROGRAMS)
 TOOLS: dict[str, Tool] = {t.name: t for t in _OWN}
 # rrotor's: its runtime keys, self-hosted runtimes and offline licences, and the org's apps: offered only while
 # GLYPHH_RROTOR is on, the default. (A project runs on Glyphh cloud too, so its tools are always offered.)

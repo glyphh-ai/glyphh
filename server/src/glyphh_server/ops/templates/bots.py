@@ -1,5 +1,5 @@
 """The ops a template's tools make bots of (docs/specs/templates.md): `make` an Ada model of the person's own from a
-spec (a bot's gate), `decide` on one and `record` a precedent in one, over the install's models alone: the
+spec (a bot's decision), `decide` on one and `record` a precedent in one, over the install's models alone: the
 template's (by key) and the ones it made (by name, kept in template_installs.made so a removal deletes them too).
 Each is one call to the Ada workers as the person (ops/templates/ada.py); the install's row is read and changed on
 short transactions of their own, never held while a worker answers."""

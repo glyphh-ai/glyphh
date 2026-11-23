@@ -1,0 +1,110 @@
+{
+  "bot": {
+    "name": "Resume Screener",
+    "tagline": "Screens the job applications in your Gmail: real or spam, a strong, borderline or poor fit, and how much of each was generated",
+    "description": "Every hour it reads the new applications in your Gmail (a resume as PDF, Word or text, and the email around it). Code checks the sender first: a message whose domain did not vouch for it is refused. Then three Ada models, your own, decide from past applicants: is the sender a real applicant or spam, is the applicant a strong, borderline or poor fit for the role, and how much of the application was generated (some, mostly or fully), each with its confidence. The generated model holds only generated applications: one with no close generated precedent is called human, with how near the nearest came. They start from past applicants (generated and labelled) and learn from you: what they are unsure of they ask you, and every verdict you correct is a new precedent. Each screened email is labelled in Gmail with its verdict, and your Glyphh connection gains screen_application, applicants and correct.",
+    "look": {"head": "classic", "tail": "long", "eye": "side", "extra": "none", "accessory": "glasses", "pose": "lean"},
+    "instructions": "You are Resume Screener. Your job: screen job applications - is the sender a real applicant, how well do they fit the role, how much of the application was generated - and label each screened email in Gmail with its verdict.\n\nHow you work:\n1. Call inbox_applications. When the person handed you an application (a resume's text, with or without its cover letter, the sender's address or the role), pass it as `given`: the text itself, or `{resume, letter, sender, role}`. Otherwise read the inbox: pass `q` as `in:inbox -label:screened newer_than:14d {subject:(application applying resume cv role position) has:attachment}`. That search is the job's: never search the mail with the person's words. It answers `applications` (one item per applicant, each with its `id`) and `rejected` (the messages the sender checks refused, each with why).\n2. If there are no applications and none rejected, say that there are no new applications, and stop.\n3. Call decide with the decision `source` and every application as an item, each whole and exactly as inbox_applications returned it. Ada answers `real` or `spam` for each, and whether it is sure. For each decision in steps 3 to 5, ask the person about the items Ada is not sure of with ask_person (that decision and those items), and use their answers.\n4. Call decide with the decision `fit` and only the `real` ones, whole again. It answers `strong`, `borderline` or `poor`.\n5. Call decide with the decision `made` and the same `real` ones. It answers how much of each was generated: `some`, `mostly` or `fully`, or `human` when no generated application close to it is known.\n6. Give each application one verdict, by this rule: `spam` when its source is `spam`; otherwise its fit, `strong`, `borderline` or `poor`; `waiting` when its source, or for a real one its fit, is not decided yet. How much was generated never changes the verdict: it is reported beside it. A rejected message counts as spam.\n7. Call inbox_label with `verdicts`, one `{id, verdict}` for every application, and `rejected` as inbox_applications returned it. Each message gets its verdict's label; one still waiting, and an application the person handed you, gets none.\n8. Use the screening-report skill to answer with the result.\n\nRead applications exactly as given: never invent an applicant's experience, skills or employers, and never change what an item holds before it is decided. Fair, plain and quick.\n\nWhen the person only greets you or asks what you can do, answer in a sentence or two and use no tool. When they ask for something outside this job, say plainly that it is not what you do.",
+    "model": "claude-sonnet-5-5",
+    "effort": "medium"
+  },
+  "requires": [
+    {"app": "gmail", "tools": []}
+  ],
+  "decisions": {
+    "source": {
+      "case": {"e": {"s": {"kind": "$item.sender_kind", "auth": "$item.auth", "bulk": "$item.bulk",
+                           "resume": "$item.has_resume", "subject": "$item.subject", "opening": "$item.opening",
+                           "links": "$item.signals.links", "id": "$item.id"}}},
+      "outcomes": ["real", "spam"],
+      "question": "Is this a real applicant?",
+      "ask_below": 0.7,
+      "seed_from": "resume-screener",
+      "spec": {
+        "name": "source",
+        "layers": [{"name": "e", "segments": [{"name": "s", "roles": [
+          {"name": "kind"},
+          {"name": "auth"},
+          {"name": "bulk"},
+          {"name": "resume"},
+          {"name": "subject", "text_encoding": "bag_of_words"},
+          {"name": "opening", "text_encoding": "bag_of_words"},
+          {"name": "links", "numeric_config": {"min_value": 0, "max_value": 30, "bin_width": 1}},
+          {"name": "id", "key_part": true, "similarity_weight": 0}
+        ]}]}],
+        "output": {"ask_below": 0.7}
+      }
+    },
+    "fit": {
+      "case": {"a": {"s": {"role": "$item.role", "skills": "$item.skills", "titles": "$item.titles",
+                           "years": "$item.years", "education": "$item.education", "id": "$item.id"}}},
+      "outcomes": ["strong", "borderline", "poor"],
+      "question": "How well does this applicant fit the role?",
+      "ask_below": 0.7,
+      "seed_from": "resume-screener",
+      "spec": {
+        "name": "fit",
+        "layers": [{"name": "a", "segments": [{"name": "s", "roles": [
+          {"name": "role", "text_encoding": "bag_of_words"},
+          {"name": "skills"},
+          {"name": "titles", "text_encoding": "bag_of_words"},
+          {"name": "years", "numeric_config": {"min_value": 0, "max_value": 40, "bin_width": 2}},
+          {"name": "education"},
+          {"name": "id", "key_part": true, "similarity_weight": 0}
+        ]}]}],
+        "output": {"ask_below": 0.7}
+      }
+    },
+    "made": {
+      "case": {"g": {"s": {"stock": "$item.signals.stock_per_k", "tells": "$item.signals.tells",
+                           "burst": "$item.signals.burstiness", "specifics": "$item.signals.specifics_per_k",
+                           "dashes": "$item.signals.dashes_per_k", "id": "$item.id"}}},
+      "outcomes": ["some", "mostly", "fully"],
+      "question": "How much of this application was generated?",
+      "ask_below": 0.55,
+      "seed_from": "resume-screener",
+      "probe": true,
+      "spec": {
+        "name": "made",
+        "layers": [{"name": "g", "segments": [{"name": "s", "roles": [
+          {"name": "stock", "numeric_config": {"min_value": 0, "max_value": 80, "bin_width": 4}},
+          {"name": "tells"},
+          {"name": "burst", "numeric_config": {"min_value": 0, "max_value": 100, "bin_width": 5}},
+          {"name": "specifics", "numeric_config": {"min_value": 0, "max_value": 100, "bin_width": 5}},
+          {"name": "dashes", "numeric_config": {"min_value": 0, "max_value": 20, "bin_width": 1}},
+          {"name": "id", "key_part": true, "similarity_weight": 0}
+        ]}]}],
+        "output": {"ask_below": 0.55}
+      }
+    }
+  },
+  "builtins": ["inbox_applications", "inbox_label"],
+  "task": "Screen the new job applications in my inbox, label each email with its verdict, and tell me who is worth my time.",
+  "schedule": {"every": "hour"},
+  "examples": [
+    "Screen the new applications in my inbox",
+    "Any strong applicants today?",
+    "Screen this resume: (paste it here)"
+  ],
+  "connector_tools": [
+    {"name": "screen_application", "title": "Screen an application", "op": "run", "verdicts": "fit", "wait": 45,
+     "description": "Screen one job application now with the Resume Screener: is the sender real, is it a strong, borderline or poor fit for the role, and how much of it was generated (some, mostly, fully, or human when no generated precedent is close), each with its confidence. Give the resume's text; the cover letter, the sender's email and the role if you have them.",
+     "args": {"resume": "The resume's text (or the whole application)", "letter": "The cover letter or the email it came in, if any",
+              "sender": "The applicant's email address, if known", "role": "The role they applied for"},
+     "required": ["resume"]},
+    {"name": "screen_inbox", "title": "Screen the inbox now", "op": "run", "verdicts": "fit", "wait": 50,
+     "description": "Read the new job applications in the Gmail inbox now, rather than at the next hourly run, and answer their verdicts."},
+    {"name": "applicants", "title": "Applicants and their verdicts", "op": "runs", "verdicts": "fit",
+     "description": "The Resume Screener's recent runs: each applicant screened with their verdicts (real or spam, strong, borderline or poor fit, how much generated or human, each with its confidence and who decided it), and any question waiting for you."},
+    {"name": "correct", "title": "Correct an applicant's fit", "op": "wrong", "gate": "fit",
+     "description": "Say the Resume Screener's fit for an applicant was wrong: the run's id, the right outcome (strong, borderline or poor) and the applicant's id as item. Ada keeps it as a precedent and decides the next applicant like them your way."},
+    {"name": "correct_generated", "title": "Correct how much was generated", "op": "wrong", "gate": "made",
+     "description": "Say how much of an application the Resume Screener called generated was really generated (some, mostly or fully), for the run's id and the applicant's id as item; Ada learns it."},
+    {"name": "correct_source", "title": "Correct real or spam", "op": "wrong", "gate": "source",
+     "description": "Say an application the Resume Screener called real was spam, or the other way round (real or spam), for the run's id and the applicant's id as item; Ada learns it."},
+    {"name": "screener_answer", "title": "Answer the screener's question", "op": "answer",
+     "description": "Answer what the Resume Screener asked you about the applicants it was unsure of: the run's id and the answer, one per applicant (1=strong 2=borderline 3=poor, or rest=poor)."}
+  ],
+  "limits": {"seconds": 600},
+  "runs_on": ["cloud", "rrotor"]
+}

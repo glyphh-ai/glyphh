@@ -27,8 +27,9 @@ TOOLS: tuple[Tool, ...] = (
         "bot_draft",
         "Draft a bot with Glyphh's bot maker",
         "Glyphh's bot maker's next turn in a conversation about a bot the person wants: a short question, or the bot "
-        "drafted (name, summary, cat, instructions, model, loop and gates, skills, apps), checked by the SDK and "
-        "scoped to the org's connections. Pass the whole conversation and the draft so far; bot_create makes it.",
+        "drafted (name, summary, cat, instructions, model, the decisions it can ask Ada about, skills, apps), checked "
+        "by the SDK and scoped to the org's connections. Pass the whole conversation and the draft so far; "
+        "bot_create makes it.",
         DraftIn,
         draft,
         True,

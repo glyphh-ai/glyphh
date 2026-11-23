@@ -1,6 +1,6 @@
-"""A gate's cases by hand (docs/specs/bots.md, 12): a labelled case added (made from an item's fields as a run makes
-it, or given as the case itself) and a precedent forgotten, each a go of the runner through the gate's Ada model, so
-none is done while a run of the bot is going."""
+"""A decision's cases by hand (docs/specs/bots.md, 12): a labelled case added (made from an item's fields as a run
+makes it, or given as the case itself) and a precedent forgotten, each a go of the runner on the decision's Ada
+model, so none is done while a run of the bot is going."""
 
 import uuid
 from typing import Any
@@ -39,7 +39,7 @@ def _row(bot: Any, body: CaseIn, case: Any, made: str) -> dict[str, Any]:
 
 
 async def add(svc: Goes, who: Principal, slug: str, body: CaseIn) -> Trained:
-    """A labelled case of the gate's, kept as a precedent and listed with its decisions (kind case, by you)."""
+    """A labelled case of the decision's, kept as a precedent and listed with its decisions (kind case, by you)."""
     bot = await mend._idle(svc, who, slug)
     outcome_of(bot, body.gate, body.outcome)
     case = case_of(bot, body)
@@ -53,12 +53,12 @@ async def add(svc: Goes, who: Principal, slug: str, body: CaseIn) -> Trained:
     async with svc.engine.begin() as conn:
         await tenancy.enter(conn, who.org_id)
         new_id = (await conn.execute(insert(D).values(**_row(bot, body, case, made)).returning(D.id))).scalar_one()
-    return await shown(svc, who, bot, [new_id], f"Added a {body.outcome} case to gate {body.gate}", precedents)
+    return await shown(svc, who, bot, [new_id], f"Added a {body.outcome} case to decision {body.gate}", precedents)
 
 
 async def forget(svc: Goes, who: Principal, slug: str, gate: str, precedent: str) -> Forgot:
-    """The precedent forgotten by the gate's model; a decision it was is no longer a precedent, and a case added by
-    hand is gone."""
+    """The precedent forgotten by the decision's Ada model; a decision row it was is no longer a precedent, and a
+    case added by hand is gone."""
     bot = await mend._idle(svc, who, slug)
     if gate not in decisions.outcomes(bot):
         raise Invalid(f"{slug} has no gate {gate}.", reason="gate")

@@ -1,6 +1,7 @@
-"""The org's hosted Glyphh bots (docs/specs/bots.md): how one is written (bot_guide), and making one (the SDK's bot
-package: its loop, gates and limits, its agent's prompt and skills, a look, the Claude model, per connection its
-tools), reading, changing and deleting it. Its runs are bot_runs.py's."""
+"""The org's hosted Glyphh bots (docs/specs/bots.md, bot-agent-loop.md): how one is written (bot_guide), and making
+one (a Claude agent a person talks to: its instructions, standing task and examples, what Ada decides for it, its
+notes, a look, the Claude model, per connection its tools), reading, changing and deleting it. The org's
+orchestrator is one of them, listed first: changed like any bot, never deleted. Its runs are bot_runs.py's."""
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -28,15 +29,15 @@ class Scopes(BaseModel):
 
 
 def line(bot: BotView) -> str:
-    steps = len(bot.spec.get("loop") or [])
-    gates = len(bot.spec.get("gates") or {})
+    decides = ", ".join(bot.spec.get("gates") or {}) or "nothing"
+    role = ", the orchestrator (never deleted)" if bot.role == "orchestrator" else ""
     last = f", last run {bot.last_run.status}" if bot.last_run else ""
     when = f"schedule {bot.schedule_summary}" + (f", Next run {bot.next_run}" if bot.next_run else "")
     where = f"runs on rrotor {bot.runs_on}" if bot.runs_on else "runs on Glyphh cloud"
     may = "; ".join(f"{f.path} ({'read and change' if f.access == 'write' else 'read only'})" for f in bot.folders)
     folders = f"; folders: {may}" if may else ""
     model = f"{bot.model} at {bot.effort} effort"
-    said = f"{bot.name} ({bot.slug}): {bot.summary or 'no summary'}; {steps} steps, {gates} gates, {model}{last}"
+    said = f"{bot.name} ({bot.slug}{role}): {bot.summary or 'no summary'}; decides {decides}; {model}{last}"
     return f"{said}; {when}; {where}{folders}"
 
 
@@ -109,25 +110,34 @@ TOOLS: tuple[Tool, ...] = (
     _tool(
         "bots",
         "Bots",
-        "The org's Glyphh bots, searched by `q`: loops that do a job with the org's connections, gates that learn in "
-        "Ada, Claude for the steps that need judgment. Each is a tool to use: bot_run runs it on an input.",
+        "The org's Glyphh bots, searched by `q`, its orchestrator first: each a Claude agent that does a job with the "
+        "org's connections, with Ada deciding what it decides and learning from the person's answers. Each is a "
+        "tool to use: bot_run says something to it.",
         Search,
         list_bots,
         True,
     ),
-    _tool("bot", "A bot", "One bot: its loop, gates, prompt, skills, tools and latest run.", Slug, get_bot, True),
+    _tool(
+        "bot",
+        "A bot",
+        "One bot: its instructions, standing task, examples, decisions, notes, tools and latest run.",
+        Slug,
+        get_bot,
+        True,
+    ),
     _tool(
         "bot_create",
         "Make a bot",
         "Make a Glyphh bot (bot_guide says how): a name, a summary, its cat (look: head, tail, eye, extra, accessory, "
-        "pose) or a drawn mascot (bot_mascot), instructions (its agent's prompt), the Claude model (bot_models), its "
-        "permission mode (ask, connection or auto: which tool steps wait for the person), its voice (bot_voices), its "
-        "spec (loop, gates, limits), skills and, per connection, its tools; its schedule in plain words (every: off, "
-        "hour, day, weekdays, week, month; at HH:MM, weekday, day, the person's timezone, the input) and where it runs "
-        "(runs_on, one of bot_places; none: Glyphh cloud); its effort (how hard Claude works on its agent steps: low, "
-        "medium, high, xhigh or max; medium unless said) and, on a rrotor, the folders of that machine it may use "
-        "(folders: each {path, access: read or write}; the rrotor refuses one its owner does not offer). Checked "
-        "before it is made: every problem is said at once.",
+        "pose) or a drawn mascot (bot_mascot), instructions (who it is and how it works), its task (what it does when "
+        "it runs on its own), examples (prompts a person might type), the Claude model (bot_models), its permission "
+        "mode (ask, connection or auto: which actions wait for the person's yes), its voice (bot_voices), its spec "
+        "(gates: the decisions it can ask Ada about; hosts; limits), skills (its notes) and, per connection, its "
+        "tools; its schedule in plain words (every: off, hour, day, weekdays, week, month; at HH:MM, weekday, day, "
+        "the person's timezone) and where it runs (runs_on, one of bot_places; none: Glyphh cloud); its effort (how "
+        "hard Claude works: low, medium, high, xhigh or max; medium unless said) and, on a rrotor, the folders of "
+        "that machine it may use (folders: each {path, access: read or write}; the rrotor refuses one its owner does "
+        "not offer). Checked before it is made: every problem is said at once.",
         BotIn,
         create,
         False,
@@ -135,13 +145,20 @@ TOOLS: tuple[Tool, ...] = (
     _tool(
         "bot_update",
         "Change a bot",
-        "Change what is given of a bot (its schedule, where it runs: runs_on null is Glyphh cloud; its effort; its "
-        "folders, the whole list, [] for none), checked again; its slug stays.",
+        "Change what is given of a bot (its instructions, task, examples, schedule, where it runs: runs_on null is "
+        "Glyphh cloud; its effort; its folders, the whole list, [] for none), checked again; its slug stays.",
         Update,
         update,
         False,
     ),
-    _tool("bot_delete", "Delete a bot", "Delete a bot and its runs. Not undone.", Slug, delete, False),
+    _tool(
+        "bot_delete",
+        "Delete a bot",
+        "Delete a bot and its runs. Not undone. The orchestrator is never deleted: it is changed instead.",
+        Slug,
+        delete,
+        False,
+    ),
     _tool(
         "bot_connections_set",
         "Scope a bot's tools",

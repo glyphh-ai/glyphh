@@ -5,13 +5,12 @@ Folders are `[{path, access: "read" | "write"}]`, used only when the bot runs on
 folders: they are kept and ignored there). The server knows nothing of the machine's files, so it checks the shape
 alone: an absolute path with no `..`, at most MAX of them, none twice. Whether a path is one the machine's owner
 offers is the rrotor's to say, at each run (rrotor's docs/architecture.md, 5.11); it mounts exactly these in the run's
-sandbox. A rrotor before 0.6.0 knows neither folders nor effort.
+sandbox. Every rrotor that runs a bot's agent (0.9.0, ops/bots/remote.py) takes both.
 
 Effort is the Claude API's own `output_config.effort`: `low`, `medium`, `high`, `xhigh` or `max`, `medium` unless the
-owner says. It goes with each request of an agent step when the step's model takes it (the three bot models take all
-five) and is left out otherwise: a run never fails over it."""
+owner says. It goes with the bot's turn when its model takes it (the three bot models take all five) and is left out
+otherwise: a run never fails over it."""
 
-import re
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -20,8 +19,6 @@ from glyphh_server.errors import Invalid
 
 MAX: int = 20
 PATH_MAX: int = 1024
-RROTOR_MIN: tuple[int, int] = (0, 6)  # the first rrotor that takes a call's folders and glyphh_bot's effort
-RROTOR_MIN_NAME: str = "0.6.0"
 
 Effort = Literal["low", "medium", "high", "xhigh", "max"]
 EFFORTS: tuple[str, ...] = ("low", "medium", "high", "xhigh", "max")
@@ -81,12 +78,6 @@ def folders(given: list[Folder]) -> list[dict[str, str]]:
             raise Invalid(f"{path} is listed twice: give each folder once.", reason="folders")
         kept.append({"path": path, "access": one.access})
     return kept
-
-
-def takes(version: str | None) -> bool:
-    """Whether a rrotor of this version takes a call's folders and glyphh_bot's effort."""
-    found = re.match(r"(\d+)\.(\d+)", version or "")
-    return found is not None and (int(found[1]), int(found[2])) >= RROTOR_MIN
 
 
 def effort_for(model: str, effort: str | None) -> str | None:

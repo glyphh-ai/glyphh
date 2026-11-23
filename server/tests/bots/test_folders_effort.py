@@ -1,7 +1,7 @@
 """A bot's folders and effort (docs/specs/bots.md, 13): the folders of its rrotor's machine it may use, their shape
-checked here and nothing more, sent with each call of its run there; the effort Claude works at, on each request of
-an agent step in the cloud and in the rrotor's call; both through the routes, a template's copy and the connector's
-tools. And the ticket a person's browser reads the machine itself with."""
+checked here and nothing more, sent with each call of its run there; the effort Claude works at, with its turn on
+Glyphh cloud and in the rrotor's call; both through the routes, a template's copy and the connector's tools. And the
+ticket a person's browser reads the machine itself with."""
 
 import base64
 import json
@@ -20,16 +20,16 @@ from glyphh_server.models import Rrotor
 from glyphh_server.ops.bots import access, goes
 from glyphh_server.ops.bots.access import Folder, WithEffort
 from glyphh_server.ops.link.protocol import Call
-from tests.bots.conftest import Served, connected, made_bot
+from tests.bots.conftest import Served, connected, ran
 from tests.bots.fakes import FakeAnthropic
-from tests.bots.remote import OnRrotor, online, result, rrotor_fixture  # noqa: F401 (the fixture)
+from tests.bots.remote import OnRrotor, out, rrotor_fixture  # noqa: F401 (the fixture)
 from tests.connector import granted, rpc, tool
-from tests.db.helpers import Person, person
+from tests.db.helpers import person
 from tests.link import local_runtime, self_runtime
 
 DOCS: dict[str, str] = {"path": "/Users/ana/Documents", "access": "read"}
 OUT: dict[str, str] = {"path": "/Users/ana/Documents/out", "access": "write"}
-POET: dict[str, Any] = {"name": "Poet", "instructions": "Write.", "spec": {"loop": [{"id": "poem", "agent": "A poem"}]}}
+POET: dict[str, Any] = {"name": "Poet", "instructions": "Write a poem about what you are given.", "spec": {}}
 
 
 async def _version(engine: AsyncEngine, rrotor_id: uuid.UUID, version: str | None) -> None:
@@ -53,7 +53,8 @@ async def test_a_bot_has_no_folders_and_medium_effort_until_its_owner_chooses(
     res = await served.http.patch("/v1/bots/poet", json={"summary": "Poems"}, headers=ada.headers)
     assert (res.json()["folders"], res.json()["effort"], res.json()["runs_on"]) == ([DOCS, OUT], "high", None)
     assert (await served.http.get("/v1/bots/poet", headers=ada.headers)).json()["folders"] == [DOCS, OUT]
-    listed = (await served.http.get("/v1/bots", headers=ada.headers)).json()["bots"][0]
+    bots = (await served.http.get("/v1/bots", headers=ada.headers)).json()["bots"]
+    listed = next(b for b in bots if b["slug"] == "poet")
     assert (listed["folders"], listed["effort"]) == ([DOCS, OUT], "high")
     # the whole list is replaced; [] clears it
     res = await served.http.patch("/v1/bots/poet", json={"folders": []}, headers=ada.headers)
@@ -120,21 +121,16 @@ async def test_the_models_listing_says_the_efforts(served: Served, engine: Async
 # Effort, on the Claude call
 
 
-async def test_a_bots_effort_goes_with_each_claude_request_of_its_agent_steps(
-    served: Served, engine: AsyncEngine
-) -> None:
+async def test_a_bots_effort_goes_with_its_turn(served: Served, engine: AsyncEngine) -> None:
     ada = await person(engine)
     await served.http.post("/v1/bots", json={**POET, "effort": "high"}, headers=ada.headers)
-    run = await served.http.post("/v1/bots/poet/runs", json={"input": "the sea"}, headers=ada.headers)
-    await served.settled()
-    assert (await served.http.get(f"/v1/bot-runs/{run.json()['id']}", headers=ada.headers)).json()["status"] == "done"
-    sent = served.claude.requests[-1]
-    assert sent["model"] == "claude-opus-5-5" and sent["output_config"] == {"effort": "high"}
+    assert (await ran(served, ada, "poet", "the sea"))["status"] == "done"
+    turn = served.agent.turns[-1]
+    assert (turn.model, turn.effort) == ("claude-opus-5-5", "high")
     # medium, the default, is said too: a model's own default is not always medium
     await served.http.patch("/v1/bots/poet", json={"effort": "medium"}, headers=ada.headers)
-    await served.http.post("/v1/bots/poet/runs", json={"input": "the sea"}, headers=ada.headers)
-    await served.settled()
-    assert served.claude.requests[-1]["output_config"] == {"effort": "medium"}
+    await ran(served, ada, "poet", "the sea")
+    assert served.agent.turns[-1].effort == "medium"
 
 
 def test_effort_is_left_out_where_the_model_takes_none_and_never_fails_a_request() -> None:
@@ -169,60 +165,29 @@ def test_the_real_claude_carries_the_bots_effort(monkeypatch: pytest.MonkeyPatch
 # On its rrotor
 
 
-async def _on(r: OnRrotor, engine: AsyncEngine, version: str | None = "0.6.0", **over: Any) -> tuple[Person, Any, Any]:
-    ada = await person(engine)
-    rt = await online(engine, ada)
-    await _version(engine, rt.id, version)
-    await made_bot(r.s, ada, runs_on=str(rt.id), **over)
-    run = await r.s.http.post("/v1/bots/inbox-cat/runs", json={"input": "lunch"}, headers=ada.headers)
-    assert run.status_code == 202, run.text
-    return ada, rt, run.json()
-
-
 async def test_a_run_on_a_rrotor_carries_the_bots_folders_and_effort(on_rrotor: OnRrotor, engine: AsyncEngine) -> None:
-    ada, rt, run = await _on(on_rrotor, engine, folders=[DOCS, OUT], effort="xhigh")
+    ada, rt, run = await out(on_rrotor, engine, folders=[DOCS, OUT], effort="xhigh")
     to, sent = on_rrotor.hub.sent[-1]
     assert to == rt.id and isinstance(sent, Call) and run["status"] == "dispatched"
-    assert sent.folders == [DOCS, OUT] and sent.inputs["effort"] == "xhigh"
+    assert sent.folders == [DOCS, OUT] and sent.inputs["effort"] == "xhigh" and sent.inputs["file_tools"] is True
     assert json.loads(sent.model_dump_json())["folders"] == [DOCS, OUT]  # as the link carries it
     # a folder the machine's owner does not offer: the rrotor's plain sentence is the run's error
     why = "/Users/ana/Documents is not in a folder this rrotor's owner shares with bots: it shares /srv/shared."
     refused = {"status": "failed", "step": "call", "prompt": None, "data": {"code": "E_FOLDER_REFUSED", "reason": why}}
     await on_rrotor.landed(rt, ada, sent.run_id, refused)
-    ended = (await on_rrotor.s.http.get(f"/v1/bot-runs/{run['id']}", headers=ada.headers)).json()
+    ended = await on_rrotor.run(ada, run["id"])
     assert ended["status"] == "failed" and why in ended["error"]
-    # a fresh call for an answer carries them again
+    # the next call carries them as they are then
     await on_rrotor.s.http.patch("/v1/bots/inbox-cat", json={"folders": [OUT]}, headers=ada.headers)
-    run = (await on_rrotor.s.http.post("/v1/bots/inbox-cat/runs", json={"input": "x"}, headers=ada.headers)).json()
+    run = await on_rrotor.start(ada)
     assert on_rrotor.hub.last().folders == [OUT] and run["status"] == "dispatched"
 
 
 async def test_a_bot_with_no_folders_sends_none(on_rrotor: OnRrotor, engine: AsyncEngine) -> None:
-    _, _, run = await _on(on_rrotor, engine)
+    _, _, run = await out(on_rrotor, engine)
     sent = on_rrotor.hub.last()
     assert run["status"] == "dispatched" and sent.folders is None and sent.inputs["effort"] == "medium"
-
-
-@pytest.mark.parametrize("version", ["0.5.0", None, "dev"])
-async def test_a_rrotor_before_folders_is_sent_no_effort_and_a_bot_with_folders_fails_saying_to_update(
-    on_rrotor: OnRrotor, engine: AsyncEngine, version: str | None
-) -> None:
-    ada, rt, run = await _on(on_rrotor, engine, version, effort="high")
-    assert run["status"] == "dispatched" and "effort" not in on_rrotor.hub.last().inputs  # never fails over effort
-    await on_rrotor.landed(rt, ada, uuid.UUID(run["id"]), result())
-    await on_rrotor.s.http.patch("/v1/bots/inbox-cat", json={"folders": [DOCS]}, headers=ada.headers)
-    sent = len(on_rrotor.hub.sent)
-    run = (await on_rrotor.s.http.post("/v1/bots/inbox-cat/runs", json={"input": "x"}, headers=ada.headers)).json()
-    assert run["status"] == "failed" and len(on_rrotor.hub.sent) == sent
-    assert run["error"] == (
-        f"Acme runs rrotor {version or 'an earlier version'}, which cannot give a bot folders: update it to "
-        "rrotor 0.6.0 or later, or take the folders off the bot."
-    )
-
-
-def test_which_rrotors_take_folders() -> None:
-    assert [access.takes(v) for v in ("0.6.0", "0.6.1-rc1", "0.10.2", "1.0.0")] == [True] * 4
-    assert [access.takes(v) for v in ("0.5.0", "0.5.9", "", None, "latest")] == [False] * 5
+    assert "file_tools" not in sent.inputs
 
 
 # A template's copy, and the connector's tools
@@ -232,7 +197,7 @@ async def test_a_templates_copy_has_its_effort_and_no_folders(served: Served, en
     ada = await person(engine)
     await connected(served, ada)
     one = (await served.http.get("/v1/bot-templates/inbox-triage", headers=ada.headers)).json()
-    assert one["effort"] == "medium" and "folders" not in one  # a template knows no machine
+    assert one["slug"] == "inbox-triage" and "folders" not in one  # a template knows no machine
     res = await served.http.post("/v1/bot-templates/inbox-triage/install", json={"name": "Mail"}, headers=ada.headers)
     assert res.status_code == 201 and (res.json()["folders"], res.json()["effort"]) == ([], "medium")
     # the copy is the org's: its owner chooses after

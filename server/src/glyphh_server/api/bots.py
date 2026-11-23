@@ -1,16 +1,16 @@
-"""The org's hosted bots (docs/specs/bots.md): each the SDK's bot package (its loop of steps, gates that learn in Ada,
-hard limits, its agent's prompt and skills), with a look (its cat), the Claude model its agent steps run on and, per
-connection, the tools it may use; run in the background by the SDK's runner. A run that stops for the person waits
-(needs_input) until it is answered; a gate's wrong call is corrected and learned. The agent steps run on the org's own
-Anthropic key when it has set one (Glyphh's markup charged), else on Glyphh's (Anthropic's rate and the markup), drawn
-from the plan's allowance and then the org's balance. Each route takes a person's Ada API key too (api/key_auth.py)."""
+"""The org's hosted bots (docs/specs/bots.md, bot-agent-loop.md): each a Claude agent a person talks to, with its
+instructions, what Ada decides for it, a look (its cat), its model and, per connection, the tools it may use; a run
+is one Agent SDK turn in the background. A run that stops for the person waits (needs_input) until it is answered; a
+decision's wrong call is corrected and learned. A run is billed on the org's own Anthropic key when it has set one
+(Glyphh's markup charged), else on Glyphh's (Anthropic's rate and the markup), drawn from the plan's allowance and
+then the org's balance. Each route takes a person's Ada API key too (api/key_auth.py)."""
 
 import uuid
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, Request, Response
 
-from glyphh_server.api import bot_decisions
+from glyphh_server.api import bot_decisions, bot_plugins
 from glyphh_server.api.auth import Cfg, Conn
 from glyphh_server.api.key_auth import KeyCaller as Caller
 from glyphh_server.api.key_auth import KeyPerson as Person
@@ -35,6 +35,7 @@ from glyphh_server.ops.projects import runs as project_runs
 
 router = APIRouter(tags=["bots"])
 router.include_router(bot_decisions.router)  # its decisions, read and trained (docs/specs/bots.md, 12)
+router.include_router(bot_plugins.router)  # its plugins, brought up to date
 
 
 def _bots(request: Request) -> Any:
@@ -51,7 +52,7 @@ async def list_bots(
 
 @router.get("/v1/bots/models", operation_id="listBotModels")
 async def list_models(caller: Caller) -> BotModels:
-    """The Claude models a bot's agent steps may run on, at their rates."""
+    """The Claude models a bot may run on, at their rates."""
     return prices.listing()
 
 
@@ -91,16 +92,17 @@ async def get_template(slug: str, caller: Caller) -> templates.BotTemplate:
 
 @router.post("/v1/bot-templates/{slug}/install", operation_id="installBotTemplate", status_code=201)
 async def install_template(slug: str, body: templates.InstallIn, who: Caller, conn: Conn, settings: Cfg) -> BotView:
-    """The org's own bot copied from the template, scoped to its connection of each app the bot needs (422, reason
-    connections, naming the apps to connect first)."""
-    return await templates.install(conn, who, settings.secret_key, slug, body)
+    """The org's own bot made from the template, scoped to its connection of each app the bot needs (422, reason
+    connections, naming the apps to connect first; reason rrotor, with setup_url, for a template that runs only on a
+    rrotor while the org has none linked)."""
+    return await templates.install(conn, who, settings.secret_key, slug, body, settings.platform_url.rstrip("/"))
 
 
 @router.get("/v1/bot-approvals", operation_id="listBotApprovals")
 async def list_approvals(caller: Caller, conn: Conn) -> Runs:
-    """The org's approvals queue: every run of its bots waiting on the person (a gate unsure, an approval, a tool its
-    connection asks about) and every project's pull request waiting for a merge or a no (kind project), oldest
-    first; POST /v1/bot-runs/{id}/answer answers a bot's, POST /v1/project-runs/{id}/answer a project's."""
+    """The org's approvals queue: every run of its bots waiting on the person (the bot's own question, an approval,
+    a tool its connection asks about) and every project's pull request waiting for a merge or a no (kind project),
+    oldest first; POST /v1/bot-runs/{id}/answer answers a bot's, POST /v1/project-runs/{id}/answer a project's."""
     return Runs(runs=await project_runs.queue(conn))
 
 
@@ -144,7 +146,7 @@ async def update_bot(slug: str, body: BotPatch, caller: Caller, conn: Conn) -> B
 
 @router.delete("/v1/bots/{slug}", operation_id="deleteBot", status_code=204)
 async def delete_bot(slug: str, caller: Caller, conn: Conn, settings: Cfg) -> Response:
-    """The bot deleted, with its runs; its Ada key revoked (its gates' models stay in Ada)."""
+    """The bot deleted, with its runs; its Ada key revoked (its decisions' models stay in Ada)."""
     await store.remove(conn, slug, settings.secret_key)
     return Response(status_code=204)
 
@@ -157,7 +159,8 @@ async def set_connections(slug: str, body: ScopesIn, caller: Caller, conn: Conn)
 
 @router.get("/v1/bots/{slug}/gates", operation_id="getBotGates")
 async def get_gates(slug: str, request: Request, who: Person) -> Gates:
-    """What its gates have learned: per gate its precedents, how often it asked, how often it was right."""
+    """What its decisions' Ada models have learned: per decision its precedents, how often Ada was unsure, how often
+    it was right (the route's name is a storage name kept from the first engine)."""
     return Gates(gates=await _bots(request).gates(who, slug))
 
 
@@ -186,7 +189,7 @@ async def answer_run(run_id: uuid.UUID, body: AnswerIn, request: Request, who: P
 
 @router.post("/v1/bot-runs/{run_id}/wrong", operation_id="correctBotRun")
 async def correct_run(run_id: uuid.UUID, body: WrongIn, request: Request, who: Person) -> dict[str, Any]:
-    """A gate called the run (or one of its items) wrong: what it should have said, learned as a precedent."""
+    """A decision of the run (or of one of its items) was wrong: what it should have been, learned as a precedent."""
     return await _bots(request).wrong(who, run_id, body)
 
 

@@ -49,11 +49,19 @@ class RunApp(BaseModel):
     result: Any = Field(None, description="The tool's result, which the page renders")
 
 
+class RunStep(BaseModel):
+    tool: str = Field(description="The tool's key (never shown to the person)")
+    title: str = Field(description="What it did, in plain words: Send Email, Decided urgency for 4 items")
+    app: str = Field(description="The app's name, when it is an app's tool")
+    ok: bool = Field(description="False when it failed or was refused")
+
+
 class Shown(BaseModel):
     """What a run says of itself and brought back (a RunView's)."""
 
-    summary: str = Field("", description="What happened, in a plain sentence; empty while it runs")
-    hint: str = Field("", description="When the text it was given did not fit the bot: what the bot does, what to give")
+    summary: str = Field("", description="A plain sentence for a run with no words of its own; else empty")
+    hint: str = Field("", description="Always empty: a bot answers what it is told (kept for older clients)")
+    steps: list[RunStep] = Field(default_factory=list, description="What it used during the turn, in order")
     links: list[RunLink] = Field(default_factory=list, description="Pages its steps made or touched")
     apps: list[RunApp] = Field(default_factory=list, description="MCP App UI resources its tool results carry")
     files: list[RunFile] = Field(
@@ -78,6 +86,12 @@ def _dicts(value: Any, depth: int = 0) -> Iterator[dict[str, Any]]:
 def _steps(run: Any) -> Iterator[tuple[str, Any]]:
     data = run.data if isinstance(run.data, dict) else {}
     return ((k, v) for k, v in data.items() if k != "input" and not k.startswith("_"))
+
+
+def steps(run: Any) -> list[RunStep]:
+    """What the run used, as its desk noted it (ops/bots/agent/desk.py)."""
+    data = run.data if isinstance(run.data, dict) else {}
+    return [RunStep(**s) for s in data.get("_steps") or []]
 
 
 def kind_of(url: str) -> str | None:

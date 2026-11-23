@@ -1,0 +1,5 @@
+{
+  "name": "pr-review-digest",
+  "version": "1.0.0",
+  "description": "PR Review Digest: finds the open pull requests waiting on your review and posts a ranked digest to Slack."
+}

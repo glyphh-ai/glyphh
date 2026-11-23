@@ -1,0 +1,5 @@
+{
+  "name": "support-triage",
+  "version": "1.0.0",
+  "description": "Support Triage: sorts new support email by urgency and posts the urgent ones to your Slack channel."
+}

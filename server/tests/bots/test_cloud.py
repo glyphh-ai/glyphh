@@ -1,7 +1,6 @@
-"""The cloud's program for a bot: fetch only from public hosts (named, resolved, never redirected, JSON of a bounded
-size), and its scoped tools called on the server's loop from the runner's thread."""
+"""What a bot's `fetch` may reach (ops/bots/fetching.py, cloud.py): https on one of the hosts the bot names, and only
+public hosts (named, resolved, never redirected), answering JSON of a bounded size."""
 
-import asyncio
 import json
 import socket
 from types import SimpleNamespace
@@ -10,7 +9,8 @@ from typing import Any
 import pytest
 
 from glyphh_server.errors import Invalid
-from glyphh_server.ops.bots import cloud, engine
+from glyphh_server.ops.bots import cloud, fetching
+from glyphh_server.ops.bots.agent import run as agent_run
 
 
 def test_only_public_host_names_are_hosts_a_bot_may_name() -> None:
@@ -80,30 +80,35 @@ def test_fetch_answers_json_and_refuses_private_hosts_and_big_answers(monkeypatc
         cloud.fetch(req, 5)
 
 
-async def test_the_program_fetches_and_calls_its_tools_on_the_servers_loop() -> None:
-    asked: list[Any] = []
-    ctx = SimpleNamespace(http_json=lambda url, headers=None: asked.append((url, headers)) or {"url": url})
+async def test_fetch_is_a_get_of_https_json_from_one_of_the_bots_own_hosts(monkeypatch: pytest.MonkeyPatch) -> None:
+    sent: list[tuple[str, dict[str, str], float]] = []
 
-    async def send(given: dict[str, Any]) -> Any:
-        return {"sent": given}
+    def fetch(req: Any, timeout: float) -> Any:
+        sent.append((req.full_url, dict(req.header_items()), timeout))
+        return {"items": [1, 2]}
 
-    program = cloud.Program({"gmail-send-email": send}, asyncio.get_running_loop())
-    assert program.fetch(ctx, "https://a.example.com") == {"url": "https://a.example.com"}
-    program.fetch(ctx, {"url": "https://b.example.com", "headers": {"x": "1"}})
-    program.fetch(ctx, {"url": "https://c.example.com", "headers": "nope"})
-    assert asked[1:] == [("https://b.example.com", {"x": "1"}), ("https://c.example.com", None)]
-    with pytest.raises(ValueError, match="takes a URL"):
-        program.fetch(ctx, 7)
-    tool = program.__getattr__("gmail-send-email")
-    assert await asyncio.to_thread(tool, ctx, {"to": "x"}) == {"sent": {"to": "x"}}
-    assert await asyncio.to_thread(tool, ctx, "not a dict") == {"sent": {}}
-    with pytest.raises(AttributeError):
-        program.__getattr__("gmail-delete-everything")
-    with pytest.raises(RuntimeError, match="only being checked"):
-        cloud.Program({"gmail-send-email": send}).__getattr__("gmail-send-email")(ctx, {})
-
-
-def test_a_run_whose_steps_left_nothing_has_no_output() -> None:
-    bot = SimpleNamespace(spec={"loop": [{"id": "a"}, "not a step"]})
-    assert engine.output(bot, SimpleNamespace(data={})) == ""
-    assert engine.output(bot, SimpleNamespace(data={"a": "x" * (engine.OUTPUT_MAX + 5)})) == "x" * engine.OUTPUT_MAX
+    monkeypatch.setattr(cloud, "fetch", fetch)
+    spec = {"hosts": ["api.example.com", "news.example.org"]}
+    assert fetching.fetched(spec, "https://api.example.com/v1/items?n=2") == {"items": [1, 2]}
+    assert fetching.fetched(spec, {"url": "https://news.example.org/x", "headers": {"X-Key": 7}}) == {"items": [1, 2]}
+    fetching.fetched(spec, {"url": "https://api.example.com/y", "headers": "not headers"})
+    assert [(url, timeout) for url, _, timeout in sent] == [
+        ("https://api.example.com/v1/items?n=2", cloud.FETCH_SECONDS),
+        ("https://news.example.org/x", cloud.FETCH_SECONDS),
+        ("https://api.example.com/y", cloud.FETCH_SECONDS),
+    ]
+    assert sent[0][1] == {"User-agent": fetching.AGENT, "Accept": "application/json"}
+    assert sent[1][1]["X-key"] == "7" and sent[1][1]["User-agent"] == fetching.AGENT
+    for url in ("http://api.example.com/x", "https://evil.example.net/x", "https://api.example.com.evil.net/x"):
+        with pytest.raises(ValueError, match=r"is not https on one of the bot's hosts \(api\.example\.com, news"):
+            fetching.fetched(spec, url)
+    for none in ({}, {"hosts": "api.example.com"}):
+        with pytest.raises(ValueError, match=r"one of the bot's hosts \(none\)"):
+            fetching.fetched(none, "https://api.example.com/x")
+    for bad in (7, None, {"url": 7}, {"headers": {}}):
+        with pytest.raises(ValueError, match="fetch takes a URL"):
+            fetching.fetched(spec, bad)
+    assert len(sent) == 3  # nothing else was fetched
+    bot = SimpleNamespace(spec=spec)
+    assert await agent_run.fetch(bot, {"url": "https://api.example.com/z"}) == {"items": [1, 2]}  # off the loop
+    assert sent[-1][0] == "https://api.example.com/z"

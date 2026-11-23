@@ -1,6 +1,6 @@
 """Create with AI (docs/specs/bots.md, 9): the bot maker, Claude drafting a bot from what the person says they want. It
-asks short questions until it knows the job, then drafts the whole bot (name, summary, cat, instructions, model, the
-loop with its gates, skills, and the apps it needs), which the SDK checks as it checks a bot being made; a draft the
+asks short questions until it knows the job, then drafts the whole bot (name, summary, cat, instructions, model, its
+standing task and examples, what it decides, its notes, and the apps it needs), checked as a bot being made; a draft the
 check finds wrong is sent back to Claude once to fix. The apps it needs are matched to the org's connections (its
 first of each app), the ones not connected named. Nothing is made: POST /v1/bots makes the draft. Claude is the bots'
 own, on the org's key or Glyphh's, metered either way (ops/bots/goes.py)."""
@@ -19,7 +19,7 @@ from glyphh_server.db import tenancy
 from glyphh_server.errors import GlyphhError, Unavailable
 from glyphh_server.models import Connection
 from glyphh_server.ops.auth.principal import Principal
-from glyphh_server.ops.bots import prices, store
+from glyphh_server.ops.bots import prices, shape, store
 from glyphh_server.ops.bots.guide import GUIDE
 from glyphh_server.ops.bots.maker_views import BotDraft, DraftIn, DraftView
 from glyphh_server.ops.bots.views import LOOK_PARTS, ScopeIn
@@ -38,11 +38,13 @@ and keep changing it as they ask. Write the way a friendly colleague talks: shor
 Answer with one JSON object and nothing else:
 {"reply": "<what you say to the person: a question, or what you drafted and what to check>",
  "draft": null or {"name": "...", "summary": "<one line>", "look": {<its cat: one of each of LOOKS>},
-   "instructions": "<its agent's prompt: who it is, how it works and writes>", "model": "<one of MODELS>",
-   "spec": {<as the guide says>}, "skills": {"<name>": "<SKILL.md text>"},
+   "instructions": "<who it is and how it works, as the guide says>", "model": "<one of MODELS>",
+   "task": "<what it does when it runs on its own>", "examples": ["<a prompt a person might type>", ...],
+   "spec": {<as the guide says>}, "skills": {"<name>": "<SKILL.md text: its know-how for one kind of work>"},
    "apps": [{"app": "<Pipedream app slug>", "tools": ["<tool key>", ...]}]}}
-Give the draft only once you know enough, and then every time after, whole. A step that runs a tool names a tool of
-an app in apps. Tool keys are Pipedream action keys, the app's slug first (gmail-find-email, slack-send-message).
+Give the draft only once you know enough, and then every time after, whole. The tools its instructions use are tools
+of an app in apps. Tool keys are Pipedream action keys, the app's slug first (gmail-find-email, slack-send-message);
+its instructions call each by its key with - as _ (gmail_find_email).
 LOOKS: {looks}
 MODELS: {models} (the default {default} unless the job is simple and frequent)
 The org has these apps connected: {linked}. Prefer them; name any other app it truly needs.
@@ -92,14 +94,15 @@ def parsed(text: str) -> tuple[str, dict[str, Any] | None]:
 
 
 def problems_of(draft: BotDraft) -> list[str]:
-    """What the SDK's check finds wrong with the draft, every tool it names counted as scoped."""
+    """What the check of a bot being made finds wrong with the draft, and what its task and examples run over."""
     scopes = [{"connection_id": a.app, "tools": a.tools} for a in draft.apps]
+    over = shape.limits(draft.task, draft.examples)
     try:
         slug = store.slugify(draft.name)
         store.checked(SimpleNamespace(**draft.model_dump(), slug=slug, scopes=scopes, state=None))
     except GlyphhError as err:
-        return list(err.detail.get("problems") or [err.message])
-    return []
+        return [*(err.detail.get("problems") or [err.message]), *over]
+    return over
 
 
 def shaped(raw: dict[str, Any], linked: dict[str, Any], before: dict[str, Any] | None) -> BotDraft | list[str]:
