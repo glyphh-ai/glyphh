@@ -37,7 +37,10 @@ export function LinkCards({ links }: { links: RunLink[] }) {
   );
 }
 
-/** Files a run's steps name, as the app's attachment chips; one with a page opens it. */
+/**
+ * A run's files as the app's attachment chips: those of its folders it used say what it did with each
+ * ("Invoices/March.pdf · read", "Summary.md · written"); one with a page opens it.
+ */
 export function FileChips({ files }: { files: FileChip[] }) {
   if (files.length === 0) return null;
   return (
@@ -48,6 +51,7 @@ export function FileChips({ files }: { files: FileChip[] }) {
             <span className="kind">{fileKind(f.name)}</span>
             <span className="an">{f.name}</span>
             {f.size !== null && <small>{fileSize(f.size)}</small>}
+            {f.did && <small>· {f.did}</small>}
           </>
         );
         return f.url ? (

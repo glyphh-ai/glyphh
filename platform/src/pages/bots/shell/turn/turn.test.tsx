@@ -83,6 +83,20 @@ describe('a bot’s turn is clean', () => {
     expect(within(turn).queryByText(/It finished/)).toBeNull();
   });
 
+  it('names the files of its folders the bot read and changed, each with what it did', async () => {
+    const used = [
+      { name: 'Notes/Summary.md', did: 'written' as const },
+      { name: 'Invoices/March.pdf', did: 'read' as const },
+    ];
+    const turn = await on([done({ output: 'Summarised.', files: used, data: { work: { filename: 'Notes/Summary.md', size: 9 } } })]);
+    const chips = within(turn).getByLabelText('Files');
+    expect(Array.from(chips.querySelectorAll('.att')).map((c) => c.textContent)).toEqual(['MDNotes/Summary.md· written', 'PDFInvoices/March.pdf· read']);
+    expect(within(chips).queryByRole('link')).toBeNull();
+    const many = Array.from({ length: 9 }, (_, i) => ({ name: `f${i}.txt`, did: 'read' as const }));
+    expect(filesOf(done({ files: [...many, ...many] }))).toHaveLength(6);
+    expect(filesOf(done({ files: used }))[1]).toEqual({ name: 'Invoices/March.pdf', size: null, url: null, did: 'read' });
+  });
+
   it('shows a failed run’s reason plainly and asks a question in place', async () => {
     const failed = await on([done({ status: 'failed', error: 'step decide: gate easy has no model', summary: undefined })]);
     expect(within(failed).getByText('It failed: Step decide: decision easy has no model.')).toBeInTheDocument();

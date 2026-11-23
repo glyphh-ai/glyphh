@@ -83,7 +83,7 @@ export function wordsOf(run: BotRun, spec?: BotSpec): { answer: string; summary:
 }
 
 export type Shot = { src: string; alt: string };
-export type FileChip = { name: string; size: number | null; url: string | null };
+export type FileChip = { name: string; size: number | null; url: string | null; did?: string };
 
 const IMAGE_URL = /^https?:\/\/[^\s]+\.(png|jpe?g|gif|webp)(\?[^\s]*)?$/i;
 const IMAGE_KEYS = /^(image|image_url|imageUrl|thumbnail_url|picture|photo_url|screenshot|screenshot_url)$/;
@@ -123,9 +123,13 @@ export function imagesOf(run: BotRun, shown = ''): Shot[] {
   return out;
 }
 
-/** Files its steps name (an attachment, a document): a name with a size or a type; six at most. */
+/**
+ * The run's files, six at most: first those of its own folders it read and changed (the server names them, with what
+ * it did: "read", "written", "moved"), then files its steps name (an attachment, a document: a name with a size or a type).
+ */
 export function filesOf(run: BotRun): FileChip[] {
   const out: FileChip[] = [];
+  for (const f of run.files ?? []) if (out.length < 6 && !out.some((o) => o.name === f.name)) out.push({ name: f.name, size: null, url: null, did: f.did });
   for (const data of stepData(run))
     walk(data, (_key, v) => {
       if (v === null || typeof v !== 'object' || Array.isArray(v)) return;

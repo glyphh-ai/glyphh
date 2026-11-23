@@ -98,6 +98,8 @@ export type BotModels = { models: BotModel[]; markup_pct: number; /** The effort
 export type BatchItem = { n: number; label: string; [k: string]: unknown };
 export type Question = { question: string; options: string[]; batch: BatchItem[] | null; answer_with: string | null };
 export type RunLink = { url: string; title: string; kind: string };
+/** A file of the bot's folders (on its rrotor) the run read or changed: its name alone, never what is in it. */
+export type RunFile = { name: string; did: 'read' | 'written' | 'moved' };
 /** An MCP App (`ui://…`) a step's tool result carries: its page (`html`, or read from the server by `uri`) and what it shows. */
 export type RunApp = { step: string; uri: string; title: string; html: string | null; input: unknown; result: unknown };
 /** An MCP App's page as `GET /v1/mcp-apps/resource` answers it (the server's own panels). */
@@ -124,6 +126,8 @@ export type BotRun = {
   links?: RunLink[];
   /** MCP App UI resources its steps' tool results carry, shown inline in the turn. */
   apps?: RunApp[];
+  /** On a rrotor: the files of its folders it read and changed, what it changed first. */
+  files?: RunFile[];
   /** The org's rrotor it ran on; none for Glyphh cloud. */
   runs_on?: string | null;
   /** `project`: in the approvals queue, a project's pull request waiting for merge or reject (`project_slug` its project). */

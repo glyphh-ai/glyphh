@@ -12,7 +12,8 @@ grants licences.
 | Runtimes | `glyphh-ai/rrotor` | rrotor, the runtime a person runs for their programs and CLIs: local on their own computer (installed from Claude with the `glyphh` plugin's `rrotor` skill, or `deploy/compose` in `glyphh-ai/glyphh`), or self-hosted at its own address, `https://<host>` (`RROTOR_PUBLIC_HOST`). It reads its licence key as `GLYPHH_LICENSE_KEY`. Claude and apps call it directly |
 
 The contract is the server's `docs/architecture.md` (the API table and **The platform**); prices and plan rules are
-its `docs/pricing.md`.
+its `docs/pricing.md`. The Bots screen is built to one product spec, Chris's rulings in his own words:
+[docs/bots-screen.md](docs/bots-screen.md).
 
 ## Sign-in
 
