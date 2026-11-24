@@ -68,7 +68,8 @@ async def handle(ctx: Context, call: Call) -> dict[str, Any]:
         case "tools/call":
             return await registry.call(ctx, call.params)
         case "resources/list":
-            hidden = {panel.DECISION_URI} if ctx.ada is None else set()  # the decision card while Ada Cloud is on
+            # Ada's cards (the decision, the screening verdict) while Ada Cloud is on.
+            hidden = {panel.DECISION_URI, panel.SCREENER_URI} if ctx.ada is None else set()
             return {"resources": [r for r in panel.RESOURCES if r["uri"] not in hidden]}
         case "resources/templates/list":
             return {"resourceTemplates": []}

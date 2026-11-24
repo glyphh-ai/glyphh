@@ -1,7 +1,9 @@
 """The panels: MCP App resources (MCP Apps 2026-01-26), each an HTML page that renders what its tools answer and acts
-by calling the connector's own tools through the host. The account panel (`ui://glyphh/account/5`) and the decision
+by calling the connector's own tools through the host. The account panel (`ui://glyphh/account/5`), the decision
 card (`ui://glyphh/decision/1`: one Ada decision, from ada_decide, with its probabilities, whether Ada asks first and
-the precedents it stands on; Approve or a correction records the case through the tool its answer's `teach` names).
+the precedents it stands on; Approve or a correction records the case through the tool its answer's `teach` names)
+and the screener card (`ui://glyphh/screener/1`: the Resume Screener plugin's verdict for one application, from
+screener_verdict: real person, suspect or unsure with what each signal found, the fit, and how it was written).
 Each inlines the MCP Apps client (@modelcontextprotocol/ext-apps 2.0.3, the bundle the glyphh plugin's sign-in card
 ships). An address carries its version: a new panel, a new address."""
 
@@ -13,6 +15,7 @@ from glyphh_server.mcp.protocol import Call
 
 URI: str = "ui://glyphh/account/5"
 DECISION_URI: str = "ui://glyphh/decision/1"
+SCREENER_URI: str = "ui://glyphh/screener/1"
 MIME: str = "text/html;profile=mcp-app"
 EXTENSION: str = "io.modelcontextprotocol/ui"
 RESOURCE: dict[str, str] = {
@@ -30,8 +33,17 @@ DECISION_RESOURCE: dict[str, str] = {
     "stands on; approve it or correct it, and the case is recorded as a precedent the model learns from.",
     "mimeType": MIME,
 }
-RESOURCES: tuple[dict[str, str], ...] = (RESOURCE, DECISION_RESOURCE)
-PAGES: dict[str, str] = {URI: "account.html", DECISION_URI: "decision.html"}
+SCREENER_RESOURCE: dict[str, str] = {
+    "uri": SCREENER_URI,
+    "name": "screener",
+    "title": "Screening verdict",
+    "description": "The Resume Screener's verdict for one application: real person, suspect or unsure with what each "
+    "signal found, then the fit for the role, then how it was written; your answer to a signal Ada was unsure of is "
+    "recorded as a precedent.",
+    "mimeType": MIME,
+}
+RESOURCES: tuple[dict[str, str], ...] = (RESOURCE, DECISION_RESOURCE, SCREENER_RESOURCE)
+PAGES: dict[str, str] = {URI: "account.html", DECISION_URI: "decision.html", SCREENER_URI: "screener.html"}
 
 
 @lru_cache
