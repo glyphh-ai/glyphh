@@ -20,18 +20,6 @@ REFRESH_TTL: timedelta = timedelta(days=30)
 SEEN_EVERY: timedelta = timedelta(minutes=1)
 
 
-class Introspection(BaseModel):
-    """RFC 7662's shape: whether a token is live for a resource, and for whom."""
-
-    active: bool
-    sub: str | None = None
-    org: str | None = None
-    scope: str | None = None
-    exp: int | None = None
-    role: str | None = None  # admin or member (docs/specs/apps.md, 2)
-    groups: list[str] | None = None  # the identity provider's groups, the person's roles
-
-
 class TokenAnswer(BaseModel):
     access_token: str
     token_type: str = "Bearer"
@@ -106,9 +94,8 @@ async def _live(conn: AsyncConnection, token: str, resource: str) -> Row | None:
     marks its grant used."""
     row = (
         await conn.execute(
-            select(ConnectorToken.grant_id, User.id, User.org_id, User.role, ConnectorGrant.scope)
-            .add_columns(ConnectorToken.expires_at, ConnectorGrant.client_id, User.email, Org.suspended_at)
-            .add_columns(User.groups)
+            select(ConnectorToken.grant_id, User.id, User.org_id, User.role)
+            .add_columns(ConnectorGrant.client_id, User.email, Org.suspended_at)
             .join(ConnectorGrant, ConnectorGrant.id == ConnectorToken.grant_id)
             .join(User, User.id == ConnectorGrant.user_id)
             .join(Org, Org.id == User.org_id)
@@ -148,20 +135,4 @@ async def principal_for(conn: AsyncConnection, token: str, resource: str) -> Pri
         client_id=row.client_id,
         suspended=row.suspended_at is not None,
         email=row.email,
-    )
-
-
-async def introspect(conn: AsyncConnection, token: str, resource: str) -> Introspection:
-    """For a self-hosted runtime asking about a bearer it was shown: live for the runtime's own address, and whose."""
-    row = await _live(conn, token, resource)
-    if row is None:
-        return Introspection(active=False)
-    return Introspection(
-        active=True,
-        sub=str(row.id),
-        org=str(row.org_id),
-        scope=row.scope,
-        exp=int(row.expires_at.timestamp()),
-        role=row.role,
-        groups=list(row.groups),
     )

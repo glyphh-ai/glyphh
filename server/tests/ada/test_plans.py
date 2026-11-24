@@ -172,11 +172,15 @@ async def test_plans_and_usage_show_the_cloud_numbers_with_ada_cloud_on(
     plan = text(await tool(ada, auth, "plan"))
     assert "Ada Cloud 1,000,000 precedents, 5,000,000 reads a month (then $1 per 10,000 more), 200 calls" in plan
     listed = text(await tool(ada, auth, "plans")).splitlines()
-    assert listed[0].endswith("Ada Cloud 1,000 precedents, 5,000 reads a month (then refused), 5 calls a second")
-    assert listed[1].endswith(
-        "Ada Cloud 10,000 precedents, 50,000 reads a month (then $1 per 10,000 more), 10 calls a second"
+    assert listed[0] == (
+        "Free: free; Ada Cloud 1,000 precedents, 5,000 reads a month (then refused), 5 calls a second; "
+        "no single sign-on"
     )
-    assert listed[4].endswith("Ada Cloud by contract")
+    assert listed[1].endswith(
+        "Ada Cloud 10,000 precedents, 50,000 reads a month (then $1 per 10,000 more), 10 calls a second; "
+        "no single sign-on"
+    )
+    assert listed[4].endswith("Ada Cloud by contract; single sign-on")
     usage = await tool(ada, auth, "usage")
     lines = text(usage).splitlines()
     assert lines[0].startswith(f"Ada Cloud reads {requests.period()}: 1 of 5,000,000; the count starts again")

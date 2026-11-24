@@ -1,7 +1,7 @@
 """Ada Cloud's refusals. The API raises them as the server's own (one shape: {"error": {"code", "message",
 "trace_id", ...}}); a worker raises Refusal, which travels back on the reply list and is raised again by the API with
-the worker's code and status. The codes a caller of rrotor knows are kept (E_AUTH, E_MODEL_MISSING), so SDK 3.0 reads
-the cloud's refusals as it reads a runtime's."""
+the worker's code and status. The codes SDK 3.0 knows are kept (E_AUTH, E_MODEL_MISSING), so it reads the cloud's
+refusals unchanged."""
 
 from typing import Any
 

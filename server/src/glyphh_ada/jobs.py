@@ -5,7 +5,7 @@ waits in `awaiting` for its file; `stage` says what a running job is doing ("res
 A job's beat, stall, loss and cancel are jobstate.py's.
 
 learn weighs the model's roles, values, words and pairs from its graded precedents and then calibrates its
-temperature, as rrotor's learn does; calibrate fits the temperature alone. Both read at most limits.JOB_SAMPLE of the
+temperature, as the kernel learns; calibrate fits the temperature alone. Both read at most limits.JOB_SAMPLE of the
 newest precedents (sample.py). When learning changes what a stored case carries (learned word weights or pairs), the
 kernel rewrites the sampled precedents; the job rewrites every other one after it, in batches, so the store is
 restated whole: on Postgres a model is never restated when it is opened."""

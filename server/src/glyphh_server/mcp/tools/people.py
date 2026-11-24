@@ -24,7 +24,7 @@ class InviteArgs(BaseModel):
 
 async def list_installs(ctx: Context, _: NoArgs) -> Done:
     found = await installs.list_installs(ctx.conn, ctx.who)
-    lines = [f"{i.name} ({i.surface}, mod {i.mod_version}), id {i.id}" for i in found] or ["No installs."]
+    lines = [f"{i.name} ({i.surface}, plugin {i.mod_version}), id {i.id}" for i in found] or ["No installs."]
     return Done("\n".join(lines), {"installs": [dump(i) for i in found]})
 
 

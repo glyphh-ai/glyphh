@@ -1,33 +1,21 @@
 """Plans and billing: Checkout, plan changes, Stripe's portal, all against a fake Stripe."""
 
 import httpx
-from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from glyphh_server.models import Rrotor
 from tests.db.helpers import member, org_row, person, subscribed
 from tests.fakes import FakeStripe
-from tests.link import local_runtime, self_runtime
-
-FEATURES_OFF = {"sync": False, "ha": False, "offline": False, "sso": False}
 
 
-async def test_billing_shows_the_plan_and_the_fullest_runtimes_precedents(
-    client: httpx.AsyncClient, engine: AsyncEngine
-) -> None:
+async def test_billing_shows_the_plan_to_every_member(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
     ada = await person(engine, "Pro")
     bob = await member(engine, ada.org_id)
-    empty = (await client.get("/v1/billing", headers=ada.headers)).json()
-    assert empty["precedents"] == {"used": 0, "limit": 50_000} and "hosting" not in empty
-    mine, theirs = await local_runtime(engine, ada), await self_runtime(engine, bob)
-    async with engine.begin() as conn:
-        for runtime_id, held in ((mine.id, 1_200), (theirs.id, 800)):
-            await conn.execute(update(Rrotor).where(Rrotor.id == runtime_id).values(precedents=held))
     billing = (await client.get("/v1/billing", headers=ada.headers)).json()
     assert (billing["plan"]["name"], billing["billing_status"], billing["renews_at"]) == ("Pro", "none", None)
-    assert billing["precedents"] == {"used": 1_200, "limit": 50_000} and billing["cloud"] is None
+    assert billing["cloud"] is None and billing["plan_until"] is None  # Ada Cloud off, no Enterprise grant
+    assert set(billing) == {"plan", "cloud", "tokens", "balance", "billing_status", "renews_at", "plan_until"}
     me = (await client.get("/v1/me", headers=bob.headers)).json()
-    assert me["precedents"] == billing["precedents"]
+    assert me["plan"] == billing["plan"]
     assert (await client.get("/v1/billing")).status_code == 401
 
 
@@ -42,29 +30,13 @@ async def test_the_plans_are_free_basic_pro_team_and_enterprise(
         ("Team", 29_900, "month", True),
         ("Enterprise", None, "year", False),
     ]
-    assert [p["limits"] for p in plans] == [
-        {"machines": 1, "precedents": 5_000},
-        {"machines": 1, "precedents": 5_000},  # Basic: no licence key, a self-hosted node runs as Free's
-        {"machines": 3, "precedents": 50_000},
-        {"machines": 10, "precedents": 500_000},
-        {"machines": None, "precedents": None},
-    ]
-    assert [p["features"] for p in plans] == [
-        FEATURES_OFF,
-        FEATURES_OFF,
-        FEATURES_OFF | {"sync": True},
-        FEATURES_OFF | {"sync": True},
-        {"sync": True, "ha": True, "offline": True, "sso": True},
-    ]
-    built = FEATURES_OFF | {"offline": True, "sso": True}  # offline licences and single sign-on work today
-    assert all(p["built"] == built for p in plans)
-    keys = {"name", "version", "price_cents", "interval", "self_serve", "limits", "features", "built"}
-    assert keys | {"cloud", "llm_tokens", "connections"} == set(plans[0])
+    assert [p["features"] for p in plans] == [{"sso": False}] * 4 + [{"sso": True}]  # single sign-on: Enterprise's
+    assert all(p["built"] == {"sso": True} for p in plans)  # single sign-on works today
+    keys = {"name", "version", "price_cents", "interval", "self_serve", "features", "built"}
+    assert keys | {"cloud", "llm_tokens"} == set(plans[0])
     assert all(p["cloud"] is None for p in plans)  # Ada Cloud off
     # Glyphh-hosted models' tokens a month (docs/specs/tokens.md): a plan's fact, shown whether they are on or not
     assert [p["llm_tokens"] for p in plans] == [250_000, 5_000_000, 25_000_000, 100_000_000, None]
-    # connections: no price set yet (Chris's), so every one is included on every plan
-    assert all(p["connections"] == {"included": None, "cents_a_month": None} for p in plans)
 
 
 async def test_checkout_makes_the_customer_once_and_sells_the_newest_flat_price(

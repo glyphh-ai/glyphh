@@ -14,7 +14,6 @@ from glyphh_server import app as app_module
 from glyphh_server.app import create_app
 from glyphh_server.models import Org
 from glyphh_server.ops import tend
-from glyphh_server.ops.link.hub import Hub
 from glyphh_server.ops.plans import org_version
 from tests.conftest import SETTINGS, _client
 from tests.db.helpers import person
@@ -36,7 +35,7 @@ async def _plan(engine: AsyncEngine, who: Any) -> str:
 
 
 async def _tick(engine: AsyncEngine, redis: Redis) -> bool:
-    return await tend.tend(engine, Hub(redis), SETTINGS, 60, None)
+    return await tend.tend(engine, redis, SETTINGS, None)
 
 
 async def test_ticks_at_once_run_one_at_a_time_and_each_part_once(engine: AsyncEngine, redis: Redis) -> None:
@@ -78,14 +77,12 @@ async def test_the_app_ticks_every_minute_and_survives_a_failure(
     engine: AsyncEngine, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     monkeypatch.setattr(app_module, "IDLE_EVERY", 0.01)
-    ticks: list[int] = []
+    ticks: list[Any] = []
     stopped = asyncio.Event()
 
-    async def ticked(
-        engine: AsyncEngine, hub: Any, cfg: Any, step: int, stripe: Any, cf: Any, gh: Any, bots: Any
-    ) -> None:
-        assert stripe is not None and cf is not None and gh is not None and bots is not None
-        ticks.append(step)
+    async def ticked(engine: AsyncEngine, redis: Any, cfg: Any, stripe: Any, cf: Any, gh: Any) -> None:
+        assert isinstance(redis, Redis) and stripe is not None and cf is not None and gh is not None
+        ticks.append(cfg)
         if len(ticks) == 1:
             raise RuntimeError("hiccup")
         stopped.set()

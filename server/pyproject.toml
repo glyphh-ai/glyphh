@@ -1,7 +1,7 @@
 [project]
 name = "glyphh-server"
 version = "0.1.0"
-description = "The Glyphh server: accounts, orgs, invites, plans and billing, installs, licences for local rrotors, the connector and Ada Cloud"
+description = "The Glyphh server: accounts, orgs, invites, plans and billing, installs, the connector and Ada Cloud"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.115",
@@ -16,13 +16,6 @@ dependencies = [
     # Ada Cloud's kernel (docs/specs/ada-cloud.md, 3.2): the private ada-private repo at a pinned commit, never
     # published. CI and Fly's builder read it with a read-only deploy key (the Dockerfile's ada_deploy_key secret).
     "glyphh-kernel[postgres] @ git+https://github.com/glyphh-ai/ada-private@f28212c414a7ce031cdb5253f5c4e2258141401d",
-    "anthropic>=2.12.0",
-    # The bots keep what their decisions learn in the SDK's own store and policy (glyphh.bots, docs/specs/bots.md, 9)
-    "glyphh[api]==3.12.0",
-    # A bot's run is one Claude Agent SDK turn (docs/specs/bot-agent-loop.md); its wheel bundles the Claude Code CLI
-    "claude-agent-sdk==0.2.187",
-    # The bots' built-in tools read resumes sent as PDF (ops/bots/resumes.py); pure Python, no system libraries
-    "pypdf>=5.0",
 ]
 
 [dependency-groups]
@@ -33,8 +26,9 @@ dev = [
     "httpx>=0.28",
     "ruff>=0.8",
     "asgi-lifespan>=2.1.0",
-    "httpx-ws>=0.9.0",
     "jsonschema>=4.23",
+    # The published SDK, called against Ada Cloud's API as a customer's code would (tests/ada/test_sdk.py)
+    "glyphh==3.12.0",
 ]
 docs = [
     "mkdocs-material>=9.6",

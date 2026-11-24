@@ -21,7 +21,7 @@ def _probe_app() -> FastAPI:
         raise Conflict("That name is taken.", field="name")
 
     async def unavailable() -> None:
-        raise Unavailable("Pipedream is down.")
+        raise Unavailable("Stripe is down.")
 
     async def crash() -> None:
         raise RuntimeError("secret internals")

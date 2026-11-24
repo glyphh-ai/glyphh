@@ -32,7 +32,7 @@ button:focus-visible,select:focus-visible{outline:2px solid var(--color-ring-pri
 <script type="module">
 const $ = (id) => document.getElementById(id);
 const app = new window.McpApp({ name: "glyphh-account", version: "1" }, {}, { autoResize: true });
-const amount = (n) => (n === null ? "unlimited" : String(n));
+const amount = (n) => (n === null ? "by contract" : n.toLocaleString());
 
 function theme(ctx) {
   if (!ctx) return;
@@ -67,13 +67,16 @@ function showPlan(d) {
   const p = d.plan, o = d.org;
   const renews = o.renews_at ? `, renews ${o.renews_at.slice(0, 10)}` : "";
   $("plan").textContent = `${p.name}, billing ${o.billing_status}${renews}. Members and installs are unlimited.`;
-  const on = Object.entries(p.features).filter(([, v]) => v).map(([k]) => k).join(", ") || "none";
-  $("limits").replaceChildren(item(`Runtime nodes: ${amount(p.limits.machines)}`),
-    item(`Precedents per node: ${amount(p.limits.precedents)}`), item(`Features: ${on}`));
+  const c = p.cloud;
+  const lines = c ? [`Precedents: ${amount(c.precedents)}`, `Reads a month: ${amount(c.requests_per_month)}`] : [];
+  $("limits").replaceChildren(...lines.map((l) => item(l)), item(`Single sign-on: ${p.features.sso ? "yes" : "no"}`));
 }
 
 function showUsage(u) {
-  $("usage").textContent = `Precedents ${u.precedents.used} on the fullest runtime, of ${amount(u.precedents.limit)} per node.`;
+  const c = u.cloud;
+  $("usage").textContent = c
+    ? `Reads ${c.month}: ${c.requests.used} of ${amount(c.requests.max)}. Precedents: ${c.precedents.used} of ${amount(c.precedents.max)}.`
+    : "Nothing is metered on this plan yet.";
 }
 
 async function refresh() {

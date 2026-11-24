@@ -1,6 +1,5 @@
-"""Counting and locking for what an org holds. Plans are flat per org: members, installs and runtimes are unlimited
-on every plan; a plan's runtime nodes and precedents per node are signed into its licence key and enforced by rrotor
-(ops/license_keys.py). Callers lock the row a count belongs to first, so requests at the same moment are taken one
+"""Counting and locking for what an org holds. Plans are flat per org: members and installs are unlimited
+on every plan. Callers lock the row a count belongs to first, so requests at the same moment are taken one
 after another."""
 
 import uuid

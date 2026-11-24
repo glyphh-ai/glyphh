@@ -1,4 +1,4 @@
-"""The mod's side of the device flow (RFC 8628): ask for a code, then poll for the install's token."""
+"""The plugin's side of the device flow (RFC 8628): ask for a code, then poll for the install's token."""
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
@@ -21,7 +21,7 @@ class DeviceCodeIn(BaseModel):
         None,
         pattern=MACHINE_ID,
         description="A stable id for this machine, 16 to 128 of A-Z a-z 0-9 _ -. Signing in again on it reuses its"
-        " install. Sent by every current mod; when absent one is made up.",
+        " install. Sent by every current plugin; when absent one is made up.",
     )
     name: str = Field(min_length=1, max_length=80, description="What the install is called: the machine's name")
     surface: Surface

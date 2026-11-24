@@ -20,7 +20,6 @@ from glyphh_ada.process import Worker
 from glyphh_server.db import tenancy
 from glyphh_server.models import AdaModelDay
 from glyphh_server.ops import tend
-from glyphh_server.ops.link.hub import Hub
 from tests.ada.conftest import ADA, SHAPES, a_model, an_org, cases, finished, key_for, shape
 from tests.ada.mcp import signed_in, tool
 from tests.ada.test_dashboard import TWO, _decided
@@ -213,7 +212,7 @@ async def test_a_tick_part_that_fails_does_not_stop_the_days_reaching_the_databa
 
     monkeypatch.setattr(tend, "expire", fails)
     with pytest.raises(RuntimeError, match="grants hiccup"):
-        await tend.tend(engine, Hub(counts), ADA, 60, None)
+        await tend.tend(engine, counts, ADA, None)
     assert "tick part failed: enterprise grants" in caplog.text
     assert await counts.hgetall(days.key(who.org_id)) == {}
     async with engine.begin() as conn:

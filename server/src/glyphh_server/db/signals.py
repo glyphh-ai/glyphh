@@ -1,8 +1,6 @@
-"""Redis, for live signals only: pub/sub to whichever server process holds a person's connection. Nothing kept lives
-here; Postgres holds the record. In production Redis runs on the server's own Fly machine, beside the server."""
-
-import json
-from typing import Any
+"""Redis, for what is counted or queued on its way to Postgres: the request metrics, the ops events, the tick's
+heartbeat and Ada Cloud's reads. Nothing kept lives here; Postgres holds the record. In production Redis runs on the
+server's own Fly machine, beside the server."""
 
 from redis.asyncio import Redis
 
@@ -20,8 +18,3 @@ async def redis_reachable(redis: Redis) -> bool:
     except Exception:  # noqa: BLE001  # any refusal means Redis is not reachable
         return False
     return True
-
-
-async def publish(redis: Redis, channel: str, event: str, data: dict[str, Any]) -> int:
-    """Send one event on a channel; the answer is how many connections heard it (0: nobody is listening)."""
-    return int(await redis.publish(channel, json.dumps({"event": event, "data": data}, default=str)))

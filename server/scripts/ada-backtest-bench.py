@@ -1,7 +1,7 @@
-"""The backtest against the benchmarks: German Credit and Banking77 (rrotor's benchmarks/; their fetch.sh scripts get
-the data), each imported into a model with its held-out cases the newest, then backtested on those (the benchmark's
-own hold-out) with the model's live settings, and with one candidate the benchmark also reports. The numbers to
-reproduce are the benchmarks' READMEs:
+"""The backtest against the benchmarks: German Credit and Banking77 (glyphh-ai/glyphh's benchmarks/; their fetch.sh
+scripts get the data), each imported into a model with its held-out cases the newest, then backtested on those (the
+benchmark's own hold-out) with the model's live settings, and with one candidate the benchmark also reports. The
+numbers to reproduce are the benchmarks' READMEs:
 
 - credit (calibrate.py): the learned spec with interactions, calibrated, decide: accuracy 70.0%, the bank's cost
   100; asking where every answer costs over 0.5, 111 of 200 decided at 81.1%; the plain vote 77.5%. Without the pairs
@@ -9,9 +9,10 @@ reproduce are the benchmarks' READMEs:
 - Banking77 (learned from its own store, word evidence 2): 88.2% of the 3,080; word evidence 0: 83.3%.
 
     GLYPHH_DATABASE_URL=postgresql+asyncpg://… python scripts/ada-backtest-bench.py --url http://server:8080 \\
-        --host ada.load --code ../rrotor/benchmarks --data ../rrotor/benchmarks
+        --host ada.load --code ../glyphh/benchmarks --data ../glyphh/benchmarks
 
---code is rrotor's benchmarks/ (its credit/run.py reads the data and makes the split, as the benchmark does);
+--code is a checkout of glyphh-ai/glyphh's benchmarks/ (its credit/run.py reads the data and makes the split, as the
+benchmark does);
 --data holds credit/german.data and banking77/train.csv and test.csv. It makes a person straight in the database,
 as scripts/ada-import.py does. Never against production.
 """
@@ -104,6 +105,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--url", required=True)
     parser.add_argument("--host", default="ada.glyphh.ai")
-    parser.add_argument("--code", required=True, help="rrotor's benchmarks/ directory")
+    parser.add_argument("--code", required=True, help="the benchmarks/ directory (glyphh-ai/glyphh)")
     parser.add_argument("--data", required=True, help="where credit/german.data and banking77/*.csv are")
     asyncio.run(main(parser.parse_args()))

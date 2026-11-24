@@ -1,5 +1,5 @@
-"""An `ada_sqlite` import: a kernel store in one SQLite file (a self-hosted runtime's precedents.sqlite, or a model's
-SQLite export) moved into a model, a batch at a time.
+"""An `ada_sqlite` import: a kernel store in one SQLite file (an Ada SQLite precedent store, precedents.sqlite, or a
+model's SQLite export) moved into a model, a batch at a time.
 
 When the file's glyphs are this model's (a sample of its cases, encoded again by this model's seed, dimension and
 lexicon, give the glyphs the file holds, and its cases name only this model's roles), the kernel's own Space.merge

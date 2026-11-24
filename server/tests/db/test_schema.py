@@ -79,7 +79,9 @@ async def test_new_cloud_limits_are_a_new_version_that_takes_the_price_and_the_o
     async with engine.begin() as conn:
         new = await newest_version(conn, "Carry")
         assert (new.cloud_precedents, new.cloud_requests, new.cloud_rps, new.cloud_overage) == (1_000, 2_000, 3, True)
-        assert (new.price_cents, new.max_machines, new.sync) == (4_900, 2, True)  # the deal as it was
+        kept = select(PlanVersion.price_cents, PlanVersion.max_machines, PlanVersion.sync)
+        deal = (await conn.execute(kept.where(PlanVersion.id == new.id))).one()
+        assert tuple(deal) == (4_900, 2, True)  # the deal as it was, its unread columns too
         pinned = (await conn.execute(select(Org.plan_version_id).where(Org.id == who.org_id))).scalar_one()
         assert pinned == new.id
         free = (await newest_version(conn, "Free")).id

@@ -1,7 +1,6 @@
-"""Signing an install in by device flow (RFC 8628). The mod asks for a code; the person opens the link, signs in
-and approves; the mod, polling, gets the install's token, once. The install is the machine: approving on a machine
-the person already has reuses its install; a new machine is a new install,
-never limited."""
+"""Signing an install in by device flow (RFC 8628). The plugin asks for a code; the person opens the link, signs
+in and approves; the plugin, polling, gets the install's token, once. The install is the machine: approving on a
+machine the person already has reuses its install; a new machine is a new install, never limited."""
 
 import secrets
 from datetime import UTC, datetime, timedelta
@@ -34,7 +33,7 @@ class DeviceStart(BaseModel):
 
 
 def new_machine_id() -> str:
-    """For an older mod that sends no machine id: one made up, so its sign-in still works."""
+    """For an older plugin that sends no machine id: one made up, so its sign-in still works."""
     return secrets.token_urlsafe(24)
 
 

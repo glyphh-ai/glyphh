@@ -1,10 +1,8 @@
 # The Glyphh server on Fly: the app glyphh-ai-server, at https://api.glyphh.ai.
 # Deployed only by CI, on a merge to main (.github/workflows/ci.yml). Its secrets are the app's own, every one a
 # GLYPHH_ setting (docs/architecture.md, Settings): GLYPHH_DATABASE_URL (`fly mpg attach`), GLYPHH_REDIS_URL,
-# GLYPHH_SECRET_KEY, GLYPHH_LICENSE_SIGNING_KEY (the Ed25519 key that signs licences and licence keys; a secret
-# set as GLYPHH_LICENSE_KEY, its old name, is still read, but to rrotor that name is the customer's key string),
-# GLYPHH_STRIPE_SECRET_KEY, GLYPHH_STRIPE_WEBHOOK_SECRET, and the sign-in providers, the Stripe prices and meter
-# (scripts/stripe-setup.py prints them) as they are added.
+# GLYPHH_SECRET_KEY, GLYPHH_STRIPE_SECRET_KEY, GLYPHH_STRIPE_WEBHOOK_SECRET, and the sign-in providers, the Stripe
+# prices and meter (scripts/stripe-setup.py prints them) as they are added.
 app = "glyphh-ai-server"
 primary_region = "iad"
 
@@ -42,8 +40,7 @@ primary_region = "iad"
     method = "GET"
     path = "/v1/health"
 
-# A bot's run is a Claude Code process beside the server (docs/specs/bot-agent-loop.md, 6.1): about 230 MB each while
-# its turn runs, GLYPHH_BOT_RUNS_AT_ONCE (4) at once, so 2 GB.
+# `app`: the schema step, then the server (the API, the connector, Ada Cloud's host and the minute tick).
 [[vm]]
   processes = ["app"]
   size = "shared-cpu-1x"

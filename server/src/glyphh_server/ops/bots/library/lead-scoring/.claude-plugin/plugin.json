@@ -1,5 +1,0 @@
-{
-  "name": "lead-scoring",
-  "version": "1.0.0",
-  "description": "Lead Scoring: scores the leads you give it as hot, warm or cold and adds the hot ones to your Google Sheet."
-}

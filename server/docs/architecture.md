@@ -1,22 +1,23 @@
 # Glyphh
 
-Glyphh as it is built: the [product](#product), the [architecture](#architecture) and the [data model](#data-model), checked against the code. What is not built is in [Not built yet](#not-built-yet) and nowhere else. Plans and prices are in [pricing.md](pricing.md). How rrotor and the server talk, step by step, is in rrotor's `docs/architecture.md`; the platform's pages are in `glyphh-ai/platform`'s README.
+Glyphh as it is built: the [product](#product), the [architecture](#architecture) and the [data model](#data-model), checked against the code. What is not built is in [Not built yet](#not-built-yet) and nowhere else. Plans and prices are in [pricing.md](pricing.md); the platform's pages are in `glyphh-ai/platform`'s README.
 
 ## Product
 
-**Glyphh is a platform, a server, Ada Cloud and a local runtime.** A person signs in once on the platform (https://platform.glyphh.ai), installs rrotor on their own machine and drives it from Claude; the server grants the licence that runtime runs on.
+**Glyphh is one thing: Ada.** Ada Cloud is Ada as an API that Glyphh runs: a person signs in once on the platform (https://platform.glyphh.ai), makes a model from a spec, loads its precedents, and asks; Claude reaches the same models through the Glyphh connector, software through the SDKs or the `glyphh` command with an API key.
 
 | Part for the person | What it is | Where |
 |---|---|---|
-| rrotor | The runtime the person installs and drives from Claude: it hosts spec-driven programs and sandboxed CLIs, all on the person's own machine | Local, or self-hosted at `https://<host>` |
-| Ada Cloud | Ada models as an API, from the person's own precedents (built, off by default: `GLYPHH_ADA_CLOUD`) | `https://ada.glyphh.ai` |
-| The `glyphh` plugin | For Claude Code: the account panels and sign-in card, the Ada skill, the file ledger | `/plugin marketplace add glyphh-ai/glyphh`, `/plugin install glyphh@glyphh` |
-| The SDKs | A runtime's API for an app, with a runtime key | PyPI `glyphh` 3.0.0, npm `@glyphh-ai/glyphh` 3.0.0 |
+| Ada Cloud | Ada models as an API, from the person's own precedents: make, load, learn, decide, ask, audit (off unless `GLYPHH_ADA_CLOUD` is on) | `https://ada.glyphh.ai` |
+| The Glyphh connector | The account and Ada from Claude or any MCP client: the account, plan, usage, billing, people and grants tools, the `ada_*` tools, the account panel and the decision card | `https://api.glyphh.ai/mcp` |
+| The platform | The one web app: sign-in, models, API keys, usage, billing, the org | https://platform.glyphh.ai |
+| The `glyphh` plugin | For Claude Code (2.0.0): the account panel and sign-in, the skills `ada`, `glyphh-cli` and `glyphh-sign-in`, the file ledger | `/plugin marketplace add glyphh-ai/glyphh`, `/plugin install glyphh@glyphh` |
+| The SDKs and the `glyphh` command | Ada for Python and TypeScript, and from the shell, with an API key | PyPI `glyphh` 4.0.0, npm `@glyphh-ai/glyphh` |
 
-- **The server only grants licences for rrotor.** It hosts nothing and is on no program's data path: a program runs on the person's runtime and is called there. The server signs the licence and the licence key the runtime runs on, counts its nodes and keeps the runtime keys a self-hosted runtime checks.
-- **Never per seat, model or install;** the tiers and the licensing strategy are in [pricing.md](pricing.md).
+- **Glyphh holds the models and their precedents,** a schema per org, and answers every call: there is nothing to install or host.
+- **Never per seat, model or key;** the plans are in [pricing.md](pricing.md).
 - **The platform is the one door.** The server renders nothing; every browser step lands on the platform. In Claude, the plugin and the Glyphh connector show the account too.
-- **Glyphh has no model in it.** Claude runs on the person's own subscription; Glyphh never holds a Claude login ([Anthropic's terms](#anthropics-terms)).
+- **Claude is never Glyphh's.** Claude runs on the person's own subscription and calls Glyphh's tools; Glyphh never holds a Claude login ([Anthropic's terms](#anthropics-terms)).
 
 ## Architecture
 
@@ -26,52 +27,45 @@ flowchart TB
         subgraph Claude["Claude, desktop or CLI"]
             Base["glyphh plugin"]
         end
-        LocalRotor["rrotor, local<br/>programs and CLIs"]
-        Local[("~/.glyphh<br/>install, licence")]
+        Local[("~/.glyphh<br/>install")]
         Base --> Local
-        Claude --> LocalRotor
     end
 
     Browser["A browser"]
-    Callers["Claude or any app<br/>with a runtime key or a Glyphh sign-in"]
+    Callers["An app, the SDKs or the glyphh command<br/>with an API key"]
     Stripe["Stripe<br/>Checkout, portal, Billing Meter"]
 
     subgraph Cloud["Glyphh cloud"]
         Platform["The platform<br/>platform.glyphh.ai<br/>an OAuth client, every browser step"]
-        API["The server, api.glyphh.ai<br/>accounts, billing, licences,<br/>the connector /mcp, the minute tick"]
-        Ada["Ada Cloud, ada.glyphh.ai<br/>(off by default)"]
+        API["The server, api.glyphh.ai<br/>accounts, billing,<br/>the connector /mcp, the minute tick"]
+        Ada["Ada Cloud, ada.glyphh.ai<br/>the Ada API and its workers<br/>(off by default)"]
         DB[("Postgres<br/>everything kept")]
         Redis[("Redis<br/>live signals, Ada's work in flight")]
         Platform -- "OAuth, /v1" --> API
+        Platform -- "the session's token" --> Ada
         API --- DB
         API --- Redis
         Ada --- DB
         Ada --- Redis
     end
 
-    subgraph Own["The person's own infrastructure"]
-        Self["rrotor, self-hosted<br/>REST + MCP at https://host"]
-    end
-
     Browser --> Platform
-    Base <-- "device flow, licence" --> API
+    Base <-- "device flow, /v1" --> API
     Claude -- "the Glyphh connector" --> API
-    Callers -- "REST or MCP" --> Self
-    LocalRotor -- "outbound link: licence and usage" --> API
-    Self -- "outbound link, daily heartbeat" --> API
+    Callers -- "REST" --> Ada
     API <-- "checkout, webhook, meter events" --> Stripe
 ```
 
-**What a person makes stays theirs:** their programs, precedents and data, in their own rrotor. **Nothing of Glyphh's is on a program's data path:** a call goes from the caller to the person's runtime and back. The server holds who they are, what they pay for, the licence keys it signed and what a runtime says of itself to be licensed (its version, nodes, precedents and its runtime keys' use), never a program, its inputs or its results.
+**The server holds** who a person is, their org, what it pays for, and, with Ada Cloud on, its models and their precedents (a schema per org) and counts of its reads. A call goes from the caller to Glyphh and back; nothing runs on the person's machine but Claude and the plugin.
 
 ### The parts
 
 | Part | What it is | Repo |
 |---|---|---|
-| **The platform** | The one web app, https://platform.glyphh.ai: every browser step of every flow, and the account's pages | `glyphh-ai/platform` |
-| **The server** | https://api.glyphh.ai: the API and the authorization server; accounts, orgs, installs, plans and billing on Stripe, the signed licence and licence key, the runtime link, the Glyphh connector (`/mcp`), and Ada Cloud behind its own host. Renders nothing | `glyphh-ai/server` |
-| **The plugin, the marketplace and the SDKs** | The `glyphh` plugin and its marketplace; the SDKs `glyphh` (PyPI) and `@glyphh-ai/glyphh` (npm), one contract with fixtures | `glyphh-ai/glyphh` (public) |
-| **rrotor** | The runtime: one image (`ghcr.io/glyphh-ai/rrotor`, public), programs and sandboxed CLIs | `glyphh-ai/rrotor` |
+| **The platform** | The one web app, https://platform.glyphh.ai: every browser step of every flow, and the account's pages. It also serves the games admin and demo.glyphh.ai, which are not this server's | `glyphh-ai/platform` |
+| **The server** | https://api.glyphh.ai: the API and the authorization server; accounts, orgs, installs, plans and billing on Stripe, the Glyphh connector (`/mcp`), and Ada Cloud behind its own host. Renders nothing | `glyphh-ai/server` |
+| **The plugin, the SDKs and the command** | The `glyphh` plugin; the SDKs `glyphh` (PyPI, with the `glyphh` command) and `@glyphh-ai/glyphh` (npm), one contract with fixtures | `glyphh-ai/glyphh` (public) |
+| **The Marketplace** | Plugins and skills for Claude, in a public repo. The platform and glyphh.ai each read it themselves; nothing of it is in the server | `glyphh-ai/plugins` (public) |
 
 ### The platform
 
@@ -85,7 +79,6 @@ A confidential OAuth client of the server (tokens in a sealed HttpOnly cookie; t
 | `/authorize` `?oauth=&client=` | `GET {server}/oauth/authorize` (a client's OAuth request, checked) | "<client> wants to use your Glyphh account", Continue with each provider → `GET {server}/auth/{provider}/start?oauth=` (single sign-on with `&email=`, as on `/device`) | — |
 | `/allow` `?consent=` | the provider's callback | `GET {server}/auth/consent?consent=` → `{kind: "oauth", client, returns_to, resource, email}`: Allow or Deny | `GET {server}/auth/oauth/allow?consent=&decision=allow\|deny` (the server sends the browser on to the client) |
 | `/account` `?linked=<provider>` | a provider link's callback | The account, with the provider now linked | — |
-| `/github` `?installed=<login>` | the GitHub App's callback | The App is installed on that account | — |
 | `/billing` `?done=1` | Stripe's checkout and portal | Billing, refreshed | — |
 | `/error` `?code=&message=&trace=` | any refusal in a browser flow | The message and the trace id to quote | — |
 
@@ -122,55 +115,28 @@ sequenceDiagram
 
 The consent values are signed by the server and tied to the browser that started the flow by the server's short-lived cookie (`glyphh_signin`, ten minutes, on the server's domain), so the answering `GET` must be a top-level navigation from that browser. The platform reads `GET /auth/consent` from the browser itself (`credentials: include`): the server answers it with CORS for the platform's origin only (`GLYPHH_PLATFORM_URL`), with credentials. The cookie is `SameSite=Lax` when the platform and the server share a site (`platform.glyphh.ai` and `api.glyphh.ai`), and `SameSite=None; Secure` when they do not (locally, `localhost` beside a tunnel), so that read still carries it. The server always sends a person through a provider's sign-in before Allow; whether the platform skips its own choice of provider for someone already signed in is the platform's.
 
-The platform's own pages, from the API with the session's token: Runtimes (`GET`/`POST /v1/runtimes/self`, `POST /v1/runtimes/self/{id}/token`, `DELETE /v1/runtimes/self/{id}`, `POST /v1/runtimes/{id}/offline-licence`), Keys (`GET`/`POST /v1/runtime/keys`, `DELETE /v1/runtime/keys/{id}`), Licence (`GET /v1/license/keys`, `GET /v1/license/nodes`), Billing and Usage (`GET /v1/plans`, `/v1/billing`, `POST /v1/billing/*`), Org (`GET /v1/org`, `/members`, `/invites`; Settings → Auth: `GET`/`PUT`/`DELETE /v1/org/sso`), Account (`GET`/`PATCH /v1/me`, `/v1/installs`, `POST /v1/me/identities`), and Ada at the Ada host when Ada Cloud is on.
+The platform's own pages, from the API with the session's token: Home, Models and API Keys (the Ada host, when Ada Cloud is on: below), Usage (`GET /v1/billing`, `/v1/billing/series`, `/v1/llm/usage`), Marketplace (the public repo `glyphh-ai/plugins`, read by the platform itself, never through the server), and Settings: General (`GET`/`PATCH /v1/org`), Billing (`GET /v1/plans`, `/v1/billing`, `/v1/billing/payment`, `POST /v1/billing/*`), Members (`GET /v1/org/members`, `/v1/org/invites`), Auth (`GET`/`PUT`/`DELETE /v1/org/sso`), Releases (Ada's versions, `GET /v1/ada` at the Ada host), Profile (`GET`/`PATCH /v1/me`, `POST /v1/me/identities`) and Installs (`GET /v1/installs`); and, for Glyphh's staff, the staff view (`/v1/admin/*`).
 
-**Single sign-on** (`ops/sso.py`, Enterprise: the plan's `sso`). An org's admin sets, on the platform's Settings → Auth, an OpenID Connect issuer (Okta, Entra ID, Google Workspace, any: `{issuer}/.well-known/openid-configuration` is read first, and a wrong one is refused with nothing kept), the client id and secret Glyphh is registered as there (the redirect URI `{server}/auth/sso/callback`; the secret sealed at rest under the server's secret key, `ops/auth/sealed.py`, never shown back), the email domains that route a sign-in to the org (a domain is one org's), and whether it is **enforced**: then Google and GitHub are refused for the org's people (`E_FORBIDDEN` `sso_required`), and single sign-on is their one way in. No SAML, no SCIM. The sign-in pages offer it when any org has it (`GET /auth/providers` says `sso`): the person gives their work email, whose domain names the org; `/auth/sso/start` sends them to the org's provider as its client (the org in the signed state), `/auth/sso/callback` exchanges the code with the secret and reads who they are from the provider's userinfo endpoint (an ID token is never parsed: the exchange was over the back channel). They are found by the provider's id (`sso`, `<issuer>#<subject>`), else by email, and either way must be that org's (`E_FORBIDDEN` `other_org` otherwise), or new to Glyphh: then a member of that org, its open invite for them accepted. Nobody is moved between orgs, and nobody gets an org of their own, by single sign-on; the device flow, the connector's Allow and the platform's own sign-in all take it. A self-hosted rrotor sees nothing new: the token it introspects is the same Glyphh sign-in, bound to its address and to its org. Each sign-in also keeps the provider's `groups` claim on the person (`users.groups`, lower-cased, at most 200): their **roles**, beside `admin` or `member` (Google and GitHub give none), and Settings → Auth names the **reviewer groups** (`org_sso.reviewers`) whose members review the org's apps beside its admin.
-
-**Org apps** (`docs/specs/apps.md`; `ops/catalogue.py`, `ops/apps.py`, `ops/app_views.py`). What Claude made in the session (a Claude Code artifact: a page, a dashboard, a document, a diagram, a deck, a design) is published to the org's own rrotor as an **app** (rrotor's `app_publish`), never to the server: the server keeps the **catalogue** only, one row per app per rrotor (`apps`: title, description, type, version, commit, roles, state, who submitted and reviewed it), filled from the rrotor's `deployed` message up the link (its manifest's `kind` `app`; its `type` one of `page`, `dashboard`, `doc`, `diagram`, `deck`, `design`, else `page`; `by` the publisher's Glyphh subject) as a `draft`, and reviewed here: a reviewer (the admin, or a member of a reviewer group) approves, rejects (with a reason) or retires it, each review told down the runtime's link as an `app` message and carried in every welcome, so the rrotor serves only what is approved. A person is listed the approved apps whose `roles` are empty or meet their own (`{role} ∪ groups`); reviewers see every state. The platform's Apps page and the connector's apps panel show the same cards, searched, filtered by type and paged (`GET /v1/apps`), each with Open to `{runtime_url}/apps/{name}/` (a local rrotor's `http://127.0.0.1:7777`, reachable on its own machine only). The introspection a rrotor asks for a sign-in answers `role` and `groups` too, so the rrotor checks the same roles at its door.
+**Single sign-on** (`ops/sso.py`, Enterprise: the plan's `sso`). An org's admin sets, on the platform's Settings → Auth, an OpenID Connect issuer (Okta, Entra ID, Google Workspace, any: `{issuer}/.well-known/openid-configuration` is read first, and a wrong one is refused with nothing kept), the client id and secret Glyphh is registered as there (the redirect URI `{server}/auth/sso/callback`; the secret sealed at rest under the server's secret key, `ops/auth/sealed.py`, never shown back), the email domains that route a sign-in to the org (a domain is one org's), and whether it is **enforced**: then Google and GitHub are refused for the org's people (`E_FORBIDDEN` `sso_required`), and single sign-on is their one way in. No SAML, no SCIM. The sign-in pages offer it when any org has it (`GET /auth/providers` says `sso`): the person gives their work email, whose domain names the org; `/auth/sso/start` sends them to the org's provider as its client (the org in the signed state), `/auth/sso/callback` exchanges the code with the secret and reads who they are from the provider's userinfo endpoint (an ID token is never parsed: the exchange was over the back channel). They are found by the provider's id (`sso`, `<issuer>#<subject>`), else by email, and either way must be that org's (`E_FORBIDDEN` `other_org` otherwise), or new to Glyphh: then a member of that org, its open invite for them accepted. Nobody is moved between orgs, and nobody gets an org of their own, by single sign-on; the device flow, the connector's Allow and the platform's own sign-in all take it. Each sign-in also keeps the provider's `groups` claim on the person (`users.groups`, lower-cased, at most 200), shown in `GET /v1/me` and the connector's `whoami` beside their role, `admin` or `member` (Google and GitHub give none); nothing is decided by them.
 
 ### The `glyphh` plugin
 
 Its home is `glyphh-ai/glyphh` (the README there); what touches the server:
 
-- **Sign in** by device flow (`/glyphh signin`): the link lands on the platform's `/device`, where the person signs in with Google or GitHub and approves the install. Asking Claude "sign in to Glyphh" shows a sign-in card from the plugin's own MCP server.
-- **Licence:** fetched and checked (Ed25519) at start, refreshed daily ([The license](#the-license)); kept in [`~/.glyphh`](#on-the-machine-glyphh).
-- **The local runtime's token:** `POST /v1/runtime/local` for the install that starts rrotor ([rrotor](#rrotor)).
-- **Panels:** account, org, plan and billing, a hooks module (`hooks/hooks.json` naming `register.tsx`), behind `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS` while function hooks are early access. The Ada skill and the file ledger need neither the flag nor the server.
+- **Sign in** by device flow (`/glyphh signin`): the link lands on the platform's `/device`, where the person signs in with Google or GitHub and approves the install. Asking Claude "sign in to Glyphh" starts the same flow through the `glyphh-sign-in` skill.
+- **The panel** (`/glyphh`): sign in, account, org, plan and billing, a hooks module (`hooks/hooks.json` naming `register.tsx`), behind `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS` while function hooks are early access. It calls the API with the install's token.
+- **The connector:** its `.mcp.json` names one server, the Glyphh connector at `{server}/mcp`; the `ada` skill works through its `ada_*` tools. The plugin ships no MCP server of its own.
+- The `glyphh-cli` skill (the `glyphh` command, on an API key, at the Ada host) and the file ledger need neither the flag nor the server.
 
 ### Panels
 
 | Panel | Where | Kind |
 |---|---|---|
 | Sign in, account, org, plan, billing | The plugin | Hooks module: Claude's own elements, on desktop and CLI |
-| The sign-in card, in the chat | The plugin's MCP server | MCP App |
 | The account: who, plan, usage, upgrade, billing, installs, grants | The Glyphh connector ([The account panel](#the-connector)) | MCP App |
+| The decision card: one Ada decision, approved or corrected | The Glyphh connector, with Ada Cloud on ([The decision card](#the-connector)) | MCP App |
 
 An MCP App panel is an HTML page an MCP tool returns (`text/html;profile=mcp-app`, at a `ui://` address), framed, the host's theme passed as CSS variables. Claude's frame preflights every POST; tickets stay out of URLs; a panel's `ui://` address carries its version.
-
-### rrotor
-
-**A person's runtimes run on their own machines: a local one per install, and any they run on their own infrastructure.** Both run the same image (`ghcr.io/glyphh-ai/rrotor`, public; `RROTOR_MODE` sets which); rrotor's `docs/architecture.md` is its home. rrotor hosts spec-driven programs and sandboxed CLIs, deploys them, keeps their secrets and runs them; none of that reaches the server.
-
-| | Local | Self-hosted |
-|---|---|---|
-| Who | Every plan | Every plan, unlimited |
-| Where | The person's computer, linked with an install's runtime token (`POST /v1/runtime/local`) | The person's own infrastructure (Compose, Helm or Terraform, in rrotor's `deploy/`), registered by name and address ([Self-hosted runtimes](#self-hosted-runtimes)) |
-| Reached at | Its loopback API, driven from Claude | `https://<host>`, a runtime key or a Glyphh sign-in |
-| Licensed by | The licence key in its `welcome` (its install's licence comes from the plugin) | The licence key and a licence (`grace_days` 14) in its `welcome` and its daily heartbeat, or an offline licence |
-| Precedents | The licence key's `max_precedents` (rrotor's) | The licence key's `max_precedents` (rrotor's; its licence says unlimited) |
-
-Every rrotor is headless, with no sign-in of its own, no Claude login, model or keys in it, one volume (`/data`), and an outbound link to the server ([The runtime link](#the-runtime-link)); a local one's token stops working when its install is signed out.
-
-### Self-hosted runtimes
-
-**A rrotor the person runs themselves, on the same image, linked to Glyphh like any other.** It is registered on the platform (or with the connector's `register_self_runtime`): `POST /v1/runtimes/self {name, public_url}` answers `201 {id, name, public_url, token, env}`, the token shown once and kept only as a hash, and `env` its environment filled in: `RROTOR_MODE=self`, `RROTOR_SERVER`, `RROTOR_RUNTIME_ID`, `RROTOR_RUNTIME_TOKEN`, `RROTOR_PUBLIC_HOST`. `public_url` is `https://<host>` and nothing more (no port, path, query or fragment), stored lowercased; one of Glyphh's own addresses (the server, the platform) is refused, and one person registers an address once (`E_CONFLICT`, `reason: registered`).
-
-- **Managed from the account:** `GET /v1/runtimes/self` (`[{id, name, public_url, state, version, last_seen_at, last_heartbeat_at}]`), `POST /v1/runtimes/self/{id}/token` (a new token, `{token}`, shown once: the old one stops at once, its link is closed `4401` on whichever server process holds it, and the link's sequence numbers start again), `DELETE /v1/runtimes/self/{id}` (204: the record, its keys and nodes go, its link is closed; the runtime's own volume is untouched).
-- **Runtime keys** call it at its address: `POST /v1/runtime/keys {name, runtime_id, expires_in_days?}` (or the connector's `create_runtime_key`), `runtime_id` one of the person's self-hosted runtimes (anything else `E_NOT_FOUND`), shown once (`glyphh_rk_…`), kept as a SHA-256. Their hashes reach rrotor in its `welcome` and as `keys` down the link when they change; revoking one (`DELETE /v1/runtime/keys/{id}`) is the same message. A key expires 1 to 365 days from when it is made, or never (`expires_in_days` left out); an expired key leaves the list rrotor holds: the minute tick sends `keys` for any runtime whose key expired since the last. A revoked or expired key stays in the list, dated, until the person deletes it (`DELETE /v1/runtime/keys/{id}/record`); a live key cannot be deleted, only revoked first (`E_CONFLICT`, `reason: live`). `GET /v1/runtime/keys` lists them with `calls` and `last_used_at` from rrotor's `usage`.
-- **Reached at its own address:** `https://<host>/mcp` and its REST API, behind TLS its owner terminates; a Glyphh sign-in for it is an OAuth resource of this server's (below, The connector: A runtime as a resource).
-- **The heartbeat:** every 24 hours, and at boot, rrotor calls `POST /v1/license/verify` with its runtime token as the bearer and `{machine, licence_id, version, active_runs}`, and from rrotor's clusters on `{node_id, cluster_id, role, precedents}` (below, The licence key): `machine` the SHA-256 (hex) of its runtime id, `:` and its machine id, `licence_id` the licence it holds (or `null`). The answer is `200 {licence, license_key}` (the licence `kind: heartbeat`, 24 hours, `grace_days: 14`; the org's newest licence key or `null`; `Cache-Control: no-store`); a local runtime's token is `E_FORBIDDEN` (`not_self`), a bad one `E_UNAUTHORIZED`, any other field `E_INVALID`. The server keeps only when it beat, the version, the runs, the machine hash, the precedents and the node. **Never kept or logged:** the caller's IP address (the server's access line for this path is dropped), and never sent: prompts, a program's inputs or outputs, anyone's data.
-- **Offline, for an air-gapped runtime, on Enterprise only:** `POST /v1/runtimes/{id}/offline-licence {days}` (1 to 365; or the connector's `offline_licence`; on any other plan 403 `E_NOT_IN_PLAN`, `reason: offline`) answers `{token, expires_at}`: the licence (`kind: offline`, `grace_days: 14`) as one string, base64url (padded) of its JSON `{payload, signature}`, for `RROTOR_LICENCE` or `/data/licence.token`. rrotor checks it with the public key and no network request.
-- **Grace:** a self-hosted runtime's licence counts as live until `expires_at` plus `grace_days`; rrotor keeps whichever valid licence expires last, and past the grace refuses only what needs a licensed mod.
 
 ### On the machine: `~/.glyphh`
 
@@ -179,55 +145,25 @@ What the plugin keeps for the server (its own files are in its README):
 | Path | What |
 |---|---|
 | `install.json` | This install's id and token, mode 0600 |
-| `license.json` | The signed licence: plan, limits, features, mods, expiry |
-
-A runtime's own volume, `/data`, is laid out in rrotor's `docs/architecture.md`.
 
 ### The server
 
 The `glyphh-ai/server` repo: Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2 (async) on Postgres, in Docker. Database first, then API; 100% test coverage; errors with stable codes and a trace id; small files.
 
 - **Sign in by device flow (RFC 8628).** An install is a machine: signing in again on it reuses its install.
-- **Org:** one per user; the first user is its admin and pays; members by invite.
+- **Org:** one per user; the first user is its admin and pays; members by invite, or by single sign-on.
 - **Plans and billing:** flat plans on Stripe, and with Ada Cloud on its reads past a metered month on a Billing Meter ([Billing](#billing)).
-- **Licences:** a short-lived signed licence per install or self-hosted runtime ([The license](#the-license)) and the licence key, one per paid period ([The licence key](#the-licence-key)). rrotor enforces the runtime nodes and precedents from its key; the server counts nodes, softly, and refuses nothing.
-- **The runtime link:** rrotor's outbound WebSocket, on its own token, protocol 2. Down go the licence key and a self-hosted runtime's licence and keys; up come its node, its runtime keys' use and its precedents ([The runtime link](#the-runtime-link)). Nothing of a program.
-- **The Glyphh connector:** a remote MCP server (`/mcp`) for the account, signed in with OAuth ([The connector](#the-connector)).
+- **The Glyphh connector:** a remote MCP server (`/mcp`) for the account and Ada, signed in with OAuth ([The connector](#the-connector)).
 - **Ada Cloud** behind its own host, off by default ([Ada Cloud](#ada-cloud-built-off-glyphh_ada_cloud)).
+- **Glyphh-hosted models,** off by default (`GLYPHH_LLM`, and only with Ada Cloud on): `POST /v1/chat/completions` at the Ada hosts, a plan's tokens a month and a prepaid balance past them ([specs/tokens.md](specs/tokens.md)).
+- **The staff view** and **the minute tick** ([Glyphh's staff view](#glyphhs-staff-view), [Billing](#billing)).
 - Redis (`GLYPHH_REDIS_URL`) holds only live signals and Ada Cloud's work in flight; Postgres holds everything kept.
-
-### The runtime link
-
-`/v1/runtime/link`, the WebSocket every rrotor, local or self-hosted, holds to the server (`ops/link/`). JSON, one message per frame, each with `type` and `id`; rrotor's side is its `src/rrotord/link/protocol.py`.
-
-- **Its token** in the `Authorization: Bearer` header; one that is not good, or a local runtime's whose install was signed out, is closed `4401` with its reason.
-- **`hello` first, of protocol 3,** within 10 seconds: `{type: "hello", id, protocol: 3, version, mode: "local" | "self", runtime_id, node_id?, cluster_id?, role?}`, naming the runtime its token is. A hello of protocol 2 (a 0.2.0 rrotor) is taken too, and the link remembers it: the catalogue's messages go down that link under protocol 2's names, `artifact` for `app` and `artifacts` for `apps`, built in one place (`ops/link/protocol.py`: `NAMES`, read by `AppState.for_protocol` and `Welcome.for_protocol`; a message relayed from another process is published in protocol 3's names and said in the link's own by the process holding it). A hello of any other protocol (1 included: protocol 1 named a program `model`) is closed `4426` (`upgrade_needed`: update the rrotor); anything else, or a hello naming another runtime or mode, `4400`. A `deployed` list rrotor sends with it is the runtime's own business and is not kept. A node it names is kept in `nodes`.
-- **`welcome`:** `{type: "welcome", id, accepted: true, licence, license_key, keys, apps, reviewers}`: every runtime gets the org's newest licence key (`null`: none); a local runtime no licence and no keys (its install's licence comes from the plugin); a self-hosted one its live runtime keys' SHA-256s and a licence (`kind: link`, 24 hours, `grace_days: 14`, precedents unlimited); every runtime the catalogue's rows for it (`apps: [{type: "app", id, program, version, state, roles}]`, docs/specs/apps.md) and the org's reviewer groups (`reviewers`). The runtime is then `online` (`last_seen_at` and `image_version` stamped) until the link closes, `offline` after.
-- **Down the link, afterwards:** `keys` `{hashes}` when the runtime keys change (made, revoked or expired), `app` `{program, version, state, roles}` after each review of one of the runtime's apps, `ping`, `pong` and `ack`; and a run of one of Glyphh's built-in programs, for a bot or a project that runs on the rrotor ([bots.md](specs/bots.md), 9 and 10): `call` `{run_id, program, version: null, function, inputs, caller: "routine"}` (`glyphh_bot`'s `agent`; a project's steps, `glyphh_swarm`'s `turn`, `pick`, `merge` or `reject`), `continue` `{run_id, answer}` and `cancel` `{run_id}`; a call bigger than one message (4 MB, aiohttp's limit on rrotor's side) is never sent. Nothing else: no deploy, no secret kept there.
-- **Up the link:** `usage` `{seq, keys: [{key_sha256, calls, last_used_at}], precedents?}`, each key's calls since the last report and the runtime's total precedents across its Ada models; applied once by its `seq` (one rising counter per runtime; a new token starts it again), so a replay after a reconnect is acked and skipped. `deployed` `{program, version, commit_sha, repo?, manifest?, by?}`: one whose manifest is an app (`kind` `app`) makes or updates its catalogue row as a draft, submitted by the Glyphh subject `by` names when they are the org's; any other deploy is acked and kept nowhere. `result` `{seq, run_id, result: {status, data, step, prompt}, seconds}`: a call's result, handed to the bot run or project step it answers (taken once per run by its `seq`, from that run's rrotor alone; rrotor numbers results and usage on one counter, so a run's are not consecutive); one that answers nothing here is acked and skipped. An `event` is acked and kept nowhere, so rrotor stops owing it. `ping` is answered `pong`.
-- **Every message is checked;** an unreadable one is logged and skipped and the link stays. One that cannot be recorded closes the link `1011` unacked, and rrotor replays it after it reconnects. Nothing heard for three pings (every 20 seconds) closes it `4408`; a newer link of the same runtime takes over (`4409`) here or on another process; a stopping server closes its links `1012`.
-- **Which process holds which link:** in memory, and a Redis channel per runtime (`runtime:{id}`), so `keys` sent on any process reaches it, and rotating a self-hosted runtime's token or deleting it closes its link wherever it is held.
-
-### Bots and projects on the org's rrotors, and projects on Glyphh cloud
-
-A bot is a Claude agent a person talks to ([bot-agent-loop.md](specs/bot-agent-loop.md)): its instructions, its standing task (what it does when it runs on its own, so a scheduled run is given it), its example prompts, what it decides (`spec.gates`, each an Ada model that learns from the person's answers), its own notes (`skills`) and its plugins. A run is one Claude Agent SDK turn (`ops/bots/agent/`): the agent has the tools of the bot's connections, `decide` and `ask_person` (Ada, as tools its instructions direct), `fetch` for the hosts it names and Glyphh's built-ins, and nothing else; every tool call lands on the server, which holds the bot's permissions (allow / ask / deny and its permission mode, nothing more), and a call that must ask the person stops the run (`needs_input`) until their answer resumes the same session, kept in `bot_sessions` while the run waits. A spec that is still a loop of steps is refused (422 `spec`).
-
-A program is a deterministic workflow beside the bots ([programs.md](specs/programs.md); `ops/programs/`, `api/programs.py`): one file, `program.py`, whose `FLOW` literal is its steps (a bot's tool, a task for a bot, a question for the person, a branch, a function of the file), read without running the file and written back in place, so the platform's canvas and the file are one program. The server walks every step of a run (`ops/programs/walk.py`), on Glyphh cloud and for a rrotor alike: a tool step is the bot's own call under that bot's permissions, a bot step is a run of that bot, and a `code` step is sent to the program's rrotor (`glyphh_bot`'s `code`, rrotor 0.10.0) and does not run on Glyphh cloud (the program says so, and is refused when run). Each step, question, answer and end is a line of the run's audit trail (`program_events`), naming the bot that did it and the person who started or answered it. A program is run by a person, by its schedule (the bots' own minute tick, `ops/programs/due.py`) or by the connector (`run_program`, which streams each line as an MCP progress notification over an SSE response, `api/mcp_stream.py`); `search_tool` finds tools among the org's connected apps and Glyphh's built-ins and gives one to a bot (`ops/programs/found.py`). A template with a `program.py` installs it with its bot.
-
-A bot template is a Claude plugin package (`ops/bots/library/<slug>/`: `.claude-plugin/plugin.json`, `skills/<name>/SKILL.md`, and Glyphh's sidecar `glyphh.json` with the bot it makes, the apps and tools it requires, its decisions, standing task, examples and schedule; `ops/bots/packages.py` checks one and says every problem at once). Installing a template makes the org's own bot from the sidecar, scoped to the org's connection of each app, and keeps the package's files as the bot's plugin at the version installed (`bot_plugins`, `ops/bots/installed.py`); it is refused until each app is connected (422 `connections`). A package with code or folders runs only on a rrotor (`runs_on` is `["rrotor"]`): installing it with no rrotor linked is 422 `rrotor` with a `setup_url`, the bot's `can_run_on` is `["rrotor"]`, and putting it back on Glyphh cloud is 422 `runs_on`. `POST /v1/bots/{slug}/plugins/{name}/update` brings a plugin to the version Glyphh ships now: its files replaced, the decisions, hosts and required tools the new version names added, what the person edited and what a decision learned left as it is.
-
-Every org has one orchestrator (`bots.role`, `ops/bots/orchestrator.py`): made with the org, listed first, edited like any bot, never deleted (409 `orchestrator`), its Ada key made the first time it needs one. Beside any app's tools it has `list_bots`, `ask_bot` (a run of that bot under that bot's own permission mode; when that bot must ask the person the orchestrator's run stops with the same question, and answering either run carries both on) and `crew_start`, `crew_status`, `crew_stop` for the crew's latest workspace.
-
-Bots that were loops of steps are converted by the schema step after the migrations (`ops/bots/converted.py`), each once: the spec as it was is kept in `bots.old_spec` (nothing reads it), a bot whose loop was a library template's gets that template's plugin, task and examples (and its new instructions unless the person had changed them), any other bot gets a note, `how-it-works`, written from its steps in order, and a run that was waiting is failed, saying the bot was updated. The same step makes the orchestrator for every org that has none and points every project at it.
-
-A bot set to run on one of the org's rrotors (`runs_on`) keeps its bot, state and runs on the server; each run goes down that rrotor's link as a `call` of rrotor's built-in `glyphh_bot` (`agent`, rrotor 0.9.0; an older rrotor is refused, saying to update it): the same turn run there, with the bot's prompt, plugins, the server-side tools by name and schema, and this server's `POST /v1/bots/runs/{id}/tool` with a token for that run alone, where every tool call comes back to run as the org (answered with its result, an error, or `{ask: true}` when the server stopped the run to ask the person). The run is `dispatched` until its `result` comes up, and is kept as a run in the cloud is; its tokens go on the meter at the org's own key's rate (`ops/bots/remote*.py`, `tool_calls.py`). A bot given folders of the rrotor's machine uses their files there (rrotor 0.8.0): the server says whether each change may be made (`file_change`: at once, or by the person's yes to that change, once) and keeps the names of the files a run read and changed, never what is in them (`ops/bots/files.py`; [bots.md](specs/bots.md), 14). A project (`ops/projects/`; a swarm until 2026-11-22) is a crew of the org's bots, in no order and with no rounds, working on one GitHub repo from a set of instructions (given on the project, and a file in the repo), one bot at a time, each turn a pull request: the next turn goes to the bot that has waited longest and has something to do (wait your turn), or to the bot the org's orchestrator names after reading the repo (in its own voice and on its model; an `orchestrator` given to a project is not read); the run ends when the crew or the orchestrator says it is done, or at a safety cap (turns, or spend). Each pull request is merged or rejected by the person through the approvals queue, or (review at the end) merged into the run's own branch, whose one pull request waits at the end. On a rrotor each step is a call of `glyphh_swarm` (`turn`: a branch, Claude Code doing the bot's part in a checkout, a pull request; `pick`: the orchestrator's choice), a GitHub token with each call, and the server keeps the step's status, tokens and pointers. On Glyphh cloud, where no code runs, a step is a task of the server's own process: the bot's Claude step with the repo's files as tools through GitHub's REST API (read, write, delete; one commit and a pull request at the turn's end), metered as a bot's agent steps are; it runs no commands, tests or browser. GitHub is reached through the Glyphh GitHub App and no GitHub token is kept: a project records the installation that covers its repo, found when a person who may push to the repo connects it (else refused with the App's install link), and each step mints its own installation token for that one repo, for one hour, with contents and pull requests write and metadata read (`ops/projects/github.py`). The Bots screen's crew has a project found or made for its workspace (`PUT /v1/projects/crew`), and its past runs are in recents with the bots' (`GET /v1/recents`). Nothing waits on the server between results: each moves its run on. [bots.md](specs/bots.md), sections 9 and 10.
 
 ### Ada Cloud (built, off: `GLYPHH_ADA_CLOUD`)
 
 Ada as an API inside this app, and through the connector (`docs/specs/ada-cloud.md`, its steps 2 to 6). **Off by
 default:** off, no request reaches it (no host is routed to it, the connector lists none of its tools, plans show no
-cloud limits), the schema step adds only the two `runtime_keys` columns, the plans' cloud columns and two empty
-tables below, and the `ada` and `adajobs` process groups idle without touching Postgres or Redis.
+cloud limits), and the `ada` and `adajobs` process groups idle without touching Postgres or Redis.
 
 - **Its own host.** A request whose `Host` is one of `GLYPHH_ADA_HOSTS` (`ada.glyphh.ai`) goes to the Ada app
   (`glyphh_ada/api/`), with its own paths; every other host reaches the API as before.
@@ -279,7 +215,7 @@ tables below, and the `ada` and `adajobs` process groups idle without touching P
   kernel's `Space.merge`; any other is restated. Every record is held to the cap too. An export (`POST
   …/export {format: jsonl|ada_sqlite}`) is a job whose file is fetched by a one-hour download link on the job
   (`GET /v1/downloads/{link}`): a zip of the precedents as stored, every spec version and what was learned, or a
-  kernel SQLite store a self-hosted runtime opens; either imported into a model of the same spec answers the same.
+  kernel SQLite store; either imported into a model of the same spec answers the same.
 - **Versions.** Every spec or settings change is a new row of `spec_versions` (who, why, the backtest it was chosen
   by). One that reads the stored cases as they are is active at once; one that changes what a case carries (seed,
   dimension, roles, declared pairs, learning levers, lexicon) is a `reencode` job writing a store of its own beside
@@ -289,7 +225,7 @@ tables below, and the `ada` and `adajobs` process groups idle without touching P
   restores them, at once or by a job that brings its store up to date. A store no version has read for 7 days is
   dropped (`E_VERSION_GONE`).
 - **Ada versions** (`docs/specs/ada-cloud.md`, 12). Customers see the kernel as named versions (`ada-1-0` = kernel
-  3.12.2, stable; `ada-1-1-beta` = 3.13.0), listed with their dates and release notes in
+  3.12.2, stable; `ada-1-1-beta` = 3.13.0; `ada-1-2-beta` = 3.17.0), listed with their dates and release notes in
   `glyphh_ada/ada_versions.json` (`registry.py`, checked against the support policy at start: at most three kernels,
   one store format). Every version of a model records its Ada version and the exact kernel (`spec_versions.ada`,
   `kernel`; migration 4 gave every earlier one `ada-1-0`, `3.12.2`), and is answered, learned and re-encoded only by
@@ -319,7 +255,7 @@ tables below, and the `ada` and `adajobs` process groups idle without touching P
   plan by a token bucket in Redis (`429 E_RATE`, `Retry-After`), and a read (`decide`, `query`, `probabilities`,
   `facts`; a decide once per output; a beam once per hop reached) is counted in Redis (`ada:req:<org>:<month>`).
   Past the month a Free org's
-  reads are refused (`403 E_LIMIT` `requests`, with `used`, `max`, `plan`, `upgrade` and `resets_at`); a Pro or Team
+  reads are refused (`403 E_LIMIT` `requests`, with `used`, `max`, `plan`, `upgrade` and `resets_at`); a Basic, Pro or Team
   org's go on, and the minute tick adds the month's count to `ada_usage` and reports the reads past it to Stripe's
   `ada_requests` meter ($1 per 10,000, `GLYPHH_STRIPE_PRICE_ADA`, each report written before it is sent;
   `ada_meter_events`), giving a subscription made before it the metered price first. Checkout sells that price beside
@@ -343,7 +279,7 @@ tables below, and the `ada` and `adajobs` process groups idle without touching P
 
 | Call (at the Ada host) | Does |
 |---|---|
-| `GET`, `POST /v1/keys`, `DELETE /v1/keys/{id}` | API keys, signed in only: `{name, expires_in_days?, clearance?}`, shown once; `DELETE` revokes |
+| `GET`, `POST /v1/keys`, `DELETE /v1/keys/{id}` | API keys, signed in only: `{name, expires_in_days?, clearance?}`, shown once, kept as a SHA-256, expiring 1 to 365 days on or never; `DELETE` revokes |
 | `DELETE /v1/keys/{id}/forever` | Deletes a revoked or expired key for good (204); a live key is refused, 409 `E_CONFLICT`: revoke it first |
 | `GET`, `POST /v1/models`, `GET /v1/models/{name}`, `DELETE /v1/models/{name}?confirm=<name>` | The org's models: `{name, spec}` (checked by the kernel, then the cloud's bounds: spec 64 KB, `dimension` 8,192, 64 roles, 20 outputs, 200 values, `k` 200) |
 | `POST /v1/models/{name}/record`, `/record_many` (1,000 cases, all or none), `/grade`; `DELETE …/precedents/{id}` | Writes, each taking an `Idempotency-Key` |
@@ -357,11 +293,13 @@ tables below, and the `ada` and `adajobs` process groups idle without touching P
 | `GET /v1/models/{name}/versions`; `POST …/versions/{n}/activate` | Versions (each with what changed against the one before, the precedents when made, what it had learned, its newest backtest scores and its store: `active`, `kept` with `drop_after`, `making`, `dropped`); making one active again (a rollback) |
 | `GET /v1/models/{name}/versions/{n}`; `GET …/versions/{n}/diff?against=`; `PATCH …/versions/{n}` `{note}` | One version with its whole spec and every lever; what making it active would change from another (the active one by default): `{path, from, to, restates}` each; its note written again |
 | `POST /v1/models/{name}/backtest` `{candidates, holdout?, output?, clearance?}` | Candidates scored on held-out precedents, as a job |
-| `POST /v1/runs` `{model, function, inputs, clearance?}` | rrotor's call shape for SDK 3.0: `record`, `query`, `facts`, `probabilities`, `decide`, `learn` (waits up to 60 s), `settings`, answered as a `done` Result; `GET /v1/runs/{id}` and `…/continue` are `E_RUN_MISSING` |
+| `POST /v1/models/{name}/upgrade` `{ada?}`; `GET /v1/ada` | A model moved to another Ada version (a re-encode, `202`); the Ada versions, with the org's models on each |
+| `POST /v1/runs` `{model, function, inputs, clearance?}` | SDK 3.0's call shape, kept: `record`, `query`, `facts`, `probabilities`, `decide`, `learn` (waits up to 60 s), `settings`, answered as a `done` Result; `GET /v1/runs/{id}` and `…/continue` are `E_RUN_MISSING` |
 | `GET /v1/usage` | `{plan, month, resets_at, models, precedents: {used, max}, requests: {used, max, over, overage}, requests_per_second}`: the org's models, the precedents they hold and its reads this month against its plan (`max` null: by contract; `over`: reads past the month, metered when `overage`) |
 | `GET /v1/models/{name}/stats?days=` (30; 90 at most) | A model's dashboard: its active version, precedents by outcome (each output's 50 most common, `others` the rest together), precedents by the cases' days, latest jobs, the org's precedents against the plan's, and every one of its last days (UTC; those before it was made empty): reads by kind, decides answered, how many asked, `sure`, the decides by how sure in tenths, and `answers`, the same for each output apart. Past 100,000 precedents the outcomes and days are estimated from a sample (`estimated`), so a look stays cheap. Not a read |
 | `GET /v1/models/{name}/map?limit=&layer=` (2,000 at most) | Its 3D view: a sample of its precedents, each `{id, outcome, outcomes, bits}` (the glyph packed, base64; a layer's when `layer`), and `edges` `[i, j, sim]`, each one's 10 nearest in the sample by Jaccard similarity. Not a read |
 | `GET /v1/models/{name}/precedents/{id}` | One precedent: its case cut to the caller's clearance, outcomes, author and time. Not a read |
+| `POST /v1/chat/completions` | The Glyphh-hosted models, only with `GLYPHH_LLM` on too ([specs/tokens.md](specs/tokens.md)) |
 | `GET /v1/health` | As on the API |
 
 **The platform** calls the Ada host server-side with the OAuth access token its session holds (a Glyphh sign-in,
@@ -370,7 +308,7 @@ true`.
 
 ### Starting up, and migrations
 
-The image runs the schema step before the server (`python -m glyphh_server.db.schema`), one process at a time (an advisory lock): it brings the database to `db/schema.sql`'s shape (migrations, below), runs `db/schema.sql` as it is (safe to run again), refuses to boot if a table lacks a column the code maps (the fix: the migration that was missed; a dev database can instead be made again with `docker compose down -v`), then seeds the mods (`ada`; a mod no longer seeded is retired, never deleted), the plans and their first versions (`db/seed.py`; a Stripe price a plan's newest version does not sell on becomes a new version) and the platform's OAuth client (`db/seed_clients.py`, [The connector](#the-connector)), and last gives every org without one its orchestrator bot and converts the bots that are still loops of steps (`ops/bots/converted.py`; a bot is converted once, so running it again changes nothing). The server then refuses to start without a `GLYPHH_SECRET_KEY` of 32 characters or more, or in `prod` without `GLYPHH_LICENSE_SIGNING_KEY`.
+The image runs the schema step before the server (`python -m glyphh_server.db.schema`), one process at a time (an advisory lock): it brings the database to `db/schema.sql`'s shape (migrations, below), runs `db/schema.sql` as it is (safe to run again), refuses to boot if a table lacks a column the code maps (the fix: the migration that was missed; a dev database can instead be made again with `docker compose down -v`), then seeds the plans and their first versions (`db/seed.py`; a Stripe price a plan's newest version does not sell on becomes a new version) and the platform's OAuth client (`db/seed_clients.py`, [The connector](#the-connector)). The server then refuses to start without a `GLYPHH_SECRET_KEY` of 32 characters or more.
 
 **Production keeps its data,** so the schema changes by migrations. `db/schema.sql` is always the latest shape; `db/migrations/NNNN_name.sql`, numbered from `0001` with no gap, each bring a database that has data one step forward, and the schema step runs the ones a database has not had, in order, each once, inside its transaction, recording each in `schema_migrations` (made if missing). A database with no tables yet is made from `db/schema.sql` and every migration recorded without running; one with tables but no record is recorded at the baseline, `tests/db/baseline.sql`, and runs them all. **The rule for a schema change:** change `db/schema.sql` and add the migration that brings an existing database to it (written to run once on real rows); `tests/db/test_migrations.py` makes one database from `db/schema.sql` and one from the baseline plus every migration and requires the same columns, constraints, indexes, policies and row-level security, and the baseline is never edited. `python -m glyphh_server.db.reset` is for development and emergencies only, run by hand with `GLYPHH_RESET_DATABASE=1`: it drops every table the server's role owns and runs the schema step again; nothing runs it on deploy.
 
@@ -389,148 +327,65 @@ From the environment (prefix `GLYPHH_`, or `.env`, never committed; `config.py`)
 | `GLYPHH_PUBLIC_URL` | `http://localhost:8080` | The server's own address: the issuer, the connector's resource, the provider callbacks |
 | `GLYPHH_PLATFORM_URL` | `http://localhost:3000` | The platform: every browser step is sent there; the one origin `GET /auth/consent` answers with CORS |
 | `GLYPHH_PLATFORM_CLIENT_ID`, `_SECRET` | none | The platform's own OAuth client (the platform's `PLATFORM_CLIENT_ID` and `_SECRET`), made at every start |
-| `GLYPHH_SECRET_KEY` | none (required) | 32+ characters, or the server refuses to start; signs every browser step's value (device sign-in, linking a provider, the connector's Allow, installing the GitHub App) and Ada Cloud's upload and download links |
-| `GLYPHH_LICENSE_SIGNING_KEY` | none | Base64 of a raw 32-byte Ed25519 private key; signs every licence and licence key. Required in `prod`; elsewhere one is made at start (licences and keys then don't verify after a restart). `GLYPHH_LICENSE_KEY` is its old name, still read: to rrotor that name is the customer's key string |
+| `GLYPHH_SECRET_KEY` | none (required) | 32+ characters, or the server refuses to start; signs every browser step's value (device sign-in, linking a provider, the connector's Allow, single sign-on) and Ada Cloud's upload and download links, and seals an org's single sign-on secret |
 | `GLYPHH_GOOGLE_CLIENT_ID`, `_SECRET`, `GLYPHH_GITHUB_CLIENT_ID`, `_SECRET` | none | Sign-in providers; one without both is not offered |
 | `GLYPHH_STRIPE_SECRET_KEY`, `GLYPHH_STRIPE_WEBHOOK_SECRET` | none | Billing; without them it answers `E_UNAVAILABLE` `billing_off` |
 | `GLYPHH_STRIPE_PRICE_BASIC`, `GLYPHH_STRIPE_PRICE_PRO`, `GLYPHH_STRIPE_PRICE_TEAM` | none | The flat monthly prices Basic, Pro and Team sell on; a price a plan's newest version doesn't sell on becomes a new version at the next boot |
 | `GLYPHH_STRIPE_PRICE_ADA`, `GLYPHH_STRIPE_METER_ADA` | none | Ada Cloud's reads past a Basic, Pro or Team month: the metered price ($1 per 10,000) Checkout sells with Ada Cloud on (without it, `E_UNAVAILABLE`), and its meter's event name (`ada_requests`; without it nothing is reported) |
-| `GLYPHH_ADA_URL` | `https://ada.glyphh.ai` | The Ada API's address in the links the connector hands out |
-| `GLYPHH_GITHUB_APP_ID`, `_PRIVATE_KEY`, `_SLUG` | none | The Glyphh GitHub App: its id, its PEM key (line breaks may be written `\n`) and its slug (install page `https://github.com/apps/<slug>/installations/new`; set the App's Setup URL to `{public_url}/v1/github/callback`); without all three, `E_UNAVAILABLE` `github_off` |
 | `GLYPHH_INVITE_URL` | `{public_url}/join` | Where an invite's link points |
 | `GLYPHH_MCP_ORIGINS` | `https://claude.ai,https://claude.com` | Browser origins `/mcp` takes besides the server's own, comma-separated; a request with no `Origin` passes |
-| `GLYPHH_CLOUDFLARE_API_TOKEN` | none | A read-only Cloudflare token (Zone Analytics) for the staff view's traffic, pulled each hour by the tick; without it the traffic view says it is not connected ([Glyphh's staff view](#glyphhs-staff-view)) |
-| `GLYPHH_GITHUB_TRAFFIC_TOKEN` | none | A GitHub token that may read the repositories' traffic (fine-grained: Administration read) for the staff view's GitHub figures, pulled each hour by the tick; without it they say they are not connected |
-| `GLYPHH_GITHUB_TRAFFIC_REPOS` | `glyphh-ai/glyphh` | The repositories whose traffic is pulled, owner/name, comma-separated |
 | `GLYPHH_ADA_CLOUD` | off | Ada Cloud ([above](#ada-cloud-built-off-glyphh_ada_cloud)); off, nothing of it is reachable and its workers idle |
-| `GLYPHH_RROTOR` | on | rrotor in the connector (shelved 2026-11-02, back on 2026-11-17): off, the connector neither lists nor calls its runtime-key, self-hosted-runtime, offline-licence and apps tools, says nothing of them in its instructions and lists no apps panel. The API's routes and the link stay as they are |
 | `GLYPHH_ADA_HOSTS` | `ada.glyphh.ai` | The hosts that reach the Ada API, comma-separated (each a certificate on the app) |
+| `GLYPHH_ADA_URL` | `https://ada.glyphh.ai` | The Ada API's address in the links the connector hands out |
 | `GLYPHH_ADA_READ_TIMEOUT`, `GLYPHH_ADA_WRITE_TIMEOUT` | `10`, `30` | Seconds the API waits on a worker: a read; `record_many`, making and deleting a model, a new version |
 | `GLYPHH_ADA_WORKERS` | `0` | Worker processes per machine of the `ada` and `adajobs` groups for the latest stable Ada version's kernel; 0, one per vCPU |
 | `GLYPHH_ADA_KERNEL_WORKERS` | `1` | Worker processes per machine of each group for every other kernel Ada versions list (a beta, a deprecated stable) |
 | `GLYPHH_ADA_KERNELS_DIR` | `/opt/ada` | Where every kernel but the latest stable's is installed, one folder per kernel |
 | `GLYPHH_ADA_IMPORT_BYTES` | `209715200` | The largest file an import takes (200 MB) |
-| `GLYPHH_ANTHROPIC_API_KEY` | none | Claude for the hosted bots' runs (each one Claude Agent SDK turn) and the bot maker, for an org with no key of its own (metered); with neither, starting a run answers `E_UNAVAILABLE` `anthropic_off` ([bots.md](specs/bots.md), 9) |
-| `GLYPHH_PIPEDREAM_CLIENT_ID`, `_CLIENT_SECRET`, `_PROJECT_ID`, `GLYPHH_PIPEDREAM_ENVIRONMENT` | none, `production` | Pipedream Connect, the orgs' connections: its OAuth client, project and environment; without the first three, `E_UNAVAILABLE` `pipedream_off` |
-| `GLYPHH_BOT_RUNS_AT_ONCE` | `4` | The bot runs one machine runs at once, each an Agent SDK turn in the web process (about 230 MB while its turn runs, none while it waits on the person); the rest wait, queued |
+| `GLYPHH_LLM` | off | Glyphh-hosted models ([specs/tokens.md](specs/tokens.md)); they are served at the Ada hosts, so it takes effect only with Ada Cloud on too |
+| `GLYPHH_INFERENCE_URL`, `GLYPHH_INFERENCE_KEY`, `GLYPHH_INFERENCE_TIMEOUT` | none, none, `300` | The OpenAI-compatible server the hosted models are proxied to, the bearer sent to it when set, and the seconds a request waits on it |
+| `GLYPHH_CLOUDFLARE_API_TOKEN` | none | A read-only Cloudflare token (Zone Analytics) for the staff view's traffic, pulled each hour by the tick; without it the traffic view says it is not connected ([Glyphh's staff view](#glyphhs-staff-view)) |
+| `GLYPHH_GITHUB_TRAFFIC_TOKEN` | none | A GitHub token that may read the repositories' traffic (fine-grained: Administration read) for the staff view's GitHub figures, pulled each hour by the tick; without it they say they are not connected |
+| `GLYPHH_GITHUB_TRAFFIC_REPOS` | `glyphh-ai/glyphh` | The repositories whose traffic is pulled, owner/name, comma-separated |
 | `GLYPHH_STAFF_EMAILS` | `support@glyphh.ai` | Glyphh's staff, comma-separated verified sign-in emails: the platform opens the staff view for them ([Glyphh's staff view](#glyphhs-staff-view)) |
 
 ### API
 
-JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the health check, the device flow's, the plans and mods lists, the bought-once licence, the browser steps (sign-in, GitHub's pages, `/billing/done`), OAuth's own endpoints and Stripe's webhook carries an install's token or an OAuth access token (`Authorization: Bearer`); a runtime's own calls (`POST /v1/license/verify`, `POST /v1/runtime/introspect` and the link) carry its runtime token instead. The platform signs in as an OAuth client, so `/v1` takes either person's token, as the same person and org: a caller by access token has no install: `POST /v1/sign-out` ends its grant instead, no install is `current` in `GET /v1/installs`, and `POST /v1/runtime/local` refuses it (`E_INVALID` `no_install`: a local runtime belongs to an install). The server's root and `/health` answer `E_NOT_FOUND`: the health check is `/v1/health`. `/mcp` takes only an access token. The server renders no page: a browser in a flow is sent to the platform (above, The platform). Refusals are `{"error": {"code", "message", "trace_id"}}`; a limit is `E_LIMIT` with `reason` and `limit`, `used` and `max`; a feature the plan lacks is `E_NOT_IN_PLAN` with its `reason`.
+JSON over HTTPS under `/v1`, described by `/openapi.json`. Every call but the health check, the device flow's, the plans and hosted models lists, the browser steps (sign-in, `/billing/done`), OAuth's own endpoints and Stripe's webhook carries an install's token or an OAuth access token (`Authorization: Bearer`). The platform signs in as an OAuth client, so `/v1` takes either token, as the same person and org: a caller by access token has no install, so `POST /v1/sign-out` ends its grant instead and no install is `current` in `GET /v1/installs`. The server's root and `/health` answer `E_NOT_FOUND`: the health check is `/v1/health`. `/mcp` takes only an access token. The server renders no page: a browser in a flow is sent to the platform (above, The platform). Refusals are `{"error": {"code", "message", "trace_id"}}`; a limit is `E_LIMIT` with `reason`, `used` and `max`; a feature the plan lacks is `E_NOT_IN_PLAN` with its `reason`. Ada Cloud's calls are at the Ada host ([above](#ada-cloud-built-off-glyphh_ada_cloud)).
 
 | Area | Calls |
 |---|---|
 | Health | `GET /v1/health` (open: `{status, version, database, redis}`; Fly's check) |
 | Device flow | `POST /v1/device/code` (with the plugin's `machine_id`), `POST /v1/device/token`, `GET /v1/device?code=` (to the platform's `/device`) |
 | Browser steps | `GET /auth/providers` (`{providers: [google, github], sso}`), `GET /auth/{provider}/start?code=\|link=\|oauth=` (to the provider; `sso` with `&email=`, the work email whose domain names the org), `GET /auth/{provider}/callback` (to the platform's `/device/approve`, `/allow` or `/account`), `GET /auth/consent?consent=` (what a consent asks), `GET /auth/approve?consent=&decision=`, `GET /auth/oauth/allow?consent=&decision=`, `GET /billing/done` (to the platform's `/billing`); each consent signed, ten minutes, tied to the browser by the `glyphh_signin` cookie; a refusal on any of these but `/auth/providers` and `/auth/consent` (which the platform reads as JSON) goes to the platform's `/error` |
-| Apps | `GET /v1/apps?q=&page=&per_page=&state=&type=` (`{apps, page, per_page, total}`: the approved ones the caller's roles allow, newest change first, 24 a page; `draft`, `rejected` and `retired` for reviewers only, `E_FORBIDDEN` `reviewer` otherwise; `type` one of `page`, `dashboard`, `doc`, `diagram`, `deck`, `design` keeps only that type, anything else `422`), `GET /v1/apps/{id}`, `POST /v1/apps/{id}/approve`, `/reject` (`{reason}`), `/retire` (a reviewer's; `E_CONFLICT` when the state does not allow it); each `{id, runtime_id, runtime_name, runtime_url, name, title, description, type, version, commit_sha, roles, state, submitted_by, submitted_at, reviewed_by, reviewed_at, reason, url}` (above, The platform) |
-| Templates | `GET /v1/templates?q=`, `GET /v1/templates/{slug}`, `POST`/`DELETE /v1/templates/{slug}/install`, `POST /v1/me/glyphh/context` (`{prompt?}` → `{context}`, the plugin's hooks) ([templates.md](specs/templates.md)) |
-| Connections | `GET /v1/connections`, `GET /v1/connections/apps?q=&cursor=`, `POST /v1/connections/link` (`{app}` → `{url, expires_at}`, Pipedream's sign-in page), `POST /v1/connections/sync`, `DELETE /v1/connections/{id}`, `GET /v1/connections/{id}/tools`, `PUT /v1/connections/{id}/permissions` (per tool: allow, ask or deny); `E_UNAVAILABLE` `pipedream_off` without Pipedream ([bots.md](specs/bots.md), 9) |
-| Bots | `GET`/`POST /v1/bots` (`?q=` searches), `GET /v1/bot-templates`, `GET /v1/bot-templates/{slug}`, `POST /v1/bot-templates/{slug}/install` (the marketplace's bots, each a plugin package that says where it can run, `runs_on`; installed, the org's own bot with the package kept as its plugin; 422 `connections` naming the apps to connect first, 422 `rrotor` with `setup_url` for a rrotor-only template while none is linked), `POST /v1/bots/{slug}/plugins/{name}/update` (a bot's plugin brought to the version Glyphh ships now; 404 when it has no such plugin from a template), `GET /v1/bot-approvals` (runs waiting on the person, and projects' pull requests, `kind: "project"`), `GET /v1/bots/models`, `GET /v1/bots/voices`, `GET /v1/bots/places` (where a bot can run: Glyphh cloud and the org's rrotors, each linked or not, with the address a browser reads the machine at), `POST /v1/bots/places/{id}/ticket` (a ten-minute ticket for the person's browser to read that rrotor itself: the folders a bot may be given, the crew's work; [bots.md](specs/bots.md), 13), `POST /v1/bots/draft` (Create with AI: the bot maker's next turn, a question or a checked draft), `POST /v1/bots/mascot` (a mascot drawn from words, safe SVG), `GET`/`PATCH`/`DELETE /v1/bots/{slug}` (a bot's view says its `role`, `task`, `examples`, `plugins` and `can_run_on`; the org's orchestrator is listed first and its `DELETE` is 409 `orchestrator`; a spec with a `loop` is 422 `spec`), `PUT /v1/bots/{slug}/connections` (per connection, the tools it may use), `GET /v1/bots/{slug}/gates`, `POST /v1/bots/{slug}/runs` (`{input}`, what the person says, or empty for its standing task → 202, queued; a bot on a rrotor sent there, `dispatched`, or `E_CONFLICT` `rrotor_offline`), `GET /v1/bots/{slug}/runs`, `GET /v1/bot-runs/{id}` (its log, data, question, tokens, cost and the rrotor it ran on), `POST /v1/bot-runs/{id}/answer`, `/wrong`, `/cancel`, `POST /v1/bots/runs/{id}/tool` (a bot on a rrotor calls its tools, bearer its run's tool token), `GET`/`PUT`/`DELETE /v1/bot-key` (the org's own Anthropic key) ([bots.md](specs/bots.md), 9) |
-| Bot decisions | `GET /v1/bots/{slug}/decisions` (searched, filtered, sorted, cursor-paged; readable labels and fields), `GET /v1/bots/{slug}/decisions/stats`, `GET /v1/bot-decisions/{id}` (with its nearest precedents), `POST /v1/bot-decisions/{id}/relabel`, `/confirm`, `POST /v1/bots/{slug}/decisions/relabel`, `/confirm` (many of one gate), `POST /v1/bots/{slug}/cases`, `DELETE /v1/bots/{slug}/gates/{gate}/precedents/{id}`, `POST /v1/bots/{slug}/backtest` ([bots.md](specs/bots.md), 12) |
-| Projects | `GET`/`POST /v1/projects`, `GET`/`PATCH`/`DELETE /v1/projects/{slug}` (a crew of the org's bots, in no order, a GitHub repo and instructions, how turns are taken, its review and caps, on Glyphh cloud or one of the org's rrotors), `PUT /v1/projects/crew` (the crew's project for a workspace, a repo and branch, found or made and set to the bots and settings given: the Bots screen's, which never names one), `POST /v1/projects/{slug}/runs` (`{task, model?, effort?}`, `task` may be empty → 202, its first step sent where it runs), `GET /v1/projects/{slug}/runs`, `GET /v1/project-runs/{id}` (its turns, pull requests, tokens), `POST /v1/project-runs/{id}/answer` (`{answer: merge \| reject}`), `/cancel`; GitHub is the Glyphh GitHub App's (below): there is no token to save; each also at its old swarm path (`/v1/swarms…`, `/v1/swarm-runs…`), out of the spec ([bots.md](specs/bots.md), 10) |
-| Account | `GET`/`PATCH /v1/me` (the org, the plan and `precedents` as in `GET /v1/billing`; `groups`, the person's roles from single sign-on, and `reviewer`), `POST /v1/me/identities` (a link that adds Google or GitHub), `DELETE /v1/me/identities/{provider}`, `GET /v1/installs`, `DELETE /v1/installs/{id}`, `POST /v1/sign-out` |
-| Licences | `GET /v1/license`, `GET /v1/license/key` (below, The license), `GET /v1/license/keys` (the org's licence keys), `GET /v1/license/nodes` (its runtime nodes), `POST /v1/license/verify` (a self-hosted runtime's heartbeat, its runtime token as auth) (below, The licence key) |
-| Org | `GET`/`PATCH /v1/org`, `GET /v1/org/members`, `DELETE /v1/org/members/{user_id}`, `GET`/`POST /v1/org/invites`, `DELETE /v1/org/invites/{id}`, `POST /v1/invites/accept`, `GET`/`PUT`/`DELETE /v1/org/sso` (single sign-on, above The platform: `{issuer, client_id, client_secret?, domains, enforced, reviewers?}` in, `{issuer, client_id, domains, enforced, reviewers, callback_url, updated_at}` or null out; the admin's, on Enterprise, `E_NOT_IN_PLAN` `sso` elsewhere, `E_UNAVAILABLE` `discovery` for an issuer that cannot be read, `E_CONFLICT` for a domain another org holds) |
-| Mods, plans, billing | `GET /v1/mods` (each mod and the plans that include it: every one), `GET /v1/plans`, `GET /v1/billing`, `/v1/billing/series`, `/v1/billing/payment`, `POST /v1/billing/checkout`, `/plan`, `/portal`, `/card`, `POST /v1/stripe/webhook` (below, Billing) |
-| Runtimes | `POST /v1/runtime/local` (a local rrotor's runtime token, for this install: made the first time, rotated after, shown once); `/v1/runtime/link` (above, The runtime link); `GET`/`POST /v1/runtimes/self`, `POST /v1/runtimes/self/{id}/token`, `DELETE /v1/runtimes/self/{id}`, `POST /v1/runtimes/{id}/offline-licence`; `GET`/`POST /v1/runtime/keys`, `DELETE /v1/runtime/keys/{id}`, `DELETE /v1/runtime/keys/{id}/record` (above, Self-hosted runtimes) |
-| GitHub | `POST /v1/github/install` (a link for the browser, as linking does), `GET /v1/github/install` (to the Glyphh GitHub App's install page), `GET /v1/github/callback` (records the installation, from the browser that started it, when GitHub says it is on the person's own GitHub account), `GET /v1/github/installations`, `GET /v1/github/repos` (the repos the person's installation covers, for a repo picker), `GET /v1/github/repos/{owner}/{repo}/branches` (a repo's branches, where the App is installed and the person may push) |
-| Recents | `GET /v1/recents` (`?q=`, `waiting`, `archived`, `pinned`, `cursor`, `limit`: the org's runs, a bot's and a crew's alike, with `needs_you`, the count waiting on a person), `POST /v1/recents/{id}/pin` \| `unpin` \| `archive` \| `unarchive` (the person's own marks), `DELETE /v1/recents/{id}` (a run that has ended, deleted) ([bots.md](specs/bots.md), 11) |
-| Connector | `GET /.well-known/oauth-protected-resource` (and `/mcp` after it), `GET /.well-known/oauth-authorization-server`, `POST /oauth/register`, `GET /oauth/authorize`, `POST /oauth/token`, `POST /oauth/revoke`, `POST /mcp`; `GET /v1/connector/grants`, `DELETE /v1/connector/grants/{id}`; `POST /v1/runtime/introspect` (a self-hosted runtime asking about a bearer, its runtime token as auth) (below, The connector) |
+| Account | `GET`/`PATCH /v1/me` (the person, their role, providers and `groups` from single sign-on, the org, the plan, and `ada_cloud`, `cloud` (Ada Cloud's use, while on), `llm` and `staff`), `POST /v1/me/identities` (a link that adds Google or GitHub), `DELETE /v1/me/identities/{provider}`, `GET /v1/installs`, `DELETE /v1/installs/{id}`, `POST /v1/sign-out` |
+| Org | `GET`/`PATCH /v1/org`, `GET /v1/org/members`, `DELETE /v1/org/members/{user_id}`, `GET`/`POST /v1/org/invites`, `DELETE /v1/org/invites/{id}`, `POST /v1/invites/accept`, `GET`/`PUT`/`DELETE /v1/org/sso` (single sign-on, above The platform: `{issuer, client_id, client_secret?, domains, enforced}` in, `{issuer, client_id, domains, enforced, callback_url, updated_at}` or null out; the admin's, on Enterprise, `E_NOT_IN_PLAN` `sso` elsewhere, `E_UNAVAILABLE` `discovery` for an issuer that cannot be read, `E_CONFLICT` for a domain another org holds) |
+| Plans, billing | `GET /v1/plans`, `GET /v1/billing`, `/v1/billing/series`, `/v1/billing/payment`, `/v1/billing/ledger`, `POST /v1/billing/checkout`, `/plan`, `/portal`, `/card`, `/topup`, `POST /v1/stripe/webhook` (below, Billing) |
+| Hosted models | `GET /v1/llm/models` (open: each model and its rates), `GET /v1/llm/usage?days=` (the org's tokens by UTC day and model) ([specs/tokens.md](specs/tokens.md)) |
+| Connector | `GET /.well-known/oauth-protected-resource` (and `/mcp` after it), `GET /.well-known/oauth-authorization-server`, `POST /oauth/register`, `GET /oauth/authorize`, `POST /oauth/token`, `POST /oauth/revoke`, `POST /mcp`; `GET /v1/connector/grants`, `DELETE /v1/connector/grants/{id}` (below, The connector) |
 | Sign-up source | `POST /v1/me/source` (the website's `glyphh_src` campaign tags, sent by the platform as a sign-in finishes: kept on the person, and on the org they made, once, within a day of the account being made; below, Glyphh's staff view) |
-| Staff | `/v1/admin/*`, staff only, through the platform's sign-in, every request audited: `GET dashboard?days=`, `infra`, `alerts`, `orgs?q=&plan=&offset=&limit=`, `orgs/{id}`, `POST`/`DELETE orgs/{id}/enterprise`, `POST orgs/{id}/plan`, `POST`/`DELETE orgs/{id}/suspend`, `GET users`, `plans`, `marketing?days=`, `traffic?days=`, `ada-versions`, `audit`, `events`, `POST events/{id}/ack`, `POST events/ack` (below, Glyphh's staff view) |
-
-### The license
-
-`GET /v1/license` answers the caller's license (an install's; for an OAuth caller, the same with `install_id` `null`); `GET /v1/license/key` the public key (`{"alg": "Ed25519", "public_key": "<base64 of the raw 32 bytes>"}`). The plugin verifies it offline: the signature (base64) is Ed25519 over the payload's canonical JSON, the payload's keys sorted at every level, no spaces, ASCII only (Python's `json.dumps(payload, sort_keys=True, separators=(",", ":"))`, UTF-8), and the license holds until `expires_at` (24 hours; the plugin fetches a new one daily).
-
-```json
-{
-  "payload": {
-    "install_id": "6a1d…",
-    "user_id": "0f3c…",
-    "org_id": "9b2e…",
-    "plan": "Pro",
-    "limits": {"machines": 3},
-    "features": {"sync": true, "ha": false, "offline": false, "sso": false},
-    "mods": {
-      "ada": {"limits": {"precedents": null}}
-    },
-    "expires_at": "2026-10-16T09:30:00Z"
-  },
-  "signature": "q8Zk…=="
-}
-```
-
-A self-hosted runtime's licence (in its `welcome`, from its heartbeat, or issued offline) has `install_id` `null` and four more signed fields; an install's licence has none of them:
-
-```json
-{
-  "payload": {
-    "install_id": null,
-    "user_id": "0f3c…",
-    "org_id": "9b2e…",
-    "plan": "Pro",
-    "limits": {"machines": 3},
-    "features": {"sync": true, "ha": false, "offline": false, "sso": false},
-    "mods": {
-      "ada": {"limits": {"precedents": null}}
-    },
-    "expires_at": "2026-10-19T09:30:00Z",
-    "runtime_id": "3d8f…",
-    "licence_id": "c41a…",
-    "kind": "link",
-    "grace_days": 14
-  },
-  "signature": "Xn2c…=="
-}
-```
-
-- `runtime_id` is the runtime it is for; `licence_id` is new with every licence; `kind` is `link` (a welcome), `heartbeat` or `offline` (up to 365 days); `grace_days` is 14: the licence counts as live until `expires_at` plus that many days.
-- `mods` names every active mod (every plan includes each); a retired mod is in no license. Ada's one limit, `precedents`, is `null` (unlimited) in every licence: the precedents per node are the licence key's `max_precedents`.
-- `limits.machines` is the runtime nodes the org may have, its people's together (`null` unlimited; Free 1, Pro 3, Team 10), the licence key's `max_nodes`.
-- `features` are the plan's: `sync`, `ha`, `offline`, `sso`. `offline` (offline licences) and `sso` (single sign-on) are acted on; the others are flags ([Not built yet](#not-built-yet)).
-
-### The licence key
-
-The key rrotor runs on (rrotor's `docs/specs/licensing.md`; [pricing.md](pricing.md#the-key)), beside the licence above. One string, `<base64url payload>.<base64url signature>`, base64url without padding; the payload UTF-8 JSON, the signature Ed25519 over the payload's **exact bytes** (no canonical form: what was signed is what is read), with `GLYPHH_LICENSE_SIGNING_KEY` (`ops/license_keys.py`). The payload, its fields in this order:
-
-```json
-{"license_id": "5f0c…", "tier": "pro", "max_nodes": 3, "max_precedents": 50000, "cluster_sync_enabled": true,
- "issued_at": "2026-10-19T14:02:11Z", "expires_at": "2026-11-19T14:02:09Z", "customer_id": "9b2e…"}
-```
-
-- **From the plan version the org is on:** `tier` the plan's name in lower case (`pro`, `team`, `enterprise`), `max_nodes` its `max_machines`, `max_precedents` its `precedents` (per node), `cluster_sync_enabled` its `sync`; `null` is unlimited. `customer_id` is the org's id (no name or address); times are RFC 3339 UTC to the second.
-- **Issued** on Stripe's `checkout.session.completed` and `invoice.payment_succeeded` (the invoice's subscription on it, or under `parent.subscription_details`), once the subscription is read and synced, when it is the org's own and `active` or `trialing`: a key expiring at the paid period's end (`current_period_end`; a subscription that says none, 31 days). An Enterprise grant issues one through its last day (`plan_until`), and its deal's invoices issue that one again. The same terms to the same expiry already live are that key, not another (a checkout and its first invoice; an event delivered twice). **Free and Basic get none:** rrotor's default with no key is Community, Free's limits (rrotor has no basic tier; Basic is an Ada Cloud plan).
-- **Revoked** when the subscription ends (`customer.subscription.deleted`, or any sync that finds it `canceled` or `incomplete_expired`, so a change to Free too) and when a grant is revoked or lapses: every key of the org's is marked `revoked_at` and no longer delivered. A node holding one runs it to its `expires_at` and rrotor's 14 days' grace, then Community.
-- **Delivered:** `license_key`, the org's newest live key (not revoked, not expired: the latest `issued_at`, ties to the later `expires_at`, as rrotor picks), or `null`:
-  - in **every** runtime's `welcome`, local and self-hosted (above, The runtime link);
-  - in the **heartbeat's answer**, `200 {"licence": {…}, "license_key": "<key>" | null}`;
-  - to the platform, `GET /v1/license/keys` (any member of the org): `{"license_key": "<key>" | null, "keys": [{"license_id", "tier", "max_nodes", "max_precedents", "cluster_sync_enabled", "issued_at", "expires_at", "revoked_at", "state": "live" | "expired" | "revoked", "key"}]}`, newest first, to show and copy for a node's `GLYPHH_LICENSE_KEY` or `/etc/rrotor/license.key`;
-  - by the connector's `plan` and `usage`, **masked** (its first 8 and last 6 characters), with its tier and expiry.
-- **The heartbeat's cluster fields** (each optional): `{"machine", "licence_id", "version", "active_runs", "node_id": "rrotor-1", "cluster_id": "<uuid>" | null, "role": "standalone" | "head" | "follower", "precedents": 1200}`; `node_id` 1 to 253 characters with no space, `precedents` ≥ 0. A `hello` may say `node_id`, `cluster_id` and `role` the same way.
-- **Nodes:** each node said is kept in `nodes` by its runtime and `node_id` (its cluster, role, store's precedents, version and when it was seen); a heartbeat's `precedents` is the runtime's `precedents` too. `GET /v1/license/nodes` counts the org's runtime nodes: each node seen in the last 48 hours, and a runtime, local or self-hosted, that has said no node as one while it is linked or was heard in those 48 hours: `{"count": 4, "max_nodes": 3, "over": true, "nodes": [{"runtime_id", "runtime", "mode", "node_id", "cluster_id", "role", "precedents", "version", "seen_at"}]}`. **Soft:** shown (the platform, the connector's `usage`: "Runtime nodes: 4 of 3 (over the plan: shown, never stopped)"), never refusing; rrotor enforces `max_nodes` itself, per cluster, at join.
+| Staff | `/v1/admin/*`, staff only, through the platform's sign-in, every request audited: `GET dashboard?days=`, `infra`, `alerts`, `orgs?q=&plan=&offset=&limit=`, `orgs/{id}`, `POST`/`DELETE orgs/{id}/enterprise`, `POST orgs/{id}/plan`, `POST orgs/{id}/llm-grant`, `POST`/`DELETE orgs/{id}/suspend`, `GET users`, `plans`, `marketing?days=`, `traffic?days=`, `ada-versions`, `audit`, `events`, `POST events/{id}/ack`, `POST events/ack` (below, Glyphh's staff view) |
 
 ### Billing
 
 A paid plan is one Stripe subscription: the plan's flat price and, with Ada Cloud on and a plan that meters its reads, Ada Cloud's metered reads' price. Writes are the admin's.
 
-- **`GET /v1/plans`** (open): each active plan's newest version, `[{name, version, price_cents, interval, self_serve, limits: {machines, precedents}, features: {sync, ha, offline, sso}, built: {sync, ha, offline, sso}, cloud}]`; `built` says which features work today, the same on every plan (`offline` and `sso`: `BUILT` in `ops/plans.py`), so an unbuilt one is never shown as included; `interval` is `month`, `year` or `null` (Free), `price_cents` `null` for Enterprise (each contract's), `limits.machines` the runtime nodes (Free 1, Basic 1, Pro 3, Team 10, Enterprise `null`), `cloud` Ada Cloud's limits while it is on.
-- **`GET /v1/billing`** (anyone in the org): `{plan (as in /v1/plans), billing_status, renews_at, plan_until, precedents: {used, limit}, cloud, connections, tokens, balance, bots}`: `used` is the most any one of the org's runtimes last said it holds, `limit` the plan's precedents per node; `cloud` Ada Cloud's use while it is on; `connections` the org's against the plan's (pricing.md); `tokens`, `balance` and `bots` the month's tokens of the hosted models and the bots, the overage balance and each bot's month ([specs/tokens.md](specs/tokens.md)). `GET /v1/me` carries the same `precedents`.
+- **`GET /v1/plans`** (open): each active plan's newest version, `[{name, version, price_cents, interval, self_serve, features: {sso}, built: {sso}, cloud, llm_tokens}]`; `built` says which features work today, the same on every plan (`BUILT` in `ops/plans.py`), so an unbuilt one is never shown as included; `interval` is `month`, `year` or `null` (Free), `price_cents` `null` for Enterprise (each contract's), `cloud` Ada Cloud's limits while it is on (`{precedents, requests_per_month, requests_per_second, overage, overage_cents_per_10k}`), `llm_tokens` the hosted models' tokens a month.
+- **`GET /v1/billing`** (anyone in the org): `{plan (as in /v1/plans), billing_status, renews_at, plan_until, cloud, tokens, balance}`: `cloud` is Ada Cloud's use while it is on (the org's precedents and its reads this month against the plan's); `tokens` and `balance` the month's tokens of the hosted models and the overage balance ([specs/tokens.md](specs/tokens.md)).
 - **`POST /v1/billing/checkout` `{plan}`**: Stripe Checkout for Basic, Pro or Team (the flat price, quantity 1, and with Ada Cloud on the metered reads' price for a plan that meters them). A plan with no Stripe price here (Free, or a plan before its price is set) is `E_INVALID` `not_sold`, Enterprise `E_INVALID` `not_self_serve` ("talk to us at sales@glyphh.ai"), an unknown plan `E_INVALID`, a subscribed org `E_CONFLICT` `subscribed`, a server without Stripe, or with Ada Cloud on and no reads' price, `E_UNAVAILABLE` `billing_off`.
 - **`POST /v1/billing/plan` `{plan}`**: to the newest version of another self-serve plan (a newer version of its own plan too; the same version changes nothing), prorated (the flat item's price changed, a metered item left); to Free, Ada Cloud's reads past the month are reported and the subscription cancelled now (invoiced, prorated). Not subscribed `E_CONFLICT` `not_subscribed`; an org on a plan by contract `E_CONFLICT` `contract`; Enterprise named `E_INVALID` `not_self_serve`. Answers the org.
 - **`POST /v1/billing/portal`**: Stripe's portal (card, invoices, cancel); an org that never checked out is `E_CONFLICT` `no_billing`.
-- **`GET /v1/billing/series?days=30`** (anyone in the org; 1 to 90): the org's use by UTC day for the platform's Usage charts, oldest first, one a day, today's last: `{days: [{day, reads, decides, bot_runs, charged_cents, charged_micros, connections, connections_added}]}`. `reads` are Ada Cloud's reads of every kind from `ada_model_days` (today's may lag the minute tick), `charged_*` the day's charges to the balance from `llm_usage_days`, `connections` those the org holds at the day's end (a deleted one leaves no row, so the count is of today's connections by when each was made). Tokens by day and model are `GET /v1/llm/usage`. Precedents have no history (`ops/billing/series.py`).
+- **`GET /v1/billing/series?days=30`** (anyone in the org; 1 to 90): the org's use by UTC day for the platform's Usage charts, oldest first, one a day, today's last: `{days: [{day, reads, decides, charged_cents, charged_micros}]}`. `reads` are Ada Cloud's reads of every kind from `ada_model_days` (today's may lag the minute tick), `decides` those that were decides, `charged_*` the day's charges to the balance from `llm_usage_days`. Tokens by day and model are `GET /v1/llm/usage`. Precedents have no history (`ops/billing/series.py`).
 - **`GET /v1/billing/payment`** (the admin's): the card on file and the last twelve invoices, read from Stripe each time and kept nowhere: `{card: {brand, last4, exp_month, exp_year} | null, invoices: [{id, number, status, total_cents, currency, created, url, pdf}]}`. The card is the customer's default payment method, else its newest card. An org with no Stripe customer is `{card: null, invoices: []}` without asking Stripe (`ops/billing/payment.py`).
-- **`POST /v1/billing/card`** (the admin's): Stripe's portal opened at its page to add or replace the card (`flow_data[type]=payment_method_update`), the org's Stripe customer made first if it has none; back through `/billing/done`. Auto-reload of the balance is not built.
-- **Stripe's webhook** (signed: a bad or older-than-300-seconds signature is `E_UNAUTHORIZED`) handles `checkout.session.completed`, `invoice.payment_succeeded` and `customer.subscription.created`, `.updated` and `.deleted`, and logs any other. It keeps the org true: the org found by its Stripe customer, else by `metadata.org_id` or `client_reference_id`; on every event it reads the subscription fresh and matches its flat item's price to a plan version, passing over a metered item; a payment issues the org a licence key ([The licence key](#the-licence-key)); a subscription that ended puts the org on Free (an Enterprise deal's too, its grant cleared) and revokes its keys. A subscription that is not the org's current one is passed over, so replays and events out of order change nothing; `renews_at` is empty when the subscription ends at the period's end.
+- **`POST /v1/billing/card`** (the admin's): Stripe's portal opened at its page to add or replace the card (`flow_data[type]=payment_method_update`), the org's Stripe customer made first if it has none; back through `/billing/done`.
+- **`POST /v1/billing/topup` `{amount_cents}`** (the admin's) and **`GET /v1/billing/ledger`**: adding $10 to $1,000 to the hosted models' overage balance through Stripe Checkout, and the balance's entries, newest first ([specs/tokens.md](specs/tokens.md)). Auto-reload of the balance is not built.
+- **Stripe's webhook** (signed: a bad or older-than-300-seconds signature is `E_UNAUTHORIZED`) handles `checkout.session.completed`, `invoice.payment_succeeded` and `customer.subscription.created`, `.updated` and `.deleted`, and logs any other. It keeps the org true: the org found by its Stripe customer, else by `metadata.org_id` or `client_reference_id`; on every event it reads the subscription fresh and matches its flat item's price to a plan version, passing over a metered item; a subscription that ended puts the org on Free (an Enterprise deal's too, its grant cleared). A subscription that is not the org's current one is passed over, so replays and events out of order change nothing; `renews_at` is empty when the subscription ends at the period's end. A paid Checkout session of `mode` `payment` is a top-up: it credits the overage balance, once per session.
 
-**Enterprise** is granted by staff, never bought (`ops/enterprise.py`, `grant` and `revoke`: [pricing.md](pricing.md#the-control-plane)). The org's `plan_until` and deal subscription are recorded on it and a licence key issued through its last day; revoking it, or the date passing, puts the org back on Free and revokes its keys.
+**Enterprise** is granted by staff, never bought (`ops/enterprise.py`, `grant` and `revoke`: [pricing.md](pricing.md#setting-up)). The org's `plan_until` and deal subscription are recorded on it; revoking it, or the date passing, puts the org back on Free.
 
-**The minute tick** (`ops/tend.py`), in this order: its heartbeat and the ops events logged since the last tick moved to Postgres; the runtime keys that expired taken off their runtimes (`keys` down the link); Enterprise grants past their date ended; with Ada Cloud on, its reads and its models' days taken from Redis into the database, and with Stripe its reads past a metered month reported to the `ada_requests` meter; with `GLYPHH_CLOUDFLARE_API_TOKEN`, once an hour, the traffic pulled from Cloudflare, and with `GLYPHH_GITHUB_TRAFFIC_TOKEN`, once an hour, the public repositories' traffic from GitHub ([Glyphh's staff view](#glyphhs-staff-view)); last, the bots whose schedule is due run, on the ticking process (`ops/bots/due.py`: each one's next run worked out again from now first, so a missed tick fires it once; one whose run is still live, or that runs on a rrotor, skipped; [bots.md](specs/bots.md), 9). Each part runs whatever another does: one that fails is logged by its name (`tick part failed: <part>`), the rest run, and the next minute comes. Every server process runs it, and production runs more than one: each tick takes a transaction-scoped Postgres advisory lock (`pg_try_advisory_xact_lock`, `TICK` in `ops/tend.py`) in a transaction it holds for the tick, so the lock goes when the transaction ends, however it ends, and no two ticks run at once; a process that finds it held skips that minute. Every part is safe to run again.
+**The minute tick** (`ops/tend.py`), in this order: its heartbeat and the ops events logged since the last tick moved to Postgres; Enterprise grants past their date ended; with Ada Cloud on, its reads and its models' days taken from Redis into the database, and with Stripe its reads past a metered month reported to the `ada_requests` meter; with `GLYPHH_CLOUDFLARE_API_TOKEN`, once an hour, the traffic pulled from Cloudflare, and with `GLYPHH_GITHUB_TRAFFIC_TOKEN`, once an hour, the public repositories' traffic from GitHub ([Glyphh's staff view](#glyphhs-staff-view)). Each part runs whatever another does: one that fails is logged by its name (`tick part failed: <part>`), the rest run, and the next minute comes. Every server process runs it, and production runs more than one: each tick takes a transaction-scoped Postgres advisory lock (`pg_try_advisory_xact_lock`, `TICK` in `ops/tend.py`) in a transaction it holds for the tick, so the lock goes when the transaction ends, however it ends, and no two ticks run at once; a process that finds it held skips that minute. Every part is safe to run again.
 
-Stripe's products, prices and meter are made once per account with `scripts/stripe-setup.py` ([pricing.md](pricing.md#the-control-plane)).
+Stripe's products, prices and meter are made once per account with `scripts/stripe-setup.py` ([pricing.md](pricing.md#setting-up)).
 
 ### Glyphh's staff view
 
@@ -546,7 +401,7 @@ Stripe's products, prices and meter are made once per account with `scripts/stri
 
 **Alerts** (`admin/alerts.py`, worked out as staff look): 5xx over 5% of the last 5 minutes' requests (20 or more), a backlog of 100 on `sync` or 20 on `jobs`, no worker alive on a front door with Ada Cloud on, the tick not begun in 5 minutes, Ada reads' p95 over 2 s, and open error events in the last hour (critical from 25).
 
-**Staff actions**, each audited: Enterprise granted and revoked (`ops/enterprise.py`, as its command line does); a plan version changed where billing can't disagree (within the plan an org pays for, or with no subscription to a self-serve plan's; never to or from Enterprise); an org suspended (its people's tokens and the platform answer `E_FORBIDDEN` `suspended`, its connector and API keys are refused; nothing of its data changes) and lifted.
+**Staff actions**, each audited: Enterprise granted and revoked (`ops/enterprise.py`, as its command line does); a plan version changed where billing can't disagree (within the plan an org pays for, or with no subscription to a self-serve plan's; never to or from Enterprise); dollars granted to an org's hosted-model overage balance, with a note; an org suspended (its people's tokens and the platform answer `E_FORBIDDEN` `suspended`, its connector and API keys are refused; nothing of its data changes) and lifted.
 
 **Sign-up source** (`ops/attribution.py`): the website keeps a visitor's campaign tags (utm_*, an ad's click id, the landing page) 90 days in its first-party `glyphh_src` cookie on `.glyphh.ai`; the platform reads it as a sign-in finishes and sends it to `POST /v1/me/source`, which keeps it on a person made within the last day, and on the org they made. `GET /v1/admin/marketing` counts sign-ups, paid conversions and paying orgs by source, medium and campaign.
 
@@ -556,7 +411,7 @@ Stripe's products, prices and meter are made once per account with `scripts/stri
 
 ### The connector
 
-A remote MCP server at `{public_url}/mcp`, its own OAuth 2.1 authorization server, following MCP's authorization spec (revision 2026-07-28). Through it a person manages their Glyphh account from Claude or any MCP client.
+A remote MCP server at `{public_url}/mcp`, its own OAuth 2.1 authorization server, following MCP's authorization spec (revision 2026-07-28). Through it a person manages their Glyphh account, and with Ada Cloud on works with their Ada models, from Claude or any MCP client.
 
 **Discovery.**
 
@@ -564,13 +419,11 @@ A remote MCP server at `{public_url}/mcp`, its own OAuth 2.1 authorization serve
 - `GET /.well-known/oauth-authorization-server` (RFC 8414): the issuer `{public_url}` and its endpoints; `response_types_supported` `["code"]`, `grant_types_supported` `["authorization_code", "refresh_token"]`, `code_challenge_methods_supported` `["S256"]`, `token_endpoint_auth_methods_supported` `["none", "client_secret_post", "client_secret_basic"]`, `scopes_supported` `["account"]`, `revocation_endpoint_auth_methods_supported` the same three, `authorization_response_iss_parameter_supported` `true` (RFC 9207).
 - `/mcp` without a good token answers 401 with `WWW-Authenticate: Bearer resource_metadata="{public_url}/.well-known/oauth-protected-resource/mcp", scope="account"` (and `error="invalid_token"` when an `Authorization` header was sent); the body is the API's `E_UNAUTHORIZED`.
 
-**A runtime as a resource.** A registered self-hosted runtime is a protected resource of its own: `resource` on `/oauth/authorize` and `/oauth/token` may be its `public_url` or that `/mcp`, looked up across every org, and the token is bound to `https://<its host>/mcp` and is no good on this server's `/mcp`. Any other address is `invalid_target`. rrotor cannot read the token: it asks `POST /v1/runtime/introspect` (`{token}`, its own runtime token as the bearer) and gets RFC 7662's shape, `{active, sub, org, scope, exp}` (`sub` the person's user id, the subject rrotor's audit log names), `active` only when the token was issued for that runtime's own address to a person of the runtime's org; `Cache-Control: no-store`, and rrotor keeps the answer a minute. A local runtime is always told `active: false`. So Claude adds a self-hosted runtime as a connector with one Allow click and no key.
-
 **Registration.** `POST /oauth/register` (RFC 7591): `redirect_uris` (1 to 10; each `https`, or `http` on `localhost`, `127.0.0.1` or `[::1]`; a host, no fragment, up to 2,000 characters), `client_name` (up to 100 characters; left out, the first redirect URI's host), `token_endpoint_auth_method` (`none` for a public client; `client_secret_basic`, RFC 7591's default, or `client_secret_post` get a `client_secret`, shown once and kept hashed), `grant_types` within `authorization_code` and `refresh_token` (both when left out), `response_types` `["code"]`; any other metadata is ignored. It answers `201` with the `client_id` and `client_id_issued_at` (and the secret, with `client_secret_expires_at` 0). Refusals are `invalid_redirect_uri` or `invalid_client_metadata`.
 
 **The platform's own client** is not registered: it is made at every start (`db/seed_clients.py`, in the schema step) from `GLYPHH_PLATFORM_CLIENT_ID` (a UUID: the platform's `PLATFORM_CLIENT_ID`; any other value stops the start) and `GLYPHH_PLATFORM_CLIENT_SECRET`, so a reset of the database never loses it. It is confidential (`client_secret_basic`, its secret kept hashed), named `Glyphh`, with both grant types and one redirect URI, `{GLYPHH_PLATFORM_URL}/auth/callback`; a changed secret or address takes at the next start. Without both settings, none is made. The flow treats it as any other client.
 
-**Authorization.** `GET /oauth/authorize` with `response_type=code`, `client_id`, `redirect_uri` (exactly as registered), `state` (required), `code_challenge` and `code_challenge_method=S256` (required), `scope` (`account`, the default) and `resource` (`{public_url}/mcp` or `{public_url}`, the token bound to `{public_url}/mcp`; or a registered self-hosted runtime's address, above). An unknown client or redirect URI is `E_INVALID` and never a redirect; any other refusal goes back to the redirect URI as `error` (`unsupported_response_type`, `unauthorized_client`, `invalid_request`, `invalid_scope` or `invalid_target`), `error_description`, `state` and `iss`. The server renders nothing: a good request goes on to the platform's `/authorize?oauth=&client=` (Continue with Google or GitHub, through the same provider steps as the device sign-in, tied to the browser by the same cookie, ten minutes); the provider's callback sends the browser to the platform's `/allow?consent=`, which reads `GET /auth/consent` (`{kind: "oauth", client, returns_to, resource, email}`: the client, the redirect URI's host, the resource and the email signed in) and answers `GET /auth/oauth/allow?consent=&decision=allow|deny`. Allow redirects to the client with a `code` (single use, 2 minutes), `state` and `iss`; any other answer with `error=access_denied`.
+**Authorization.** `GET /oauth/authorize` with `response_type=code`, `client_id`, `redirect_uri` (exactly as registered), `state` (required), `code_challenge` and `code_challenge_method=S256` (required), `scope` (`account`, the default) and `resource` (`{public_url}/mcp` or `{public_url}`, the token bound to `{public_url}/mcp`; any other address is `invalid_target`). An unknown client or redirect URI is `E_INVALID` and never a redirect; any other refusal goes back to the redirect URI as `error` (`unsupported_response_type`, `unauthorized_client`, `invalid_request`, `invalid_scope` or `invalid_target`), `error_description`, `state` and `iss`. The server renders nothing: a good request goes on to the platform's `/authorize?oauth=&client=` (Continue with Google or GitHub, through the same provider steps as the device sign-in, tied to the browser by the same cookie, ten minutes); the provider's callback sends the browser to the platform's `/allow?consent=`, which reads `GET /auth/consent` (`{kind: "oauth", client, returns_to, resource, email}`: the client, the redirect URI's host, the resource and the email signed in) and answers `GET /auth/oauth/allow?consent=&decision=allow|deny`. Allow redirects to the client with a `code` (single use, 2 minutes), `state` and `iss`; any other answer with `error=access_denied`.
 
 **Tokens.** `POST /oauth/token` (form-encoded):
 
@@ -581,41 +434,38 @@ A remote MCP server at `{public_url}/mcp`, its own OAuth 2.1 authorization serve
 - `POST /oauth/revoke` (RFC 7009), the client authenticated as at the token endpoint: a refresh token revokes its grant, an access token itself; any token, unknown or another client's included, answers 200.
 - These endpoints answer refusals in OAuth's own shape (`{"error": "invalid_grant", "error_description": …}`, RFC 6749 section 5.2 and RFC 7591 section 3.2.2), not the API's: OAuth clients read that shape.
 
-The server has no rate limiting ([Not built yet](#not-built-yet)).
+The account API and the OAuth endpoints have no rate limiting ([Not built yet](#not-built-yet)).
 
-**Grants.** One live per person and client: allowing the same client again reuses its grant, now for the scope and resource last asked, so tokens for an earlier resource stop working. `GET /v1/connector/grants` lists the person's grants (id, client, scope, when allowed, last used to the minute, and `current` for the one calling); `DELETE /v1/connector/grants/{id}` revokes one and every token it holds (`204`; another person's is `E_NOT_FOUND`); the connector's own `revoke_grant` does the same.
+**Grants.** One live per person and client: allowing the same client again reuses its grant, now for the scope and resource last asked. `GET /v1/connector/grants` lists the person's grants (id, client, scope, when allowed, last used to the minute, and `current` for the one calling); `DELETE /v1/connector/grants/{id}` revokes one and every token it holds (`204`; another person's is `E_NOT_FOUND`); the connector's own `revoke_grant` does the same.
 
-**`/mcp`.** Streamable HTTP, stateless: `POST` only (`GET` and `DELETE` answer 405), each request answered with one JSON object; no sessions. It speaks MCP 2026-07-28 (each request's `_meta` carries `io.modelcontextprotocol/protocolVersion` and `clientCapabilities`, mirrored in the `MCP-Protocol-Version` and `Mcp-Method` headers, and `Mcp-Name` for `tools/call` and `resources/read`, checked against the body: a mismatch is JSON-RPC `-32020`, a version not supported `-32022` with the versions supported) and the earlier `initialize` revisions 2025-11-25, 2025-06-18 and 2025-03-26; a request naming no version is read as 2025-03-26. Its methods: `initialize` (the earlier revisions only), `ping`, `server/discover`, `tools/list`, `tools/call`, `resources/list`, `resources/templates/list` (empty) and `resources/read`; a notification answers 202. An `Origin` header other than the server's own or `GLYPHH_MCP_ORIGINS` (by default `https://claude.ai,https://claude.com`) is refused (403) before the token is read; a request with no `Origin` passes. The access token must be one the authorization server issued for `{public_url}/mcp`, its grant not revoked; the request then runs as that person, in their org (row-level security).
+**`/mcp`.** Streamable HTTP, stateless: `POST` only (`GET` and `DELETE` answer 405), each request answered with one JSON object; no sessions. It speaks MCP 2026-07-28 (each request's `_meta` carries `io.modelcontextprotocol/protocolVersion` and `clientCapabilities`, mirrored in the `MCP-Protocol-Version` and `Mcp-Method` headers, and `Mcp-Name` for `tools/call` and `resources/read`, checked against the body: a mismatch is JSON-RPC `-32020`, a version not supported `-32022` with the versions supported) and the earlier `initialize` revisions 2025-11-25, 2025-06-18 and 2025-03-26; a request naming no version is read as 2025-03-26. Its methods: `initialize` (the earlier revisions only), `ping`, `server/discover`, `tools/list`, `tools/call`, `resources/list`, `resources/templates/list` (empty) and `resources/read`; a notification answers 202. An `Origin` header other than the server's own or `GLYPHH_MCP_ORIGINS` (by default `https://claude.ai,https://claude.com`) is refused (403) before the token is read; a request with no `Origin` passes. The access token must be one the authorization server issued for `{public_url}/mcp`, its grant not revoked and its org not suspended; the request then runs as that person, in their org (row-level security).
 
 | Tool | Does | Who |
 |---|---|---|
-| `whoami` | The account, its org and role | Everyone |
-| `plan` | The plan: its price, runtime nodes, precedents per node and features, billing status, when it renews, and its licence key masked | Everyone |
-| `usage` | The org's runtime nodes against the plan's (soft), the precedents on its fullest runtime against the plan's per node, and its licence key masked; with Ada Cloud on, its cloud reads and precedents | Everyone |
-| `plans` | What each plan costs and includes: runtime nodes, precedents per node, features | Everyone |
+| `whoami` | The account, its org and role (and the person's `groups` from single sign-on) | Everyone |
+| `plan` | The plan: its price, what it includes of Ada Cloud, billing status and when it renews; with hosted models on, the month's tokens and the balance | Everyone |
+| `usage` | With Ada Cloud on, the org's reads this month and its precedents against the plan's; with hosted models on, the tokens and the balance | Everyone |
+| `plans` | What each plan costs and includes | Everyone |
 | `upgrade` | `plan`: Stripe Checkout's address when not subscribed; when subscribed, changes plan (prorated; Free cancels) | Admin |
 | `billing_portal` | Stripe's portal address: card, invoices, cancel | Admin |
 | `installs`, `sign_out_install` | The person's installs; sign one out (`install_id`) | Everyone |
 | `members`, `invite` | The org's members and open invites; invite by `email` (the link, shown once) | Everyone; `invite` the admin |
 | `connector_grants`, `revoke_grant` | The connector's grants; revoke one (`grant_id`) | Everyone |
-| `self_runtimes`, `register_self_runtime`, `offline_licence` | The person's self-hosted runtimes (address, state, version, last heartbeat, and for Claude `mcp_url`, the address it connects to that rrotor at, `graph`, whether its release keeps the graph and the secrets form (rrotor 0.4.0 on; null while it has said no version), and `connect`: a rrotor is its own connector, so its programs, pipelines, graph and secrets form are its own tools and never go through this server); register one (`name`, `public_url`, a plain `https://<host>`; its token and environment shown once); an offline licence for one (`runtime_id`, `days` 1 to 365) | Everyone; `offline_licence` on Enterprise only |
-| `runtime_keys`, `create_runtime_key`, `revoke_runtime_key` | The keys that call the person's self-hosted runtimes at their addresses; make one (`name`, `runtime_id`; `expires_in_days` 1 to 365, or never; shown once); revoke one (`key_id`) | Everyone |
-| `apps`, `app_approve`, `app_reject`, `app_retire` | The org's apps as cards (`q`, `page`, `per_page`, `state`, `type`: the approved ones the caller's roles allow; drafts, rejected and retired for reviewers), shown by the apps panel; approve, reject (`reason`) or retire one (`app_id`) | Everyone; the reviews a reviewer |
 | `ada_*`, `create_api_key`, `api_keys`, `revoke_api_key` | Ada Cloud's, with it on ([Ada Cloud](#ada-cloud-built-off-glyphh_ada_cloud)) | Everyone |
-| `templates`, `template`, `template_install`, `template_remove`, and each installed template's `glyphh_*` | The template library and the tools a person's installed templates add to their own connector, with Ada Cloud on ([templates.md](specs/templates.md)) | Everyone |
+| `topup` | Stripe Checkout's address to add `amount_cents` to the overage balance, with hosted models on ([specs/tokens.md](specs/tokens.md)) | Admin |
 
-Each result is a short text and the same as structured content; a refusal is a tool result with `isError` and the API's error (`{"error": {"code", "message", "trace_id", …}}`) as structured content, bad arguments `E_INVALID`. An unknown tool is a JSON-RPC error (`-32602`). Each call runs in a savepoint, so a refusal leaves nothing half done. Calling a program is the runtime's own MCP, never the connector's.
+Each result is a short text and the same as structured content; a refusal is a tool result with `isError` and the API's error (`{"error": {"code", "message", "trace_id", …}}`) as structured content, bad arguments `E_INVALID`. An unknown tool is a JSON-RPC error (`-32602`). Each call runs in a savepoint, so a refusal leaves nothing half done (an Ada tool that waits on a worker runs on transactions of its own instead).
 
-**The account panel.** One MCP App resource, `ui://glyphh/account/4` (`text/html;profile=mcp-app`, MCP Apps 2026-01-26), listed by `resources/list` and read by `resources/read`; `whoami`, `plan` and `usage` name it in `_meta.ui.resourceUri`. It shows who you are, the plan with its runtime nodes, precedents per node and features, the usage (the precedents on the fullest runtime), Upgrade (opens Checkout, or changes plan), Manage billing, the installs (sign one out) and the grants (revoke one); every action is a call of the connector's own tools through the host. The server advertises nothing for it, as MCP Apps says: on 2026-07-28 requests the tools carry the link only when the request's `clientCapabilities` name the `io.modelcontextprotocol/ui` extension with that mime type; on the stateless earlier revisions, where a request carries no capabilities, they always carry it, and a client without panels ignores it. Its address carries its version: a new panel is a new address. Generic styling, with the host's theme variables.
+**The account panel.** One MCP App resource, `ui://glyphh/account/5` (`text/html;profile=mcp-app`, MCP Apps 2026-01-26), listed by `resources/list` and read by `resources/read`; `whoami`, `plan` and `usage` name it in `_meta.ui.resourceUri`. It shows who you are, the plan with what it includes, the usage, Upgrade (opens Checkout, or changes plan), Manage billing, the installs (sign one out) and the grants (revoke one); every action is a call of the connector's own tools through the host. The server advertises nothing for it, as MCP Apps says: on 2026-07-28 requests the tools carry the link only when the request's `clientCapabilities` name the `io.modelcontextprotocol/ui` extension with that mime type; on the stateless earlier revisions, where a request carries no capabilities, they always carry it, and a client without panels ignores it. Its address carries its version: a new panel is a new address. Generic styling, with the host's theme variables.
 
-**The apps panel.** A second MCP App resource, `ui://glyphh/apps/1`, listed and read the same way; `apps`, `app_approve`, `app_reject` and `app_retire` name it. It shows the org's apps as cards (title, a type chip: Page, Dashboard, Doc, Diagram, Deck or Design; description, the rrotor's name, the version, who published it and when, the roles as chips or Everyone) with a search box, a type filter (All types and the six, sent as `type`), Previous and Next, and Open (the app's `url`, opened by the host); for a reviewer (`whoami` says `reviewer`) three tabs, Published, Awaiting review and Rejected, with Approve and Reject (a reason asked) on a draft and Retire on a published one, each a call of the connector's own tools through the host.
+**The decision card.** A second MCP App resource, `ui://glyphh/decision/1`, listed while Ada Cloud is on and read the same way; `ada_decide` names it. It shows one Ada decision: the outcome, its probabilities, whether Ada asks the person first and the precedents it stands on. Approve, or a correction, records the case as a precedent through the tool the answer's `teach` names, a call of the connector's own tools through the host.
 
 ### Anthropic's terms
 
 From Claude Code's legal page and the Consumer Terms (checked 2026-10-14):
 
 - Third-party developers may not offer Claude.ai login in their apps, route requests through someone's subscription, or "collect, store, or intermediate Claude.ai credentials or session tokens"; nor pay for or resell Claude usage on their users' behalf.
-- **Glyphh never touches a Claude login:** Claude runs on the person's own subscription in Anthropic's own products and calls Glyphh's tools. rrotor has no Claude in it.
+- **Glyphh never touches a Claude login:** Claude runs on the person's own subscription in Anthropic's own products and calls Glyphh's tools.
 
 ## Data model
 
@@ -628,20 +478,19 @@ erDiagram
     ORGS ||--|{ USERS : "members"
     ORGS |o--o| USERS : "admin"
     ORGS ||--o{ INVITES : "sends"
-    ORGS ||--o{ LICENSES : "issued keys"
+    ORGS ||--o| ORG_SSO : "single sign-on"
+    ORG_SSO ||--|{ SSO_DOMAINS : "routes"
     ORGS ||--o{ ADA_USAGE : "read, by month"
     ORGS ||--o{ ADA_MODEL_DAYS : "read, by day"
     ORGS ||--o{ ADA_METER_EVENTS : "reported"
+    ORGS ||--o| LLM_BALANCES : "balance"
+    ORGS ||--o{ LLM_LEDGER : "balance entries"
+    ORGS ||--o{ LLM_USAGE_DAYS : "tokens, by day"
     USERS ||--|{ IDENTITIES : "signs in with"
     USERS ||--o{ INSTALLS : "has"
     INSTALLS ||--o{ TOKENS : "holds"
     INSTALLS ||--o{ DEVICE_CODES : "approved by"
-    USERS ||--o{ RROTORS : "has: one local per install, any self-hosted"
-    INSTALLS ||--o| RROTORS : "local runtime"
-    RROTORS ||--o{ NODES : "seen as"
-    USERS ||--o{ RUNTIME_KEYS : "made"
-    RROTORS |o--o{ RUNTIME_KEYS : "named by"
-    USERS ||--o| GITHUB_INSTALLATIONS : "installed the App"
+    USERS ||--o{ RUNTIME_KEYS : "made: Ada Cloud's API keys"
     USERS ||--o{ CONNECTOR_GRANTS : "allows"
     OAUTH_CLIENTS ||--o{ CONNECTOR_GRANTS : "granted to"
     OAUTH_CLIENTS ||--o{ OAUTH_CODES : "asked for"
@@ -656,16 +505,12 @@ erDiagram
         int price_cents "null: per contract"
         text billing_interval "month, year or null"
         bool self_serve
-        int max_machines "runtime nodes"
-        int precedents "per node, across its models"
-        bool sync
-        bool ha
-        bool offline
         bool sso
         int cloud_precedents
         int cloud_requests
         int cloud_rps
         bool cloud_overage
+        bigint llm_tokens
         timestamp created_at
     }
     ORGS {
@@ -684,79 +529,34 @@ erDiagram
         timestamp first_paid_at
         timestamp created_at
     }
-    RROTORS {
-        uuid id PK
-        uuid user_id FK
-        text mode "local or self"
-        uuid install_id FK "local: unique"
-        text image_version
-        text state
-        text token_hash UK
-        timestamp last_seen_at
-        bigint seq "last usage applied from its link"
-        text name "self"
-        text public_url "self: https://host"
-        timestamp last_heartbeat_at "self"
-        text machine_hash "self"
-        int active_runs "self"
-        bigint precedents "its total, as it last said"
-        timestamp precedents_at
-        timestamp created_at
-    }
     RUNTIME_KEYS {
         uuid id PK
-        uuid rrotor_id FK "the self-hosted runtime; null for an Ada Cloud key"
         uuid user_id FK
         text name
         text key_hash UK
         timestamp created_at
         timestamp expires_at "null: never"
         timestamp revoked_at
-        bigint calls
-        timestamp last_used_at
-        text scope "runtime or cloud"
-        numeric clearance "cloud: 0 to 1"
-    }
-    LICENSES {
-        uuid id PK "the key's license_id"
-        uuid org_id FK
-        text tier "free, pro, team or enterprise"
-        int max_nodes "null: unlimited"
-        int max_precedents "per node; null: unlimited"
-        bool cluster_sync_enabled
-        timestamp issued_at
-        timestamp expires_at "the paid period's end"
-        text customer_id "the org's id"
-        timestamp revoked_at "no longer delivered"
-        text key "the whole signed string"
-    }
-    NODES {
-        uuid rrotor_id PK
-        text node_id PK "the operator's own name"
-        uuid cluster_id
-        text role "standalone, head or follower"
-        bigint precedents "its store's, as it last said"
-        text version
-        timestamp seen_at
+        text scope "cloud"
+        numeric clearance "0 to 1"
     }
 ```
 
-`db/schema.sql` has 30 tables; the diagram draws the account, licensing and connector ones and the columns that matter to them, and the rest are below. Timestamps carry the time zone; ids are made by the database.
+`db/schema.sql` has 52 tables; the code uses 30 of them, and the diagram draws the account, Ada Cloud and connector ones with the columns that matter to them. Timestamps carry the time zone; ids are made by the database.
 
-- **Plan versions never change their price or limits.** Changing either adds a version with its own Stripe price; an org stays on the version it subscribed to. A change of only a plan's Ada Cloud limits is a new version too, at the same price, that takes over the version before it's Stripe price and its orgs (`db/seed.py`).
-- **Mods:** every plan includes every active mod; a retired mod (`active` false) is in no license.
-- **A limit left empty is unlimited.** `max_machines` is the runtime nodes the org may have, its people's together (counted, softly, in `GET /v1/license/nodes`); `precedents` what one node may hold across its Ada models (Free 5,000, Pro 50,000, Team 500,000 TBD, Enterprise unlimited). Both are signed into the licence key as `max_nodes` and `max_precedents`, `sync` as `cluster_sync_enabled`.
-- **Runtimes** (`rrotors`): one local per install that started one (`mode: local`, keyed by its install), and any self-hosted ones (`mode: self`, each with its `name` and `public_url`, one per address per person, and from its heartbeat `last_heartbeat_at`, `image_version`, `active_runs` and `machine_hash`, never an address of its caller's); each its own token. `state` is `stopped` until its first link, `online` while its link is up, `offline` after; `seq` is the last `usage` sequence number applied from its link, so a replay is applied once (a new token starts it again). `precedents` is the total across its Ada models it last reported.
-- **Runtime keys** (`runtime_keys`): each key the person made for one of their self-hosted runtimes (`rrotor_id`), by its SHA-256 only; `expires_at` empty for never; `calls` and `last_used_at` from rrotor's `usage`; a revoked or expired one kept, dated, until its record is deleted. A key of `scope` `cloud` is an Ada Cloud API key instead, never sent to a runtime.
-- **Licences** (`licenses`): each licence key the server signed for an org, its terms as signed and the whole key string, one per paid period or Enterprise grant, never on Free; `revoked_at` once its subscription or grant ended. Row-level secure on the org.
-- **Nodes** (`nodes`): each node a runtime's heartbeat or `hello` named, by its `node_id` within the runtime, as it last said; counted, never refused. Row-level secure through its runtime.
+**Kept until migration 0028 drops them, read by nothing:** the tables `bots`, `bot_runs`, `bot_plugins`, `bot_sessions`, `bot_keys`, `bot_decisions`, `connections`, `programs`, `program_runs`, `program_events`, `projects`, `project_runs`, `project_turns`, `run_marks`, `rrotors`, `nodes`, `apps`, `licenses`, `templates`, `template_installs`, `github_installations` and `mods`, and the columns `runtime_keys.rrotor_id`, `calls` and `last_used_at` (and its `scope` `runtime`), `org_sso.reviewers`, and `plan_versions.max_machines`, `precedents`, `sync`, `ha`, `offline`, `connections` and `connection_cents`. They are still in `db/schema.sql` and the models; no code reads or writes them, but for the plans' seed, which still fills a new plan version's `max_machines`, `precedents`, `sync`, `ha` and `offline` as it always did. The rest of this section lists only what is used.
+
+- **Plan versions never change their price or limits.** Changing either adds a version with its own Stripe price; an org stays on the version it subscribed to. A change of only a plan's Ada Cloud limits or its token allowance is a new version too, at the same price, that takes over the version before it's Stripe price and its orgs (`db/seed.py`).
+- **A limit left empty is unlimited,** or set in the contract: Enterprise's `cloud_precedents`, `cloud_requests`, `cloud_rps` and `llm_tokens`.
+- **API keys** (`runtime_keys`, `scope` `cloud`): each Ada Cloud API key a person made, by its SHA-256 only, with its `clearance`; `expires_at` empty for never; a revoked or expired one kept, dated, until it is deleted for good. The table keeps its old name.
 - **Installs are machines:** `INSTALLS.machine_id` is the id the plugin sends (a hash of the hardware UUID, or a random id it keeps; 16 to 128 of `A-Za-z0-9_-`), unique per user among installs not revoked. `DEVICE_CODES.machine_id` carries it to approval, which reuses that machine's install (its old tokens revoked) or makes a new one: installs are never limited.
 - **One org per user;** people found by the provider's own id; installs and tokens hashed; tenant isolation by row-level security on the org.
-- **GitHub installations:** the person's Glyphh GitHub App installation, recorded only when GitHub says it is on the person's own GitHub account; the server can mint a short-lived token for one of their repos from it, and keeps no long-lived GitHub key.
+- **Single sign-on** (`org_sso`, `sso_domains`): an org's issuer, client id, sealed client secret and whether it is enforced; and the email domains that route a sign-in to it, a domain one org's.
 - **OAuth clients:** the MCP clients that registered (RFC 7591), each with its exact redirect URIs; a confidential one's secret only as a hash. They belong to no org.
 - **OAuth codes:** an authorization the person allowed, until its code is redeemed (once, within 2 minutes), with its PKCE challenge and the resource it is for; `grant_id` names the grant it went into, so a second use revokes it.
 - **Connector grants:** each client (the desktop, claude.ai, the platform) the person allowed to call the Glyphh connector, one live per client, revocable one by one. **Connector tokens:** its access tokens (1 hour) and refresh tokens (30 days, rotated on use; a rotated one used again revokes the grant), kept only as hashes.
-- **Ada Cloud's** (`ada_usage`: an org's reads by calendar month, added by the minute tick from Redis; `ada_meter_events`: each report of reads past a metered month to Stripe, written before it is sent, `sent_at` once Stripe took it; `ada_model_days`: a model's counts by UTC day for the platform's dashboard). Row-level secure on the org.
+- **Ada Cloud's** (`ada_usage`: an org's reads by calendar month, added by the minute tick from Redis; `ada_meter_events`: each report of reads past a metered month to Stripe, written before it is sent, `sent_at` once Stripe took it; `ada_model_days`: a model's counts by UTC day for the platform's dashboard). Row-level secure on the org. The models and their precedents are in the org's own schema ([Ada Cloud](#ada-cloud-built-off-glyphh_ada_cloud)).
+- **The hosted models'** (`llm_balances`: an org's overage balance in microdollars and the month's allowance used; `llm_ledger`: every movement of it, a top-up, a grant, a refund, or a model's day of charges; `llm_usage_days`: tokens, requests and charges by model and UTC day). Row-level secure on the org ([specs/tokens.md](specs/tokens.md)).
 - **Orgs:** `renews_at` is when the subscription renews, from Stripe; empty when it isn't subscribed or ends at the period's end. `plan_until` is an Enterprise grant's end. `suspended_at` and `suspended_reason` are set by staff; `source` is the sign-up's campaign tags (on `users` too); `first_paid_at` when its subscription was first active ([Glyphh's staff view](#glyphhs-staff-view)).
 - **Staff** (`admin_audit`, `ops_events`): every staff request, and the server's own warnings and errors folded with a count, kept 30 days. No foreign key (an org's rows outlive it there); a session acting for an org sees none of them.
 - **Traffic** (`traffic_zones`, `traffic_days`, `traffic_tops`): Glyphh's own sites' traffic from Cloudflare, pulled each hour: each zone, its plan, when it was pulled and what its plan allowed; each day's numbers by zone and hostname (`host` '' the whole zone); each day's countries, pages and referrers. Staff only.
@@ -764,47 +564,28 @@ erDiagram
 
 ### Keys, checks, indexes and row-level security
 
-Every constraint and index in `db/schema.sql`, table by table. An `ix_<table>_<column>` index is a plain index on that one column. Ids are `gen_random_uuid()`; `created_at` (and `at`, `updated_at`) default to `now()`.
+The constraints and indexes in `db/schema.sql` of the 30 tables the code uses, table by table (the leftover tables are not listed, and a leftover column only where a kept table still carries its constraint). An `ix_<table>_<column>` index is a plain index on that one column. Ids are `gen_random_uuid()`; `created_at` (and `at`, `updated_at`) default to `now()`.
 
 | Table | Keys and checks | Foreign keys (on delete) | Indexes | Row-level security |
 |---|---|---|---|---|
-| `mods` | PK `slug`; `active` true, `sort` 0 by default | none | none | none |
 | `plans` | PK `id`; `name` unique; `active` true, `sort` 0 by default | none | none | none |
-| `plan_versions` | PK `id`; `plan_versions_version` unique (`plan_id`, `version`); `stripe_price_id` unique; `plan_versions_price` `price_cents` ≥ 0; `plan_versions_interval` `billing_interval` in `month`, `year` (or null); `plan_versions_limits` `max_machines` and `precedents` ≥ 0; `plan_versions_cloud` `cloud_precedents`, `cloud_requests` ≥ 0 and `cloud_rps` > 0 (each null: unlimited); `self_serve` true, `sync`, `ha`, `offline`, `sso`, `cloud_overage` false by default | `plan_id` → `plans` (restrict) | `ix_plan_versions_plan_id` | none |
+| `plan_versions` | PK `id`; `plan_versions_version` unique (`plan_id`, `version`); `stripe_price_id` unique; `plan_versions_price` `price_cents` ≥ 0; `plan_versions_interval` `billing_interval` in `month`, `year` (or null); `plan_versions_cloud` `cloud_precedents`, `cloud_requests` ≥ 0 and `cloud_rps` > 0 (each null: unlimited); `plan_versions_llm` `llm_tokens` ≥ 0; `self_serve` true, `sso`, `cloud_overage` false by default; on leftover columns, `plan_versions_limits` and `plan_versions_connections` | `plan_id` → `plans` (restrict) | `ix_plan_versions_plan_id` | none |
 | `orgs` | PK `id`; `stripe_customer_id` and `stripe_subscription_id` unique; `orgs_billing_status` `billing_status` in `none` (the default), `active`, `trialing`, `past_due`, `unpaid`, `canceled`, `incomplete`, `incomplete_expired`, `paused` | `plan_version_id` → `plan_versions` (restrict); `admin_user_id` → `users` (set null; `orgs_admin_user_id_fkey`, added once both tables exist) | `ix_orgs_plan_version_id` | `id` is the org |
 | `users` | PK `id`; `users_role` `role` in `admin`, `member`; `groups` empty by default | `org_id` → `orgs` (restrict) | `users_email` unique on `lower(email)`; `ix_users_org_id` | `org_id` is the org |
 | `identities` | PK (`provider`, `provider_user_id`); `identities_provider` `provider` in `google`, `github`, `sso` | `user_id` → `users` (cascade) | `ix_identities_user_id` | its user is visible |
-| `org_sso` | PK `org_id`; `reviewers` empty by default | `org_id` → `orgs` (cascade) | none | `org_id` is the org |
+| `org_sso` | PK `org_id`; `enforced` false by default | `org_id` → `orgs` (cascade) | none | `org_id` is the org |
 | `sso_domains` | PK `domain` | `org_id` → `org_sso` (cascade) | `ix_sso_domains_org_id` | `org_id` is the org |
 | `invites` | PK `id`; `token_hash` unique | `org_id` → `orgs` (cascade) | `invites_one_open` unique on (`org_id`, `lower(email)`) where `accepted_at` is null; `ix_invites_org_id` | `org_id` is the org |
 | `installs` | PK `id`; `installs_surface` `surface` in `desktop`, `cli` | `user_id` → `users` (cascade) | `installs_user_machine` unique on (`user_id`, `machine_id`) where `revoked_at` is null; `ix_installs_user_id` | its user is visible |
 | `tokens` | PK `id`; `token_hash` unique | `install_id` → `installs` (cascade) | `ix_tokens_install_id` | its install is visible |
 | `device_codes` | PK `device_code_hash`; `user_code` unique; `device_codes_surface` `surface` in `desktop`, `cli`; `device_codes_one_answer` not both `approved_at` and `denied_at`; `interval` 5 by default | `install_id` → `installs` (cascade) | none | none: read before anyone is signed in |
-| `rrotors` | PK `id`; `install_id` unique; `token_hash` unique; `rrotors_mode` `mode` in `local`, `self`; `rrotors_local_install` an install exactly when `local`; `rrotors_self_address` `public_url` and `name` exactly when `self`; `seq` 0 by default | `user_id` → `users` (cascade); `install_id` → `installs` (cascade) | `rrotors_self_url` unique on (`user_id`, `public_url`) where self; `rrotors_self_host` on `public_url` where self; `ix_rrotors_user_id` | its user is visible |
-| `apps` | PK `id`; `apps_state` `state` in `draft`, `approved`, `rejected`, `retired` (`draft` by default); `apps_type` `type` in `page`, `dashboard`, `doc`, `diagram`, `deck`, `design` (`page` by default); `roles` empty by default | `org_id` → `orgs` (cascade); `runtime_id` → `rrotors` (cascade); `submitted_by`, `reviewed_by` → `users` (set null) | `apps_one_per_app` unique on (`runtime_id`, `name`); `ix_apps_org_id` | `org_id` is the org |
-| `templates` | PK `slug`; `active` true, `sort` 0 by default; `body` the whole template (jsonb) | | | None: the library is everyone's |
-| `template_installs` | PK `id`; `made` (the models its `make` op made) empty by default | `org_id` → `orgs` (cascade); `user_id` → `users` (cascade); `slug` → `templates` (cascade) | `template_installs_one_per_person` unique on (`user_id`, `slug`); `ix_template_installs_org_id` | `org_id` is the org |
-| `connections` | PK `id`; one Pipedream account of the org's (`app`, `app_name`, `app_icon`, `account_id`, `label`, `permissions` JSONB: tool → allow/ask/deny, 0017) | `org_id` → `orgs` (cascade) | `connections_one_account` unique on (`org_id`, `account_id`) | `org_id` is the org |
-| `bots` | PK `id`; `look`, `scopes` (per connection, the tools it may use), `spec` (what it decides and may reach: `gates`, `hosts`, `builtins`, `limits`, `seed`), `skills` jsonb (its own notes); `bots_role` `role` in `bot` (the default), `orchestrator`; `task` (its standing task, ``), `examples` jsonb (`[]`), `old_spec` jsonb (its spec while bots were loops of steps, null for a bot made since; nothing reads it) (0026); `state` bytea (the runner's `runs.sqlite`); `ada_key` its own Ada key, sealed; `schedule` jsonb (as chosen in plain words, `{}` off) and `next_run_at`; `folders` jsonb (the folders of its rrotor's machine it may use, `[]`) and `bots_effort` `effort` in `low`, `medium` (the default), `high`, `xhigh`, `max` (0025) | `org_id` → `orgs` (cascade); `created_by` → `users` (set null); `runs_on` → `rrotors` (set null: Glyphh cloud) | `bots_one_slug` unique on (`org_id`, `slug`); `bots_one_orchestrator` unique on (`org_id`) where `role` is `orchestrator` (0026); `bots_due` on (`next_run_at`) where set | `org_id` is the org |
-| `bot_runs` | PK `id`; `bot_runs_status` `status` in `queued` (the default), `running`, `dispatched` (out on its rrotor, 0021), `needs_input`, `done`, `failed`, `skipped`; `log`, `data`, `question` jsonb; `loop_run` the runner's run id; `own_key`; tokens and `cost_micros` 0 by default; `machine` the one running it; `session_id` its Agent SDK session, resumed by an answer (``, 0026); on a rrotor (0021): `remote_seq` the last result's seq it took (0), `remote` jsonb (the call's starting tokens, the answer it carries, `since` its wait there began) | `org_id` → `orgs` (cascade); `bot_id` → `bots` (cascade); `user_id` → `users` (set null); `rrotor_id` → `rrotors` (set null) | `bot_runs_newest` on (`bot_id`, `created_at`); `bot_runs_one_live` unique on (`bot_id`) while queued, running, dispatched or needs_input | `org_id` is the org |
-| `bot_plugins` (0026) | PK `id`; `name`, `version` (the version installed), `source` (`template:<slug>`), `files` jsonb (the package's files by path, its manifest and sidecar among them), `installed_at` | `org_id` → `orgs` (cascade); `bot_id` → `bots` (cascade) | `bot_plugins_one` unique on (`bot_id`, `name`) | `org_id` is the org |
-| `bot_sessions` (0026) | PK `id` (identity); `session_id`, `subpath` (``), `entry` jsonb: one line of a live run's Agent SDK session, in the order written, deleted when the run ends | `org_id` → `orgs` (cascade); `run_id` → `bot_runs` (cascade) | `bot_sessions_of_run` on (`run_id`, `session_id`, `subpath`, `id`) | `org_id` is the org |
-| `programs` (0027) | PK `id`; `slug`, `name`, `summary`, `source` (its `program.py`, the whole file), `template` (the template it came with, ``), `schedule` jsonb and `next_run_at` (as a bot's) | `org_id` → `orgs` (cascade); `created_by` → `users` (set null); `bot_id` → `bots` (set null: its own bot); `runs_on` → `rrotors` (set null: Glyphh cloud) | `programs_one_slug` unique on (`org_id`, `slug`); `programs_due` on (`next_run_at`) where set | `org_id` is the org |
-| `program_runs` (0027) | PK `id`; `program_runs_trigger` `trigger` in `person`, `schedule`, `connector`; `program_runs_status` `status` in `queued`, `running`, `dispatched` (a code step out on its rrotor), `needs_input`, `done`, `failed`; `input`, `at` (the step it is at), `outputs` jsonb (each step's result by id), `question` jsonb, `error`, `approvals` jsonb (a yes to an action, by step, with the call's digest), `machine` | `org_id` → `orgs` (cascade); `program_id` → `programs` (cascade); `user_id` → `users` (set null) | `program_runs_newest` on (`program_id`, `created_at`); `program_runs_one_live` unique on (`program_id`) while live | `org_id` is the org |
-| `program_events` (0027) | PK `id` (identity: the trail's order); `at`, `kind` (`started`, `step`, `asked`, `answered`, `done`, `failed`, `cancelled`), `step`, `title`, `ok`, `detail` (500 characters at most, never a tool's answer): a run's audit trail, append only | `org_id` → `orgs` (cascade); `run_id` → `program_runs` (cascade); `bot_id` → `bots` (set null: the bot that did the step); `user_id` → `users` (set null: who started or answered) | `program_events_of_run` on (`run_id`, `id`) | `org_id` is the org |
-| `bot_decisions` (0024) | PK `id`; `loop_run`, `gate`, `step`, `n`, `key`, `kind` (as the runner's `runs.sqlite` has them, copied after each go); `label`, `fields` jsonb (the item readable), `case` jsonb, `outcome`; `who` in `ada`, `you`, `default`; `mode`, `p`, `guess`, `recorded`, `corrected`; the server's own `confirmed` and `precedent` (its id in the gate's Ada model); `body` and `search` (a generated tsvector of it) | `org_id` → `orgs` (cascade); `bot_id` → `bots` (cascade) | `bot_decisions_one` unique on (`bot_id`, `loop_run`, `gate`, `step`, `n`, `key`); `bot_decisions_newest` on (`bot_id`, `at`); `bot_decisions_search` gin on (`search`) | `org_id` is the org |
-| `projects` (`swarms` until `0023_projects.sql`) | PK `id`; `slug`, `name`, `repo_url`, `base_branch` (`main`), `members` jsonb (bot ids, a set), `instructions` (``), `instructions_path` (`PROJECT.md`), `projects_turn_mode` `turn_mode` in `wait` (the default), `orchestrator`, `projects_review` `review` in `each_turn` (the default), `end`, `max_turns` (30), `max_spend_cents`, `narrate` (false), `github_installation_id` (the installation of the Glyphh GitHub App that covers its repo, once a person connected it) | `org_id` → `orgs` (cascade); `created_by` → `users` (set null); `runs_on` → `rrotors` (set null: Glyphh cloud); `orchestrator` → `bots` (the org's orchestrator bot, set by the server, never chosen; set null) | `projects_one_slug` unique on (`org_id`, `slug`) | `org_id` is the org |
-| `project_runs` | PK `id`; `task`; `project_runs_status` `status` in `running` (the default), `needs_input`, `done`, `failed`; `ended` (why a done run ended); `members`, `review`, `turn_mode`, `max_turns`, `max_spend_cents` as the project had them; `stamp` its branches' suffix; `work_branch`, `pr_url`, `number` (review at the end: the run's branch and its pull request); `on_cloud` (false), `machine` (the machine running its cloud steps); `model`, `effort` (this run's, for every step; none: each bot's own); `done` jsonb (the bots idle in a row); `error` | `org_id` → `orgs` (cascade); `project_id` → `projects` (cascade); `user_id` → `users` (set null); `rrotor_id` → `rrotors` (set null) | `project_runs_newest` on (`project_id`, `created_at`); `project_runs_one_live` unique on (`project_id`) while running or needs_input | `org_id` is the org |
-| `project_turns` | PK `id`; `n`, `bot_slug`, `bot_name`, `branch`; `project_turns_status` `status` in `picking`, `running` (the default), `open`, `unchanged`, `merging`, `merged`, `conflict`, `rejecting`, `rejected`, `failed`, `cancelled`; `picked_by` (`wait`), `why` (a cloud run's only); `said`, `title`, `pr_url`, `number`, `head_sha`, `files` jsonb, `done`, `error`; `input_tokens`, `output_tokens`, `cost_micros` (0); `call_id` its call out on the rrotor, `remote_seq` (0) | `org_id` → `orgs` (cascade); `run_id` → `project_runs` (cascade); `bot_id` → `bots` (set null) | `project_turns_of_run` unique on (`run_id`, `n`); `project_turns_call` on (`call_id`); `project_turns_one_out` unique on (`run_id`) while picking, running, merging or rejecting | `org_id` is the org |
-| `run_marks` | PK (`user_id`, `run_id`); `run_id` a bot's run or a project's; `pinned` (false), `archived` (false): a person's own marks on the runs in their recents | `user_id` → `users` (cascade); `org_id` → `orgs` (cascade) | none | `org_id` is the org |
-| `bot_keys` | PK `org_id`; `anthropic_key` (sealed), `hint` (its last four) | `org_id` → `orgs` (cascade); `set_by` → `users` (set null) | none | `org_id` is the org |
-| `runtime_keys` | PK `id`; `key_hash` unique; `calls` 0 by default; `runtime_keys_scope` `scope` in `runtime` (the default), `cloud` (an Ada Cloud API key, never sent to a runtime); `runtime_keys_clearance` `clearance` from 0 to 1 (numeric 4, 3; 1 by default) | `rrotor_id` → `rrotors` (cascade); `user_id` → `users` (cascade) | `ix_runtime_keys_rrotor_id`; `ix_runtime_keys_user_id` | its user is visible |
-| `licenses` | PK `id` (the key's `license_id`); `licenses_tier` `tier` in `free`, `pro`, `team`, `enterprise`; `licenses_limits` `max_nodes` ≥ 1 and `max_precedents` ≥ 0 (or null) | `org_id` → `orgs` (cascade) | `licenses_newest` on (`org_id`, `issued_at`) | `org_id` is the org |
-| `nodes` | PK (`rrotor_id`, `node_id`); `nodes_role` `role` in `standalone`, `head`, `follower` (or null) | `rrotor_id` → `rrotors` (cascade) | none beyond the key | its runtime is visible |
+| `runtime_keys` | PK `id`; `key_hash` unique; `runtime_keys_scope` `scope` in `runtime` (the default, a leftover), `cloud` (an Ada Cloud API key: the only one made); `runtime_keys_clearance` `clearance` from 0 to 1 (numeric 4, 3; 1 by default) | `user_id` → `users` (cascade); the leftover `rrotor_id` → `rrotors` (cascade) | `ix_runtime_keys_user_id`; the leftover `ix_runtime_keys_rrotor_id` | its user is visible |
 | `ada_usage` | PK (`org_id`, `period`); `ada_usage_requests` `requests` ≥ 0 (0 by default) | `org_id` → `orgs` (cascade) | none beyond the key | `org_id` is the org |
 | `ada_model_days` | PK (`org_id`, `model`, `day`, `metric`); `n` 0 by default | `org_id` → `orgs` (cascade) | none beyond the key | `org_id` is the org |
 | `ada_meter_events` | PK `id`; `ada_meter_events_requests` `requests` > 0 | `org_id` → `orgs` (cascade) | `ix_ada_meter_events_org_id` | `org_id` is the org |
-| `github_installations` | PK `id`; `user_id` unique; `installation_id` unique | `user_id` → `users` (cascade) | none beyond the unique ones | its user is visible |
+| `llm_ledger` | PK `id`; `stripe_ref` unique; `llm_ledger_kind` `kind` in `topup`, `charge`, `grant`, `refund` | `org_id` → `orgs` (cascade) | `llm_ledger_newest` on (`org_id`, `at`); `llm_ledger_charge_day` unique on (`org_id`, `model`, `period`) where `kind` is `charge` | `org_id` is the org |
+| `llm_balances` | PK `org_id`; `micros` and `tokens` 0, `period` empty by default | `org_id` → `orgs` (cascade) | none beyond the key | `org_id` is the org |
+| `llm_usage_days` | PK (`org_id`, `model`, `day`); counts 0 by default | `org_id` → `orgs` (cascade) | none beyond the key | `org_id` is the org |
 | `oauth_clients` | PK `id`; `oauth_clients_auth_method` `auth_method` in `none`, `client_secret_post`, `client_secret_basic`; `oauth_clients_secret` a `secret_hash` exactly when not `none`; `oauth_clients_redirect_uris` at least one | none | none | none: a client is no org's |
 | `oauth_codes` | PK `code_hash` | `client_id` → `oauth_clients` (cascade); `user_id` → `users` (cascade); `grant_id` → `connector_grants` (cascade) | `ix_oauth_codes_client_id`; `ix_oauth_codes_user_id` | its user is visible |
 | `connector_grants` | PK `id` | `user_id` → `users` (cascade); `client_id` → `oauth_clients` (cascade) | `connector_grants_user_client` unique on (`user_id`, `client_id`) where `revoked_at` is null; `ix_connector_grants_client_id`; `ix_connector_grants_user_id` | its user is visible |
@@ -818,7 +599,7 @@ Every constraint and index in `db/schema.sql`, table by table. An `ix_<table>_<c
 | `github_traffic_days` | PK (`repo`, `day`); counts 0 by default | none | none beyond the key | `staff`: no org set only |
 | `github_traffic_tops` | PK (`repo`, `pulled_on`, `kind`, `key`); counts 0 by default | none | none beyond the key | `staff`: no org set only |
 
-**Row-level security.** Each of the 17 tables marked with an org above has row-level security enabled and forced (so it binds the server's own role, which is no superuser), and one policy, `tenant`. A request made with an install's token or an OAuth access token, and a runtime's own link, heartbeat and introspection, run in their org: `glyphh.org_id` is set for the transaction (`db/tenancy.py`). With it set, `tenant` shows only that org's rows: the org itself, rows whose `org_id` is it, and rows reached through a visible parent (a user, an install, a grant or a runtime). With it unset (sign-in, the connector's OAuth endpoints, Stripe's webhook, the schema step, the minute tick's sweeps and the few operations that cross orgs on purpose, such as joining another org) every row is seen. The tables marked none (`mods`, `plans`, `plan_versions`, `device_codes`, `oauth_clients`) belong to no org; the 8 marked `staff` are seen only with no org set.
+**Row-level security.** Each of the 18 tables marked with an org above has row-level security enabled and forced (so it binds the server's own role, which is no superuser), and one policy, `tenant`. A request made with an install's token or an OAuth access token runs in its org: `glyphh.org_id` is set for the transaction (`db/tenancy.py`). With it set, `tenant` shows only that org's rows: the org itself, rows whose `org_id` is it, and rows reached through a visible parent (a user, an install or a grant). With it unset (sign-in, the connector's OAuth endpoints, Stripe's webhook, the schema step, the minute tick's sweeps and the few operations that cross orgs on purpose, such as joining another org) every row is seen. The tables marked none (`plans`, `plan_versions`, `device_codes`, `oauth_clients`) belong to no org; the 8 marked `staff` are seen only with no org set.
 
 **Ada Cloud's org schemas** (`ada_<org id>`, with the flag on) are outside `db/schema.sql`: made and migrated by
 the workers, every table fenced by a `tenant` policy that fails closed ([Ada Cloud](#ada-cloud-built-off-glyphh_ada_cloud)).
@@ -831,14 +612,8 @@ Nothing in this section works today.
 
 | Area | What |
 |---|---|
-| What the paid tiers are sold on | Centralised precedent-store sync across instances (`sync`), multi-node HA (`ha`), SAML and SCIM (single sign-on by OpenID Connect is built: above, The platform), RBAC, audit logs: only the licence's flags ship |
-| The licensing engine | rrotor's side of the key (its start, its three enforcement modules) and the key in Stripe's receipt email; the server signs, issues, revokes and delivers keys (above, The licence key). How the rest differs is [pricing.md](pricing.md#against-what-is-built) |
-| The local runtime from the plugin | The server issues its token (`POST /v1/runtime/local`) and takes its link, and the plugin links it (`/glyphh link`, the Account section's **link**, the rrotor skill's `connect` and `start`: the token handed to rrotor's `PUT /v1/runtime/token`); the rrotor skill installs and starts it on macOS and Linux with Docker or OrbStack. Not built: Windows (WSL2) and Podman |
-| Air-gapped sign-in | An air-gapped runtime takes runtime keys only (`RROTOR_KEYS_SHA256`); no Glyphh sign-in without the link |
-| Rate limiting | None anywhere, the OAuth endpoints included |
+| Single sign-on beyond OpenID Connect | SAML and SCIM (single sign-on by OpenID Connect is built: above, The platform) |
+| Rate limiting | None on the account API or the OAuth endpoints (Ada Cloud's calls are held to the plan's calls a second) |
 | OAuth client ID metadata documents | Registration is RFC 7591 only |
 | Ada Cloud past its step 6 | Behind the flag, not built: an org-wide export, a page to delete an org's Ada data alone, Enterprise's cloud numbers per contract (its plan has none: unlimited); `docs/specs/ada-cloud.md` section 10 |
-
-**Open**
-
-- Team's precedents per node (500,000): a placeholder marked TBD in `db/seed.py`.
+| Hosted models | Refunds of a top-up, auto-reload of the balance, usage split by API key ([specs/tokens.md](specs/tokens.md)) |

@@ -24,7 +24,7 @@ K_MAX: int = 200
 # (bench/results.txt). Above this many precedents such a read is refused, never answered from a poor shortlist.
 FEW_ROLES_ABOVE: int = 100_000
 # learn and calibrate load the newest this many precedents of a model, not all of them: a fully loaded 1M model
-# needs about 16 GB (20 to 25 KB a precedent in a Space). A model this size or smaller learns exactly as rrotor does.
+# needs about 16 GB (20 to 25 KB a precedent in a Space). A model this size or smaller learns from every precedent.
 JOB_SAMPLE: int = 50_000
 
 IMPORT_FORMATS: tuple[str, ...] = ("jsonl", "csv", "ada_sqlite")

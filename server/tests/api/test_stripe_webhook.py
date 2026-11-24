@@ -81,6 +81,25 @@ async def test_the_org_is_found_by_metadata_when_stripe_has_no_customer_of_ours(
     assert await _plan(engine, ada.org_id) == ("Free", "none", "sub_meta")
 
 
+async def test_a_paid_invoice_reads_its_subscription_fresh_wherever_stripe_names_it(
+    client: httpx.AsyncClient, engine: AsyncEngine, stripe: FakeStripe
+) -> None:
+    ada, bob = await person(engine), await person(engine)
+    for who, sub, customer in ((ada, "sub_inv_old", "cus_inv_old"), (bob, "sub_inv_new", "cus_inv_new")):
+        stripe.sub(sub, customer, "price_test_pro", 1)["current_period_end"] = 1_800_000_000
+        await subscribed(engine, who.org_id, sub, customer)
+    older = {"customer": "cus_inv_old", "subscription": "sub_inv_old"}  # an older Stripe version: on the invoice
+    assert (await _send(client, _event("invoice.payment_succeeded", older))).status_code == 204
+    details = {"subscription": "sub_inv_new", "metadata": {"org_id": str(bob.org_id)}}
+    newer = {"customer": None, "parent": {"subscription_details": details}}  # a newer one: under its parent
+    assert (await _send(client, _event("invoice.payment_succeeded", newer))).status_code == 204
+    for who, sub in ((ada, "sub_inv_old"), (bob, "sub_inv_new")):
+        assert await _plan(engine, who.org_id) == ("Pro", "active", sub)
+        assert (await org_row(engine, who.org_id)).renews_at == datetime.fromtimestamp(1_800_000_000, UTC)
+    nameless = {"customer": "cus_inv_old", "parent": None}  # no subscription named: nothing to read
+    assert (await _send(client, _event("invoice.payment_succeeded", nameless))).status_code == 204
+
+
 async def test_events_for_no_org_another_subscription_or_of_no_interest_change_nothing(
     client: httpx.AsyncClient, engine: AsyncEngine, stripe: FakeStripe
 ) -> None:

@@ -5,8 +5,8 @@ fetched by a download link (the API signs it when the job is read: limits.LINK_T
   situation as the model keeps it), spec.json (every version: {version, spec, note, made_by, made_at, active}) and
   learned.json (the active store's learned weights and temperatures). Imported into a model of the same spec it
   answers as this one does (importer.py).
-- `ada_sqlite`: a kernel store written through SqliteStore, which kernel.Space(path=…) and a self-hosted runtime open
-  as precedents.sqlite unchanged, glyphs, outcomes, learned weights and temperatures included.
+- `ada_sqlite`: a kernel store written through SqliteStore, which kernel.Space(path=…) opens as an Ada SQLite
+  precedent store (precedents.sqlite) unchanged, glyphs, outcomes, learned weights and temperatures included.
 
 Read a batch at a time by sequence (restate.batches), never the whole model in memory."""
 

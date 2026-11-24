@@ -41,7 +41,7 @@ class ProviderProfile(BaseModel):
     email_verified: bool
     name: str | None = None
     org_id: uuid.UUID | None = None  # a single sign-on's org: the person lands there and nowhere else
-    groups: list[str] = []  # a single sign-on's groups claim, the person's roles (docs/specs/apps.md, 2)
+    groups: list[str] = []  # a single sign-on's groups claim, the person's roles
 
 
 async def sign_in(conn: AsyncConnection, profile: ProviderProfile) -> uuid.UUID:

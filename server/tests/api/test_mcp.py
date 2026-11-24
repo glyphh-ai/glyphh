@@ -17,8 +17,7 @@ from glyphh_server.ops.connector import grants
 from tests.connector import MODERN, UI, granted, modern, modern_headers, rpc
 from tests.db.helpers import person
 
-PANEL: str = "ui://glyphh/account/4"
-APPS: str = "ui://glyphh/apps/1"
+PANEL: str = "ui://glyphh/account/5"
 CARD: str = "ui://glyphh/decision/1"  # the decision card: listed only while Ada Cloud is on, read always
 
 
@@ -39,7 +38,10 @@ async def test_an_earlier_client_initializes_and_gets_its_version_or_the_newest_
     assert res["id"] == "i" and res["result"]["protocolVersion"] == "2025-06-18"
     assert res["result"]["capabilities"] == {"tools": {}, "resources": {}}
     assert res["result"]["serverInfo"] == {"name": "glyphh", "title": "Glyphh", "version": "test"}
-    assert "resultType" not in res["result"] and res["result"]["instructions"]
+    assert "resultType" not in res["result"]
+    said = res["result"]["instructions"]  # the account's alone: Ada Cloud is off, and nothing else is there
+    assert said.startswith("Glyphh's account, from Claude: who you are (whoami)") and "connector_grants" in said
+    assert not any(gone in said for gone in ("Ada Cloud", "rrotor", "bot", "program", "template", "runtime"))
     body["params"] = {"protocolVersion": "2099-01-01"}
     assert (await _legacy(client, auth, body)).json()["result"]["protocolVersion"] == "2025-11-25"
     note = {"jsonrpc": "2.0", "method": "notifications/initialized"}
@@ -147,85 +149,9 @@ async def test_tools_name_the_panel_only_for_a_2026_client_that_shows_panels(
         "invite",
         "connector_grants",
         "revoke_grant",
-        "runtime_keys",
-        "create_runtime_key",
-        "revoke_runtime_key",
-        "self_runtimes",
-        "register_self_runtime",
-        "offline_licence",
-        "apps",
-        "app_approve",
-        "app_reject",
-        "app_retire",
-        "bots",
-        "bot",
-        "bot_create",
-        "bot_update",
-        "bot_delete",
-        "bot_connections_set",
-        "bot_models",
-        "bot_run",
-        "bot_runs",
-        "bot_run_get",
-        "bot_run_answer",
-        "bot_run_wrong",
-        "bot_run_cancel",
-        "bot_gates",
-        "bot_decisions",
-        "bot_decision",
-        "bot_relabel",
-        "bot_relabel_many",
-        "bot_confirm",
-        "bot_add_case",
-        "bot_forget_case",
-        "bot_gate_stats",
-        "bot_backtest",
-        "bot_guide",
-        "bot_draft",
-        "bot_mascot",
-        "bot_voices",
-        "bot_places",
-        "bot_approvals",
-        "bot_templates",
-        "bot_template",
-        "bot_template_install",
-        "connection_permissions_set",
-        "connections",
-        "connection_apps",
-        "connection_link",
-        "connection_tools",
-        "projects",
-        "project",
-        "project_create",
-        "project_update",
-        "project_delete",
-        "project_run",
-        "project_runs",
-        "project_run_get",
-        "project_run_answer",
-        "project_run_cancel",
-        "programs",
-        "program_get",
-        "program_save",
-        "program_delete",
-        "program_schedule",
-        "search_tool",
-        "run_program",
-        "program_runs",
-        "program_run_get",
-        "program_run_answer",
-        "program_run_cancel",
     }
     panels = {n: t["_meta"]["ui"]["resourceUri"] for n, t in tools.items() if "_meta" in t}
-    assert panels == {
-        "whoami": PANEL,
-        "plan": PANEL,
-        "usage": PANEL,
-        "apps": APPS,
-        "app_approve": APPS,
-        "app_reject": APPS,
-        "app_retire": APPS,
-    }
+    assert panels == {"whoami": PANEL, "plan": PANEL, "usage": PANEL}
     assert tools["plan"]["_meta"] == {"ui": {"resourceUri": PANEL}}
     assert tools["upgrade"]["inputSchema"]["required"] == ["plan"] and tools["whoami"]["annotations"]["readOnlyHint"]
     assert tools["plans"]["annotations"]["readOnlyHint"] and not tools["upgrade"]["annotations"]["readOnlyHint"]
@@ -238,9 +164,9 @@ async def test_tools_name_the_panel_only_for_a_2026_client_that_shows_panels(
 async def test_the_panel_is_listed_and_read_as_an_mcp_app(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
     auth = await _auth(engine)
     listed = (await rpc(client, auth, "resources/list"))["result"]["resources"]
-    assert listed == [panel.RESOURCE, panel.APPS_RESOURCE] and listed[1]["uri"] == APPS
+    assert listed == [panel.RESOURCE] and listed[0]["uri"] == PANEL
     assert (await rpc(client, auth, "resources/templates/list"))["result"]["resourceTemplates"] == []
-    for uri in (PANEL, APPS, CARD):
+    for uri in (PANEL, CARD):
         (read,) = (await rpc(client, auth, "resources/read", uri=uri))["result"]["contents"]
         assert (read["uri"], read["mimeType"], read["_meta"]) == (
             uri,
@@ -249,9 +175,7 @@ async def test_the_panel_is_listed_and_read_as_an_mcp_app(client: httpx.AsyncCli
         )
         assert read["text"].startswith("<!doctype html>") and "window.McpApp=" in read["text"]
         assert "__APP_JS__" not in read["text"] and "callServerTool" in read["text"]
-    cards = (await rpc(client, auth, "resources/read", uri=APPS))["result"]["contents"][0]["text"]
-    assert "app_approve" in cards and "openLink" in cards and 'call("apps"' in cards and "All types" in cards
-    for old in ("ui://glyphh/artifacts/1", "ui://glyphh/apps/0"):
+    for old in ("ui://glyphh/account/4", "ui://glyphh/apps/1"):
         assert (await rpc(client, auth, "resources/read", uri=old))["error"]["code"] == -32602
     gone = await rpc(client, auth, "resources/read", uri="ui://glyphh/other")
     assert gone["error"]["code"] == -32602

@@ -9,12 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from glyphh_ada import requests
 from glyphh_ada.process import Worker
+from glyphh_server.mcp.tools import ada_base
 from tests.ada.conftest import SHAPES, a_model, an_org, cases, key_for, path_of, shape
 from tests.ada.mcp import data, refused, rpc, signed_in, text, tool
 from tests.ada.test_outputs import MULTI
 from tests.connector import granted
 from tests.connector import rpc as api_rpc
-from tests.db.helpers import person
+from tests.db.helpers import member, person
 
 PRICED = {**SHAPES, "output": {"costs": {"good": {"bad": 1}, "bad": {"good": 5}}, "ask": 0.4}}
 MAPPING = {"Colour": "a.s.color", "Shape": "a.s.shape", "Size": "a.s.size", "Ref": "a.s.id", "Verdict": "outcome"}
@@ -186,6 +187,29 @@ async def test_api_keys_from_the_connector_call_the_ada_api(
     assert "revoked" in text(await tool(ada, auth, "api_keys"))
     forever = await tool(ada, auth, "create_api_key", name="Script")
     assert "expires never" in text(forever)
+    for days in (0, 366):  # a key lasts 1 to 365 days, or never expires
+        late = await refused(ada, auth, "create_api_key", name="Late", expires_in_days=days)
+        assert (late["code"], late["reason"], late["days"]) == ("E_INVALID", "expiry_range", days)
+        assert late["message"] == "An API key lasts 1 to 365 days, or never expires."
+
+
+async def test_a_personal_model_is_its_persons_alone(
+    engine: AsyncEngine, ada: httpx.AsyncClient, worker: Worker
+) -> None:
+    pat = await person(engine, "Team")
+    lee = await member(engine, pat.org_id)
+    mine, theirs = await signed_in(engine, pat), await signed_in(engine, lee)
+    own = f"me-{pat.user_id.hex[:12]}-notes"
+    assert ada_base.mine(pat.user_id, own) and ada_base.mine(pat.user_id, "shapes") and ada_base.mine(pat.user_id, "me")
+    assert not ada_base.mine(lee.user_id, own) and not ada_base.mine(pat.user_id, "me-000000000000-notes")
+    await tool(ada, mine, "ada_model_create", name=own, spec=SHAPES)
+    await tool(ada, mine, "ada_model_create", name="shapes", spec=SHAPES)
+    assert {m["name"] for m in data(await tool(ada, mine, "ada_models"))["models"]} == {own, "shapes"}
+    assert [m["name"] for m in data(await tool(ada, theirs, "ada_models"))["models"]] == ["shapes"]  # the org's
+    assert data(await tool(ada, mine, "ada_model", name=own))["precedents"] == 0
+    hidden = await refused(ada, theirs, "ada_model", name=own)
+    assert (hidden["code"], hidden["message"]) == ("E_NOT_FOUND", f"No model named {own} in this org.")
+    assert (await refused(ada, theirs, "ada_record", name=own, data=shape(1), outcome="good"))["code"] == "E_NOT_FOUND"
 
 
 async def test_the_ada_tools_are_there_only_with_ada_cloud_on(

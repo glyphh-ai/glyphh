@@ -1,6 +1,5 @@
 """What every step of the device sign-in page shares: the provider callback address, and the short-lived cookie that
-ties each step to the browser that started it, so nobody can push their sign-in into someone else's browser. Installing
-the GitHub App is tied to its browser by the same cookie, on its own path."""
+ties each step to the browser that started it, so nobody can push their sign-in into someone else's browser."""
 
 from typing import Literal
 from urllib.parse import urlsplit
@@ -13,6 +12,7 @@ from glyphh_server.errors import Invalid
 from glyphh_server.ops.auth.secrets import make_secret
 
 COOKIE: str = "glyphh_signin"
+PATH: str = "/auth"  # the cookie's: every step of a sign-in is under it
 TTL: int = 600
 START_AGAIN: str = "This sign-in has expired or moved to another browser. Start again in Claude."
 
@@ -50,19 +50,19 @@ def new_browser() -> str:
     return make_secret()
 
 
-def bind_browser(response: Response, settings: Settings, value: str, path: str = "/auth") -> Response:
+def bind_browser(response: Response, settings: Settings, value: str) -> Response:
     response.set_cookie(
         COOKIE,
         value,
         max_age=TTL,
         httponly=True,
         samesite=same_site(settings),
-        path=path,
+        path=PATH,
         secure=settings.public_url.startswith("https://"),
     )
     return response
 
 
-def forget_browser(response: Response, path: str = "/auth") -> Response:
-    response.delete_cookie(COOKIE, path=path)
+def forget_browser(response: Response) -> Response:
+    response.delete_cookie(COOKIE, path=PATH)
     return response

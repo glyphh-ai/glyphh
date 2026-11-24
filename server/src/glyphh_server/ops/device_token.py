@@ -1,4 +1,4 @@
-"""The mod's poll for its token (RFC 8628, section 3.4). Each answer before the token is returned, not raised, so
+"""The plugin's poll for its token (RFC 8628, section 3.4). Each answer before the token is returned, not raised, so
 what the poll wrote (when it was polled, a slower interval) is kept."""
 
 import uuid

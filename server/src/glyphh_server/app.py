@@ -12,36 +12,21 @@ from glyphh_ada.api import HostRouter
 from glyphh_ada.api import make_app as make_ada
 from glyphh_server.api import (
     admin,
-    apps,
     attribution,
     billing,
-    bot_maker,
-    bots,
-    connections,
     connector,
     device,
     device_pages,
     errors,
-    github,
-    github_pages,
     health,
-    license,
     llm,
     mcp,
-    mcp_apps,
     me,
-    mods,
     oauth,
     oauth_meta,
     oauth_pages,
     org,
     plans,
-    programs,
-    projects,
-    recents,
-    runtime,
-    self_hosted,
-    templates,
 )
 from glyphh_server.api.consent_cors import ConsentCorsMiddleware
 from glyphh_server.api.trace import TraceMiddleware
@@ -50,43 +35,25 @@ from glyphh_server.db.engine import make_engine
 from glyphh_server.db.signals import make_redis
 from glyphh_server.obs import events, metrics
 from glyphh_server.obs.logs import configure
-from glyphh_server.ops import github_app, tend
+from glyphh_server.ops import tend
 from glyphh_server.ops.billing.stripe import StripeClient
-from glyphh_server.ops.bots.service import Bots
 from glyphh_server.ops.cloudflare import Cloudflare
 from glyphh_server.ops.github_traffic import GitHub
-from glyphh_server.ops.license import load_key
-from glyphh_server.ops.link.hub import Hub
 
 ROUTERS = (
     health,
     device,
     device_pages,
     me,
-    license,
     org,
-    mods,
     plans,
     billing,
     llm,
-    runtime,
-    self_hosted,
-    apps,
-    templates,
-    connections,
-    bot_maker,
-    bots,
-    programs,
-    projects,
-    recents,
-    github,
-    github_pages,
     oauth_meta,
     oauth,
     oauth_pages,
     connector,
     mcp,
-    mcp_apps,
     attribution,
     admin,
 )
@@ -97,41 +64,35 @@ IDLE_EVERY: float = 60.0
 
 async def tend_forever(
     engine: AsyncEngine,
-    hub: Hub,
+    redis: Redis,
     cfg: Settings,
     stripe: StripeClient | None,
     cloudflare: Cloudflare | None = None,
     github: GitHub | None = None,
-    bots: Bots | None = None,
 ) -> None:
     """Every minute, the server's tick (ops/tend.py); a failure is logged and the next minute comes."""
     while True:
         await asyncio.sleep(IDLE_EVERY)
         try:
-            await tend.tend(engine, hub, cfg, int(IDLE_EVERY), stripe, cloudflare, github, bots)
+            await tend.tend(engine, redis, cfg, stripe, cloudflare, github)
         except Exception:
             logging.getLogger("glyphh.runtime").exception("tick failed")
 
 
 def _tending(app: FastAPI, cfg: Settings, engine: AsyncEngine) -> asyncio.Task[None]:
     """The minute tick, always; with billing set up, Stripe (Ada Cloud's meter); with a Cloudflare token, the hourly
-    traffic pull; with a GitHub traffic token, the hourly GitHub traffic pull; the bots' schedules."""
+    traffic pull; with a GitHub traffic token, the hourly GitHub traffic pull."""
     meter = cfg.stripe_secret_key and StripeClient(app.state.http, cfg.stripe_secret_key, cfg.stripe_meter_ada)
     cloudflare = Cloudflare(app.state.http, cfg.cloudflare_api_token) if cfg.cloudflare_api_token else None
     github = GitHub(app.state.http, cfg.github_traffic_token) if cfg.github_traffic_token else None
-    tending = tend_forever(engine, app.state.hub, cfg, meter or None, cloudflare, github, app.state.bots)
-    return asyncio.create_task(tending)
+    return asyncio.create_task(tend_forever(engine, app.state.redis, cfg, meter or None, cloudflare, github))
 
 
-async def _share_http(app: FastAPI, http: httpx.AsyncClient, cfg: Settings, engine: AsyncEngine, redis: Redis) -> None:
-    """The server's HTTP client, the Ada app's too while it is on (the hosted models' inference, api/inference.py),
-    and the hosted bots' (Pipedream), their runs this machine left running when it stopped failed; their runs and the
-    projects' steps on the org's rrotors go over the hub's links."""
+def _share_http(app: FastAPI, http: httpx.AsyncClient) -> None:
+    """The server's HTTP client, the Ada app's too while it is on (the hosted models' inference, api/inference.py)."""
     app.state.http = http
     if app.state.ada is not None:
         app.state.ada.http = http
-    app.state.bots = Bots(engine, redis, cfg, http, app.state.hub)
-    await app.state.bots.recover()
 
 
 def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None = None) -> FastAPI:
@@ -145,16 +106,14 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        await _share_http(app, http or httpx.AsyncClient(timeout=10), cfg, engine, redis)
+        _share_http(app, http or httpx.AsyncClient(timeout=10))
         idle = _tending(app, cfg, engine)
         flushing = asyncio.create_task(metrics.flush_forever(app.state.metrics, redis))
         yield
         await metrics.stop(flushing, app.state.metrics, redis)
-        await app.state.bots.close()
         idle.cancel()
         with suppress(asyncio.CancelledError):
             await idle
-        await app.state.hub.close_all()
         await app.state.http.aclose()
         await redis.aclose()
         if ada is not None:
@@ -165,9 +124,6 @@ def create_app(settings: Settings | None = None, http: httpx.AsyncClient | None 
     app.state.settings = cfg
     app.state.engine = engine
     app.state.redis = redis
-    app.state.hub = Hub(redis)
-    app.state.signing_key = load_key(cfg)
-    app.state.github_key = github_app.load_key(cfg)
     app.state.ada = None if ada is None else ada.state  # the connector's Ada tools call the workers through it
     errors.install(app)
     for module in ROUTERS:

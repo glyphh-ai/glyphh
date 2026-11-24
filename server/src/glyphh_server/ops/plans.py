@@ -1,6 +1,5 @@
-"""Plans as callers see them: each plan's newest version, and the version an org is pinned to: its price, its limits
-(runtime nodes and precedents per node), its features, and with Ada Cloud on its cloud limits (precedents and reads
-a month per org, calls a second)."""
+"""Plans as callers see them: each plan's newest version, and the version an org is pinned to: its price, its
+features, and with Ada Cloud on its cloud limits (precedents and reads a month per org, calls a second)."""
 
 import uuid
 from typing import Literal
@@ -11,29 +10,14 @@ from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.errors import Invalid
-from glyphh_server.models import Mod, Org, Plan, PlanVersion
-
-
-class Limits(BaseModel):
-    machines: int | None = Field(
-        description="Runtime nodes, the org's together: the licence key's max_nodes, enforced by rrotor; the server "
-        "counts the nodes it hears from and never refuses one; null = unlimited"
-    )
-    precedents: int | None = Field(
-        description="Precedents per node, across all its Ada models: the licence key's max_precedents, enforced by "
-        "rrotor; null = unlimited"
-    )
+from glyphh_server.models import Org, Plan, PlanVersion
 
 
 class Features(BaseModel):
-    sync: bool = Field(description="Sync the precedent store across instances")
-    ha: bool = Field(description="Highly available runtimes")
-    offline: bool = Field(description="Offline (air-gapped) licences")
     sso: bool = Field(description="Single sign-on with the org's own identity provider (OpenID Connect)")
 
 
-# What works today, one source of truth: offline licences and single sign-on; sync and HA are licence flags, not built.
-BUILT: Features = Features(sync=False, ha=False, offline=True, sso=True)
+BUILT: Features = Features(sso=True)  # what works today, one source of truth
 OVERAGE_CENTS_PER_10K: int = 100  # a metered plan's reads past its month: $1 per 10,000 (the ada_requests price)
 
 
@@ -51,21 +35,12 @@ class CloudLimits(BaseModel):
     overage_cents_per_10k: int | None = Field(description="What 10,000 reads past the month cost; null: none sold")
 
 
-class ConnectionPrice(BaseModel):
-    """Connections to other services (Pipedream accounts), the org's whatever its bots: none priced until Chris sets
-    a price (the seed's TBD), so every one is included."""
-
-    included: int | None = Field(description="Connections included; null = every one")
-    cents_a_month: int | None = Field(description="Each connection past the included, a month; null = not priced")
-
-
 class PlanView(BaseModel):
     name: str
     version: int
     price_cents: int | None = Field(description="A month's or a year's, as interval says; null: set in the contract")
     interval: Literal["month", "year"] | None = Field(description="null: free")
     self_serve: bool = Field(description="Bought with Stripe Checkout; else talk to sales@glyphh.ai")
-    limits: Limits
     features: Features
     built: Features = Field(
         BUILT,
@@ -77,7 +52,6 @@ class PlanView(BaseModel):
         description="Glyphh-hosted models' tokens a calendar month, UTC, before tokens are charged to the overage "
         "balance at each model's rates (GET /v1/llm/models); null = by contract",
     )
-    connections: ConnectionPrice = Field(ConnectionPrice(included=None, cents_a_month=None))
 
 
 COLUMNS = (
@@ -88,29 +62,13 @@ COLUMNS = (
     PlanVersion.price_cents,
     PlanVersion.billing_interval,
     PlanVersion.self_serve,
-    PlanVersion.max_machines,
-    PlanVersion.precedents,
-    PlanVersion.sync,
-    PlanVersion.ha,
-    PlanVersion.offline,
     PlanVersion.sso,
     PlanVersion.cloud_precedents,
     PlanVersion.cloud_requests,
     PlanVersion.cloud_rps,
     PlanVersion.cloud_overage,
     PlanVersion.llm_tokens,
-    PlanVersion.connections,
-    PlanVersion.connection_cents,
 )
-
-
-async def active_mods(conn: AsyncConnection) -> list[str]:
-    """Every active mod's slug, in the catalog's order: every plan includes each."""
-    return list((await conn.execute(select(Mod.slug).where(Mod.active).order_by(Mod.sort, Mod.slug))).scalars())
-
-
-def features(row: Row) -> Features:
-    return Features(sync=row.sync, ha=row.ha, offline=row.offline, sso=row.sso)
 
 
 def cloud_limits(row: Row) -> CloudLimits:
@@ -131,11 +89,9 @@ def view(row: Row, cloud: bool = False) -> PlanView:
         price_cents=row.price_cents,
         interval=row.billing_interval,
         self_serve=row.self_serve,
-        limits=Limits(machines=row.max_machines, precedents=row.precedents),
-        features=features(row),
+        features=Features(sso=row.sso),
         cloud=cloud_limits(row) if cloud else None,
         llm_tokens=row.llm_tokens,
-        connections=ConnectionPrice(included=row.connections, cents_a_month=row.connection_cents),
     )
 
 

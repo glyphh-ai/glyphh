@@ -8,9 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from glyphh_ada.api.models import NewModel
 from glyphh_ada.api.tuning import Changes, NewSpec
 from glyphh_server.errors import Conflict
-from glyphh_server.mcp.tools.ada_base import NAME, Named, ada, args_of
+from glyphh_server.mcp.tools.ada_base import NAME, Named, ada, args_of, mine
 from glyphh_server.mcp.tools.base import Context, Done, NoArgs, Tool
-from glyphh_server.ops.templates import glyphh
 
 
 class SpecArgs(NewSpec):
@@ -46,7 +45,7 @@ def changed(name: str, answer: dict[str, Any]) -> str:
 
 async def models(ctx: Context, _: NoArgs) -> Done:
     found, _v = await ada(ctx, "", "models", {})
-    found = [m for m in found if glyphh.mine(ctx.who.user_id, m["name"])]  # no one else's glyphh
+    found = [m for m in found if mine(ctx.who.user_id, m["name"])]  # no one else's personal model
     lines = [f"{m['name']}: version {m['version']} on {m['ada']}, {m['precedents']:,} precedents" for m in found]
     return Done("\n".join(lines) or "No models yet: ada_model_create makes one.", {"models": found})
 

@@ -10,10 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_ada.usage import CloudUsage
 from glyphh_server.models import Identity, Org, User
-from glyphh_server.ops.apps import is_reviewer
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.plans import PlanView
-from glyphh_server.ops.usage import Precedents, usage
+from glyphh_server.ops.usage import usage
 
 
 class MeOrg(BaseModel):
@@ -31,10 +30,8 @@ class Me(BaseModel):
     role: str
     providers: list[str]
     groups: list[str] = Field([], description="The identity provider's groups, from single sign-on: the roles")
-    reviewer: bool = Field(False, description="Reviews the org's apps: the admin, or in a reviewer group")
     org: MeOrg
     plan: PlanView
-    precedents: Precedents
     ada_cloud: bool = Field(False, description="Ada Cloud is on (GLYPHH_ADA_CLOUD): the platform shows Ada")
     cloud: CloudUsage | None = Field(None, description="Ada Cloud's precedents and reads; null while it is off")
     llm: bool = Field(
@@ -56,18 +53,15 @@ async def me(conn: AsyncConnection, who: Principal, cloud: Redis | None = None) 
         select(Identity.provider).where(Identity.user_id == who.user_id).order_by(Identity.provider)
     )
     used = await usage(conn, who.org_id, cloud)
-    groups = list(person.groups)
     return Me(
         id=who.user_id,
         email=person.email,
         name=person.name,
         role=person.role,
         providers=list(providers.scalars()),
-        groups=groups,
-        reviewer=await is_reviewer(conn, who.org_id, person.role, groups),
+        groups=list(person.groups),
         org=MeOrg(**org._mapping),
         plan=used.plan,
-        precedents=used.precedents,
         ada_cloud=cloud is not None,
         cloud=used.cloud,
     )

@@ -7,14 +7,12 @@ from dataclasses import dataclass
 from typing import Any
 
 import httpx
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.config import Settings
 from glyphh_server.ops.auth.principal import Principal
 from glyphh_server.ops.billing.stripe import StripeClient
-from glyphh_server.ops.link.hub import Hub
 
 
 class NoArgs(BaseModel):
@@ -27,11 +25,7 @@ class Context:
     who: Principal
     settings: Settings
     http: httpx.AsyncClient
-    hub: Hub
-    signing_key: Ed25519PrivateKey
     ada: Any = None  # the Ada app's state (glyphh_ada.api.make_app) while Ada Cloud is on: its tools call through it
-    bots: Any = None  # the hosted bots (ops/bots/service.py): Pipedream, the runs
-    progress: Any = None  # async (str) -> None: a progress notification streamed to the client (api/mcp_stream.py)
 
     def stripe(self) -> StripeClient:
         cfg = self.settings
@@ -57,12 +51,7 @@ class Tool:
     read_only: bool = False
     panel: bool = False
     resource: str | None = None  # the panel that shows its result; None: the account panel (mcp/panel.py)
-    destructive: bool | None = None  # whether a write replaces or removes what was there (destructiveHint), when said
 
 
 def dump(model: BaseModel) -> dict[str, Any]:
     return model.model_dump(mode="json")
-
-
-def amount(value: int | None) -> str:
-    return "unlimited" if value is None else str(value)

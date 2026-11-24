@@ -278,6 +278,9 @@ async def test_the_connector_lists_versions_and_upgrades(
     await tool(ada, auth, "ada_model_create", name="shapes", spec=SHAPES, ada="ada-1-0")
     listed = await tool(ada, auth, "ada_releases")
     assert text(listed).startswith("The latest stable is ada-1-0") and "ada-1-2-beta: beta, released" in text(listed)
-    assert "ada-1-1-beta: deprecated (ends 2026-11-24), released" in text(listed)
+    # deprecated until its end date, retired from it: the shipped list's own dates say which it is today
+    old = registry.registry().find("ada-1-1-beta")
+    assert old is not None and old.status(registry.today()) in ("deprecated", "retired")
+    assert f"ada-1-1-beta: {old.status(registry.today())} (ends 2026-11-24), released" in text(listed)
     moved = await tool(ada, auth, "ada_upgrade", name="shapes", ada=BETA, note="try the beta")
     assert text(moved).startswith(f"Version 2 of shapes on {BETA} (from ada-1-0) is being made by job ")

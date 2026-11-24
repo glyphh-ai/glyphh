@@ -19,7 +19,6 @@ from glyphh_server.models import (
     AdaModelDay,
     AdaUsage,
     AdminAudit,
-    LicenseRecord,
     Org,
     Plan,
     PlanVersion,
@@ -68,7 +67,6 @@ class OrgDetail(BaseModel):
     models: list[adascan.AdaModel]
     jobs: list[adascan.AdaJob]
     api_keys: int
-    licences: int
     balance: llm_usage.Balance  # the hosted models' overage balance (docs/specs/tokens.md); staff may grant to it
     audit: list[audit.AuditEntry]
 
@@ -115,7 +113,6 @@ async def detail(conn: AsyncConnection, org_id: uuid.UUID) -> OrgDetail:
     ada = await adascan.one(conn, org_id)
     keys = select(RuntimeKey.id).join(User, User.id == RuntimeKey.user_id).where(User.org_id == org_id)
     keys = keys.where(RuntimeKey.scope == "cloud", RuntimeKey.revoked_at.is_(None))
-    licences = select(LicenseRecord.id).where(LicenseRecord.org_id == org_id, LicenseRecord.revoked_at.is_(None))
     taken = select(AdminAudit).where(AdminAudit.org_id == org_id).order_by(AdminAudit.at.desc()).limit(20)
     return OrgDetail(
         account=shown,
@@ -126,7 +123,6 @@ async def detail(conn: AsyncConnection, org_id: uuid.UUID) -> OrgDetail:
         models=ada.models,
         jobs=ada.jobs,
         api_keys=await _count(conn, keys),
-        licences=await _count(conn, licences),
         balance=await llm_usage.balance(conn, org_id),
         audit=[audit.AuditEntry(**r._mapping) for r in await conn.execute(taken)],
     )

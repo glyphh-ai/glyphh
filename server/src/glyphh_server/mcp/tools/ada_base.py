@@ -4,6 +4,7 @@ the Ada app, exactly as the API makes it (glyphh_ada/api/call.py: the plan's che
 exist only while Ada Cloud is on (registry.available), and run after the request's transaction has ended
 (registry.DETACHED): they never touch ctx.conn."""
 
+import uuid
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -15,7 +16,6 @@ from glyphh_ada.api.call import keyed, send
 from glyphh_server.db import tenancy
 from glyphh_server.errors import NotFound
 from glyphh_server.mcp.tools.base import Context
-from glyphh_server.ops.templates import glyphh
 
 NAME = Field(pattern=limits.NAME_PATTERN, description="The model's name (ada_models lists them)")
 IDEMPOTENCY = Field(None, max_length=200, description="Sent again with the same key and cases, the write is made once")
@@ -35,9 +35,15 @@ async def caller(ctx: Context) -> AdaCaller:
     return AdaCaller(ctx.who.org_id, ctx.who.user_id, 1.0, allowance=allowed)
 
 
+def mine(user_id: uuid.UUID, model: str) -> bool:
+    """Whether a model is this person's to read: a personal model (`me-<their id's first 12 hex digits>-…`, made by
+    the template library that is gone) stays its person's alone; every other model is the org's."""
+    return not model.startswith("me-") or model.startswith(f"me-{user_id.hex[:12]}-")
+
+
 def owned(ctx: Context, model: str) -> None:
-    """Another person's glyphh model (a template's, ops/templates/glyphh.py) is not there for anyone else."""
-    if not glyphh.mine(ctx.who.user_id, model):
+    """Another person's personal model is not there for anyone else."""
+    if not mine(ctx.who.user_id, model):
         raise NotFound(f"No model named {model} in this org.", model=model)
 
 

@@ -5,8 +5,6 @@ import asyncpg
 import httpx
 import pytest
 from asgi_lifespan import LifespanManager
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi import FastAPI
 from redis.asyncio import Redis
 from sqlalchemy.engine import make_url
@@ -17,7 +15,7 @@ from glyphh_server.config import Settings
 from glyphh_server.db.engine import make_engine
 from glyphh_server.db.schema import apply_schema
 from glyphh_server.db.signals import make_redis
-from tests.fakes import FakeGitHubApp, FakeStripe, fake_http
+from tests.fakes import FakeStripe, fake_http
 
 # The suite's database is made by the superuser in GLYPHH_DATABASE_URL and owned by an ordinary role the server
 # connects as: a superuser bypasses row-level security, so only an ordinary role proves the tenant policies hold.
@@ -25,21 +23,14 @@ ADMIN_URL: str = os.environ.get("GLYPHH_DATABASE_URL", "postgresql+asyncpg://gly
 APP_ROLE: str = "glyphh_app"
 DATABASE_URL: str = make_url(ADMIN_URL).set(username=APP_ROLE, password=APP_ROLE).render_as_string(hide_password=False)
 UNREACHABLE_URL: str = "postgresql+asyncpg://glyphh:glyphh@127.0.0.1:1/glyphh"
-# A real Redis: the test profile's own database on the compose service; pub/sub channels are per person.
+# A real Redis: the test profile's own database on the compose service.
 REDIS_URL: str = os.environ.get("GLYPHH_REDIS_URL", "redis://localhost:6379/1")
 UNREACHABLE_REDIS: str = "redis://127.0.0.1:1/0"
 SECRET_KEY: str = "test-secret-key-that-signs-sign-in-links-0123456789"
 PUBLIC_URL: str = "http://localhost:8080"
 WEBHOOK_SECRET: str = "whsec_test_not_a_real_secret"
-GITHUB_APP_ID: str = "424242"
-GITHUB_APP_KEY: rsa.RSAPrivateKey = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-GITHUB_APP_PEM: str = GITHUB_APP_KEY.private_bytes(
-    serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()
-).decode()
 SETTINGS: Settings = Settings(
     env="test",
-    # rrotor's connector tools as they are when shown (the default); tests/api/test_mcp_shelved.py covers them off.
-    rrotor=True,
     database_url=DATABASE_URL,
     redis_url=REDIS_URL,
     version="test",
@@ -50,9 +41,6 @@ SETTINGS: Settings = Settings(
     stripe_price_basic="price_test_basic",
     stripe_price_pro="price_test_pro",
     stripe_price_team="price_test_team",
-    github_app_id=GITHUB_APP_ID,
-    github_app_private_key=GITHUB_APP_PEM,
-    github_app_slug="glyphh-test",
 )
 PROVIDER_SETTINGS: Settings = SETTINGS.model_copy(
     update={
@@ -108,15 +96,8 @@ def stripe() -> FakeStripe:
 
 
 @pytest.fixture
-def github_app() -> FakeGitHubApp:
-    return FakeGitHubApp(GITHUB_APP_KEY.public_key(), GITHUB_APP_ID)
-
-
-@pytest.fixture
-async def client(
-    engine: AsyncEngine, stripe: FakeStripe, github_app: FakeGitHubApp
-) -> AsyncIterator[httpx.AsyncClient]:
-    async for c in _client(create_app(PROVIDER_SETTINGS, http=fake_http(stripe, github_app=github_app))):
+async def client(engine: AsyncEngine, stripe: FakeStripe) -> AsyncIterator[httpx.AsyncClient]:
+    async for c in _client(create_app(PROVIDER_SETTINGS, http=fake_http(stripe))):
         yield c
 
 

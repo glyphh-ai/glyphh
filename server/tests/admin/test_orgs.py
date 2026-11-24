@@ -90,7 +90,7 @@ async def test_one_org_shows_metadata_never_contents(admin: Admin, engine: Async
     assert len(body["days"]) == 30 and body["days"][-1] == {"day": today.isoformat(), "reads": 6}
     assert [(m["name"], m["precedents"]) for m in body["models"]] == [("loans", 3)]
     assert [(j["kind"], j["state"]) for j in body["jobs"]] == [("import", "failed")]
-    assert (body["api_keys"], body["licences"]) == (1, 0)
+    assert body["api_keys"] == 1 and "licences" not in body
     assert "never shown" not in res.text  # a spec's and a job's contents stay in the org's schema
     assert [a["action"] for a in body["audit"]] == ["adminOrg"]  # this very look, audited as it is made
     assert (await admin.get(f"/orgs/{uuid.uuid4()}")).status_code == 404

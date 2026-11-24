@@ -1,6 +1,6 @@
-"""Enterprise, granted by staff: the org on Enterprise until a date, billed on its own subscription, with a licence key
-to then; revoked back to Free, its keys revoked; ended by the tick when the date passes, and when the deal's
-subscription ends; the command refuses what it cannot do."""
+"""Enterprise, granted by staff: the org on Enterprise until a date, billed on its own subscription; revoked back to
+Free; ended by the tick when the date passes, and when the deal's subscription ends; the command refuses what it
+cannot do."""
 
 import runpy
 import sys
@@ -8,14 +8,12 @@ import uuid
 from datetime import UTC, date, datetime, timedelta
 
 import pytest
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from glyphh_server.db import tenancy
 from glyphh_server.errors import Conflict, NotFound
 from glyphh_server.models import Org
-from glyphh_server.ops import enterprise, license_keys
+from glyphh_server.ops import enterprise
 from glyphh_server.ops.billing.stripe import StripeClient
 from glyphh_server.ops.billing.sync import sync_subscription
 from glyphh_server.ops.plans import org_version
@@ -23,18 +21,10 @@ from tests.conftest import SETTINGS
 from tests.db.helpers import org_row, person, subscribed
 from tests.fakes import FakeStripe, fake_http
 
-KEY: Ed25519PrivateKey = Ed25519PrivateKey.generate()
-
 
 async def _plan(engine: AsyncEngine, org_id: uuid.UUID) -> str:
     async with engine.connect() as conn:
         return (await org_version(conn, org_id)).name
-
-
-async def _key(engine: AsyncEngine, org_id: uuid.UUID) -> str | None:
-    async with engine.begin() as conn:
-        await tenancy.enter(conn, org_id)
-        return await license_keys.newest(conn, org_id)
 
 
 async def test_a_grant_puts_the_org_on_enterprise_on_its_subscription(engine: AsyncEngine, stripe: FakeStripe) -> None:
@@ -51,7 +41,7 @@ async def test_a_grant_puts_the_org_on_enterprise_on_its_subscription(engine: As
         customer,
         "active",
     )
-    assert await _plan(engine, ada.org_id) == "Enterprise" and await _key(engine, ada.org_id) is not None
+    assert await _plan(engine, ada.org_id) == "Enterprise"
     stripe.sub(sub, customer, "price_deal_acme", 1, "trialing_forever")
     await enterprise.run(argv, SETTINGS, fake_http(stripe))  # again, the same deal: its status taken as it is
     assert (await org_row(engine, ada.org_id)).billing_status == "none"
@@ -77,9 +67,9 @@ async def test_a_grant_refuses_another_subscription_and_an_unknown_org(engine: A
     stripe.sub("sub_deal2", "cus_pro", "price_deal", 1)
     billing = StripeClient(fake_http(stripe), "sk_test")
     with pytest.raises(Conflict, match="Cancel the org's subscription sub_pro first"):
-        await enterprise.grant(engine, billing, ada.org_id, date(2027, 1, 1), "sub_deal2", KEY)
+        await enterprise.grant(engine, billing, ada.org_id, date(2027, 1, 1), "sub_deal2")
     with pytest.raises(NotFound):
-        await enterprise.grant(engine, billing, uuid.uuid4(), date(2027, 1, 1), "sub_deal2", KEY)
+        await enterprise.grant(engine, billing, uuid.uuid4(), date(2027, 1, 1), "sub_deal2")
     with pytest.raises(SystemExit):
         argv = ["grant", "--org", str(ada.org_id), "--until", "2027-01-01", "--markup", "5", "--subscription", "x"]
         await enterprise.run(argv, SETTINGS, fake_http(stripe))
@@ -87,18 +77,17 @@ async def test_a_grant_refuses_another_subscription_and_an_unknown_org(engine: A
         await enterprise.run(["grant", "--org", "not-a-uuid"], SETTINGS, fake_http(stripe))
 
 
-async def test_revoking_puts_the_org_on_free_and_revokes_its_keys(engine: AsyncEngine, stripe: FakeStripe) -> None:
+async def test_revoking_puts_the_org_on_free(engine: AsyncEngine, stripe: FakeStripe) -> None:
     ada = await person(engine, "Pro")
     sub, customer = f"sub_deal_{ada.org_id.hex}", f"cus_deal_{ada.org_id.hex}"
     stripe.sub(sub, customer, "price_deal_acme", 1)
     argv = ["grant", "--org", str(ada.org_id), "--until", "2030-01-01", "--subscription", sub]
     await enterprise.run(argv, SETTINGS, fake_http(stripe))
-    assert await _key(engine, ada.org_id) is not None
+    assert await _plan(engine, ada.org_id) == "Enterprise"
     said = await enterprise.run(["revoke", "--org", str(ada.org_id)], SETTINGS, fake_http(stripe))
     assert said == "Ada Lovelace's org is on Free. Cancel its subscription in Stripe."
     org = await org_row(engine, ada.org_id)
     assert (await _plan(engine, ada.org_id), org.plan_until, org.stripe_subscription_id) == ("Free", None, None)
-    assert await _key(engine, ada.org_id) is None
 
 
 async def test_a_grant_past_its_date_ends_at_the_tick(engine: AsyncEngine) -> None:

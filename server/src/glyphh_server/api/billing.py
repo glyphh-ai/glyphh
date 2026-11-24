@@ -58,10 +58,9 @@ def cloud_redis(request: Request) -> Redis | None:
 
 @router.get("/v1/billing", operation_id="billing")
 async def get_billing(caller: Caller, conn: Conn, request: Request) -> BillingView:
-    """The org's billing: its plan and price and the precedents its fullest runtime holds of the plan's per node;
-    with Ada Cloud on, its plan's cloud limits and what the org uses of them (precedents, reads this month); its
-    connections against the plan's; the month's tokens, the hosted models' and the bots' (one meter), and the
-    balance they are charged to past the plan's."""
+    """The org's billing: its plan and price; with Ada Cloud on, its plan's cloud limits and what the org uses of
+    them (precedents, reads this month); the month's tokens of the hosted models, and the balance they are charged
+    to past the plan's."""
     row = (
         await conn.execute(select(Org.billing_status, Org.renews_at, Org.plan_until).where(Org.id == caller.org_id))
     ).one()
@@ -71,9 +70,8 @@ async def get_billing(caller: Caller, conn: Conn, request: Request) -> BillingVi
 
 @router.post("/v1/billing/topup", operation_id="topUpBalance")
 async def top_up(body: TopupIn, caller: Caller, conn: Conn, stripe: Stripe, request: Request) -> StripePage:
-    """Stripe Checkout's address to add $10 to $1,000 to the overage balance the bots and the Glyphh-hosted models
-    draw on past the plan's tokens; credited once Stripe says it is paid. The admin's. Open whether hosted models are
-    on or not: the bots' tokens are charged to it either way."""
+    """Stripe Checkout's address to add $10 to $1,000 to the overage balance the Glyphh-hosted models draw on
+    past the plan's tokens; credited once Stripe says it is paid. The admin's."""
     return await topup.topup(conn, caller, stripe, request.app.state.settings, body.amount_cents)
 
 
@@ -110,8 +108,8 @@ async def open_portal(caller: Caller, conn: Conn, stripe: Stripe, request: Reque
 async def get_series(
     caller: Caller, conn: Conn, days: Annotated[int, Query(ge=1, le=90, description="Days back, today's included")] = 30
 ) -> Series:
-    """The org's use by UTC day, oldest first, for the Usage charts: Ada Cloud reads and decides, bot runs, what the
-    balance was charged, and the connections held. Tokens by day and model are GET /v1/llm/usage."""
+    """The org's use by UTC day, oldest first, for the Usage charts: Ada Cloud reads and decides, and what the
+    balance was charged. Tokens by day and model are GET /v1/llm/usage."""
     return await series.series(conn, caller.org_id, days)
 
 
@@ -135,7 +133,7 @@ async def stripe_webhook(
     """Stripe's events keep orgs true: plan version and status. Signed by Stripe, or refused."""
     secret = request.app.state.settings.stripe_webhook_secret
     event = signature.verified_event(secret, await request.body(), stripe_signature)
-    await webhook.handle_event(conn, stripe_client(request), event, request.app.state.signing_key)
+    await webhook.handle_event(conn, stripe_client(request), event)
     return Response(status_code=204)
 
 

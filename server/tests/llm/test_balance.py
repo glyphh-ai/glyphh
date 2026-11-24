@@ -112,7 +112,7 @@ async def test_hosted_models_off_show_nothing_of_them(
 ) -> None:
     who = await person(engine)
     shown = (await client.get("/v1/billing", headers=who.headers)).json()
-    # the bots' tokens are metered whether hosted models are on or not, so the month and the balance still show
+    # billing reads the month and the balance whether hosted models are on or not (the top-up is open either way)
     assert (shown["tokens"]["models"], shown["tokens"]["max"], shown["balance"]["micros"]) == ([], 250_000, 0)
     assert (await ada.post("/v1/chat/completions", json=ASK, headers=who.headers)).status_code == 404
     names = [t["name"] for t in (await rpc(ada, await signed_in(engine, who), "tools/list"))["result"]["tools"]]
@@ -151,11 +151,11 @@ async def test_a_new_allowance_alone_is_a_new_version_that_takes_the_price_and_t
         carry = seed.PlanSeed("Carry tokens", 4_900, "month", True, 2, None, seed.Features(), llm_tokens=7_000)
         await seed._seed_version(conn, carry, None)
         new = await newest_version(conn, "Carry tokens")
-        assert (new.version, new.llm_tokens, new.stripe_price_id, new.max_machines) == (
+        assert (new.version, new.llm_tokens, new.stripe_price_id, new.price_cents) == (
             2,
             7_000,
             "price_test_tokens",
-            2,
+            4_900,
         )
         pinned = (await conn.execute(select(Org.plan_version_id).where(Org.id == who.org_id))).scalar_one()
         assert pinned == new.id

@@ -1,5 +1,5 @@
 """The server renders nothing: whenever a browser is in a flow (the device sign-in, the connector's Allow, a provider
-link, the GitHub App, Stripe's return), it is sent to the platform, which shows the page and calls back here. Every
+link, Stripe's return), it is sent to the platform, which shows the page and calls back here. Every
 value in a redirect's query is URL-encoded; the platform's routes are listed in `glyphh-ai/platform`'s README."""
 
 from urllib.parse import urlencode

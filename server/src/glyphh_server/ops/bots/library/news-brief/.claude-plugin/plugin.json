@@ -1,5 +1,0 @@
-{
-  "name": "news-brief",
-  "version": "1.0.0",
-  "description": "News Brief: reads the Hacker News front page and writes you a five-minute brief of the stories you care about."
-}

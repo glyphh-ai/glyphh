@@ -48,18 +48,3 @@ def test_configure_installs_one_json_handler_however_often_it_runs(capsys: pytes
     logging.getLogger("glyphh.test").info("written", extra=fields(k="v"))
     out = capsys.readouterr().out.strip().splitlines()[-1]
     assert json.loads(out)["k"] == "v"
-
-
-def test_the_access_line_of_a_heartbeat_is_dropped_so_no_address_is_logged() -> None:
-    from glyphh_server.obs.logs import NoAddress
-
-    def access(path: object) -> logging.LogRecord:
-        args = ("203.0.113.9:5555", "POST", path, "1.1", 200)
-        return logging.LogRecord("uvicorn.access", logging.INFO, __file__, 1, '%s - "%s %s HTTP/%s" %d', args, None)
-
-    quiet = NoAddress()
-    assert not quiet.filter(access("/v1/license/verify")) and not quiet.filter(access("/v1/license/verify?x=1"))
-    assert quiet.filter(access("/v1/license")) and quiet.filter(_record("no args"))
-    configure("INFO")
-    configure("INFO")
-    assert sum(isinstance(f, NoAddress) for f in logging.getLogger("uvicorn.access").filters) == 1

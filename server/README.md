@@ -1,15 +1,13 @@
 # server
 
-The Glyphh server, https://api.glyphh.ai: accounts and orgs, installs signed in by device flow, flat plans on
-Stripe, the licences for rrotor (the signed licence and the licence key, one per paid period), the runtime link every
-local or self-hosted rrotor holds for its licence, the Glyphh connector (`/mcp`, OAuth 2.1) and Ada Cloud (built, off
-by default: `GLYPHH_ADA_CLOUD`). It renders nothing (every browser step lands on the platform, `glyphh-ai/platform`),
-hosts no runtime and is never on a program's data path: rrotor runs on the person's own machines.
+The Glyphh server, https://api.glyphh.ai. Glyphh is one thing, Ada: this server is Ada Cloud (Ada models as an API,
+at https://ada.glyphh.ai; off unless `GLYPHH_ADA_CLOUD` is on), the Glyphh connector (`/mcp`, OAuth 2.1), accounts
+and orgs with invites and single sign-on, installs signed in by device flow, plans and billing on Stripe, and
+Glyphh's staff view. It renders nothing: every browser step lands on the platform, `glyphh-ai/platform`.
 
 - [`docs/architecture.md`](docs/architecture.md): the contract. The system, the API, the settings, the data model,
   and what is not built yet.
-- [`docs/pricing.md`](docs/pricing.md): the tiers and the licensing strategy, and where today's code differs from
-  it.
+- [`docs/pricing.md`](docs/pricing.md): the plans and what each includes.
 
 ## Run it
 
@@ -34,14 +32,12 @@ be made again with `docker compose down -v`, or any database by hand with
 `GLYPHH_RESET_DATABASE=1 python -m glyphh_server.db.reset`; nothing resets on deploy.
 
 Settings come from the environment (prefix `GLYPHH_`, or `.env`, never committed): the
-[settings table](docs/architecture.md#settings). `GLYPHH_SECRET_KEY` (32+ characters) is required. Make the signing
-key (`GLYPHH_LICENSE_SIGNING_KEY`, the Ed25519 private key that signs licences and licence keys; `GLYPHH_LICENSE_KEY`
-is its old name, still read) or a secrets key with:
+[settings table](docs/architecture.md#settings). `GLYPHH_SECRET_KEY` (32+ characters) is required. Make one with:
 
     python -c "import base64,os; print(base64.b64encode(os.urandom(32)).decode())"
 
 To try billing against Stripe's test mode, make the products once
-([pricing.md](docs/pricing.md#the-control-plane)) and forward its events with
+([pricing.md](docs/pricing.md#setting-up)) and forward its events with
 `stripe listen --forward-to localhost:8080/v1/stripe/webhook`, setting the webhook secret it prints.
 
 ## Layout
@@ -56,24 +52,30 @@ To try billing against Stripe's test mode, make the products once
   `ops/connector/` the connector's OAuth 2.1 authorization server
 - `api/`: the routes, every one with an OpenAPI operation id; `*_pages.py` the browser steps, `oauth.py` and
   `oauth_meta.py` OAuth's endpoints (refusals in OAuth's own shape), `mcp.py` `/mcp`
-- `mcp/`: the connector's MCP server: the protocol, the tools (`mcp/tools/`) and the account panel (`mcp/panel/`)
-- `obs/`: JSON logs, each line with its trace id
+- `mcp/`: the connector's MCP server: the protocol, the tools (`mcp/tools/`) and the panels (`mcp/panel/`: the
+  account panel and the decision card)
+- `llm/`: the Glyphh-hosted models' registry, meter and ledger (off unless `GLYPHH_LLM` is on)
+- `admin/`: what the staff view reads
+- `obs/`: JSON logs, each line with its trace id, the request metrics and the ops events
+
+`src/glyphh_ada/` is Ada Cloud: its API (`api/`), the workers and what they run.
 
 ## Test it
 
     docker compose --profile test run --rm --build test
 
 The suite runs against a real Postgres (its own `glyphh_test` database, fresh each run) and a real Redis, and fails
-under 100% line and branch coverage. Google, GitHub, Stripe and Anthropic's routines are faked at the HTTP layer; the
-keys the tests use are made fresh each run. `tests/test_code_shape.py` keeps files under 200 lines, functions under 40
+under 100% line and branch coverage. Google, GitHub, Stripe and Cloudflare are faked at the HTTP layer.
+`tests/test_code_shape.py` keeps files under 200 lines, functions under 40
 and classes under 120. Lint with `uv run ruff check . && uv run ruff format --check .`.
 
 `tests/ada/` runs Ada Cloud with real workers (threads, and processes where a worker is killed): pgvector in the
-suite's database, SDK 3.0 (PyPI `glyphh` 3.0.0) against `/v1/runs`, the contract it was built to
-(`tests/ada/contract.json` and `fixtures.json`, from `glyphh-ai/glyphh` `contract/`), and the two-org isolation test.
+suite's database, the published SDK (PyPI `glyphh`, pinned in `pyproject.toml`) called as a customer's code would
+(`tests/ada/test_sdk.py`), the contract (`tests/ada/contract.json` and `fixtures.json`, from `glyphh-ai/glyphh`
+`contract/`), and the two-org isolation test.
 `scripts/ada-load.py` measures reads a second and latency against a server and its workers on a private network;
-`scripts/ada-import.py` a 1M-row import end to end, and `scripts/ada-backtest-bench.py` the backtest against rrotor's
-credit and Banking77 benchmarks (their own data and split).
+`scripts/ada-import.py` a 1M-row import end to end, and `scripts/ada-backtest-bench.py` the backtest against the
+credit and Banking77 benchmarks (their own data and split, from a checkout given with `--code`).
 
 ## Builds
 

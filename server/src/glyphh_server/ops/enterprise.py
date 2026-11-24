@@ -1,8 +1,6 @@
 """Enterprise, granted by Glyphh's staff, never bought: the org's plan becomes Enterprise until a date and its own
 Stripe subscription (the deal's annual price, invoiced) recorded. Revoking it, or the date passing, puts the org back
-on Free. A grant issues the org a licence key through its last day (air-gapped: the contract's term, delivered out of
-band too); revoking or ending it revokes the org's keys. Run on the server's machine (`fly ssh console`), where
-GLYPHH_LICENSE_SIGNING_KEY is set:
+on Free. Run on the server's machine (`fly ssh console`):
 
     python -m glyphh_server.ops.enterprise grant --org <uuid> --until <YYYY-MM-DD> --subscription <sub_…>
     python -m glyphh_server.ops.enterprise revoke --org <uuid>"""
@@ -16,7 +14,6 @@ from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 
 import httpx
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
@@ -25,9 +22,7 @@ from glyphh_server.db.engine import make_engine
 from glyphh_server.db.seed import ENTERPRISE, FREE
 from glyphh_server.errors import Conflict, GlyphhError, NotFound
 from glyphh_server.models import BILLING_STATUSES, Org
-from glyphh_server.ops import license_keys
 from glyphh_server.ops.billing.stripe import StripeClient
-from glyphh_server.ops.license import load_key
 from glyphh_server.ops.plans import newest_version
 
 log = logging.getLogger("glyphh.billing")
@@ -44,17 +39,9 @@ async def _org(conn: AsyncConnection, org_id: uuid.UUID) -> Any:
     return org
 
 
-async def grant(
-    engine: AsyncEngine,
-    stripe: StripeClient,
-    org_id: uuid.UUID,
-    until: date,
-    subscription: str,
-    signing_key: Ed25519PrivateKey,
-) -> str:
-    """The org on Enterprise through the end of `until` (UTC), billed on this subscription, with a licence key to
-    then. Granted again, a deal renewed or changed (a new subscription too, and a new key); a self-serve subscription
-    is cancelled first."""
+async def grant(engine: AsyncEngine, stripe: StripeClient, org_id: uuid.UUID, until: date, subscription: str) -> str:
+    """The org on Enterprise through the end of `until` (UTC), billed on this subscription. Granted again, a deal
+    renewed or changed (a new subscription too); a self-serve subscription is cancelled first."""
     sub = await stripe.subscription(subscription)
     async with engine.begin() as conn:
         org = await _org(conn, org_id)
@@ -72,7 +59,6 @@ async def grant(
             "first_paid_at": paid,
         }
         await conn.execute(update(Org).where(Org.id == org_id).values(**values))
-        await license_keys.issue(conn, signing_key, org_id, ends)
     return f"{org.name} is on Enterprise through {until}, billed on {subscription} ({sub['customer']})."
 
 
@@ -80,11 +66,10 @@ async def back_to_free(conn: AsyncConnection, org_id: uuid.UUID) -> None:
     free = await newest_version(conn, FREE)
     values = CLEARED | {"plan_version_id": free.id, "billing_status": "none"}
     await conn.execute(update(Org).where(Org.id == org_id).values(**values))
-    await license_keys.revoke(conn, org_id)
 
 
 async def revoke(engine: AsyncEngine, org_id: uuid.UUID) -> str:
-    """The org back on Free, its licence keys revoked. Its Stripe subscription is cancelled in Stripe."""
+    """The org back on Free. Its Stripe subscription is cancelled in Stripe."""
     async with engine.begin() as conn:
         org = await _org(conn, org_id)
         await back_to_free(conn, org_id)
@@ -124,8 +109,7 @@ async def run(argv: list[str], settings: Settings, http: httpx.AsyncClient | Non
         if args.command == "revoke":
             return await revoke(engine, args.org)
         stripe = StripeClient(client, settings.stripe_secret_key)
-        signing_key = load_key(settings)
-        return await grant(engine, stripe, args.org, args.until, args.subscription, signing_key)
+        return await grant(engine, stripe, args.org, args.until, args.subscription)
     finally:
         await client.aclose()
         await engine.dispose()

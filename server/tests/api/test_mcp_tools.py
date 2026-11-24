@@ -22,7 +22,7 @@ def _refused(result: dict, code: str) -> dict:
     return error
 
 
-async def test_whoami_and_plan_show_the_account_its_limits_and_features(
+async def test_whoami_and_plan_show_the_account_and_what_the_plan_includes(
     client: httpx.AsyncClient, engine: AsyncEngine
 ) -> None:
     ada = await person(engine)
@@ -35,12 +35,16 @@ async def test_whoami_and_plan_show_the_account_its_limits_and_features(
     assert who["content"] == [{"type": "text", "text": f"Ada Lovelace ({ada.email}), admin of Ada Lovelace's org."}]
     plan = await tool(client, auth, "plan")
     assert plan["content"][0]["text"] == (
-        "Free (version 1), free: billing none, renews 2026-11-15.\nIt includes runtime nodes 1, precedents per node "
-        "5000; features: none. Members, installs and models are unlimited.\n"
-        "Licence key: none; rrotor runs as Community (Free) without one."
+        "Free (version 1), free: billing none, renews 2026-11-15.\n"
+        "It includes no single sign-on. Members, installs and models are unlimited."
     )
     data = plan["structuredContent"]
-    assert data["org"]["renews_at"].startswith("2026-11-15") and data["plan"]["limits"]["machines"] == 1
+    assert data["org"]["renews_at"].startswith("2026-11-15") and data["plan"]["features"] == {"sso": False}
+    assert set(data) == {"plan", "org"}
+    usage = await tool(client, auth, "usage")  # Ada Cloud and the hosted models off: nothing is counted
+    assert usage["content"][0]["text"] == "Nothing is metered on this plan yet."
+    used = usage["structuredContent"]
+    assert (used["plan"]["name"], used["cloud"], used["tokens"], used["balance"]) == ("Free", None, None, None)
 
 
 async def test_plans_lists_what_each_plan_costs_and_includes(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
@@ -48,12 +52,11 @@ async def test_plans_lists_what_each_plan_costs_and_includes(client: httpx.Async
     plans = await tool(client, auth, "plans")
     assert [p["name"] for p in plans["structuredContent"]["plans"]] == ["Free", "Basic", "Pro", "Team", "Enterprise"]
     assert plans["content"][0]["text"].splitlines() == [
-        "Free: free; runtime nodes 1, precedents per node 5000; features: none",
-        "Basic: $20 a month; runtime nodes 1, precedents per node 5000; features: none",
-        "Pro: $99 a month; runtime nodes 3, precedents per node 50000; features: sync",
-        "Team: $299 a month; runtime nodes 10, precedents per node 500000; features: sync",
-        "Enterprise: by contract, a year: talk to us at sales@glyphh.ai; runtime nodes unlimited, precedents per node "
-        "unlimited; features: sync, ha, offline, sso",
+        "Free: free; no single sign-on",
+        "Basic: $20 a month; no single sign-on",
+        "Pro: $99 a month; no single sign-on",
+        "Team: $299 a month; no single sign-on",
+        "Enterprise: by contract, a year: talk to us at sales@glyphh.ai; single sign-on",
     ]
 
 
@@ -105,9 +108,8 @@ async def test_installs_are_listed_and_one_signed_out(client: httpx.AsyncClient,
     _, auth = await granted(engine, ada)
     listed = await tool(client, auth, "installs")
     (one,) = listed["structuredContent"]["installs"]
-    assert (
-        one["id"] == str(ada.install_id) and one["current"] is False and "Mac (desktop" in listed["content"][0]["text"]
-    )
+    assert one["id"] == str(ada.install_id) and one["current"] is False
+    assert listed["content"][0]["text"] == f"Mac (desktop, plugin 1.0.0), id {ada.install_id}"
     out = await tool(client, auth, "sign_out_install", install_id=str(ada.install_id))
     assert out["structuredContent"] == {"signed_out": str(ada.install_id)}
     assert (await client.get("/v1/me", headers=ada.headers)).status_code == 401

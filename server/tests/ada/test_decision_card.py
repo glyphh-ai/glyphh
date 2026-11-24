@@ -1,4 +1,4 @@
-"""The decision card (mcp/panel.py, `ui://glyphh/decision/1`): ada_decide and a template's decide tool name it, it is
+"""The decision card (mcp/panel.py, `ui://glyphh/decision/1`): ada_decide names it, it is
 listed and read while Ada Cloud is on, and an answer's `teach` records the case exactly as the card does on Approve
 or a correction: the named tool, its args, the case's data and the person's outcome."""
 
@@ -62,20 +62,3 @@ async def test_a_decision_of_several_outputs_teaches_each_outcome(
     outcomes = {"team": answer["outputs"]["team"]["outcome"], "urgent": "yes"}
     kept = data(await tool(ada, auth, "ada_record", **answer["teach"]["args"], data=case, outcomes=outcomes))
     assert kept["precedents"] == 13
-
-
-async def test_a_templates_decide_shows_the_card_and_teaches_its_record_tool(
-    engine: AsyncEngine, ada: httpx.AsyncClient, worker: Worker
-) -> None:
-    who = await person(engine, "Team")
-    auth = await signed_in(engine, who)
-    await tool(ada, auth, "template_install", slug="orchestrator")
-    tools = {t["name"]: t for t in (await rpc(ada, auth, "tools/list"))["result"]["tools"]}
-    assert tools["glyphh_bot_decide"]["_meta"] == {"ui": {"resourceUri": CARD}}
-    assert "_meta" not in tools["glyphh_bot_record"] and "_meta" not in tools["glyphh_orchestrator_recall"]
-    job = {"case": {"bot": {"job": "triage the inbox", "recurs_per_week": 20, "touches": "drafts", "similar_bots": 0}}}
-    answer = data(await tool(ada, auth, "glyphh_bot_decide", model="make_bot", data=job))
-    full = f"me-{who.user_id.hex[:12]}-orchestrator-make_bot"
-    assert answer["teach"] == {"tool": "glyphh_bot_record", "args": {"model": full}}
-    kept = data(await tool(ada, auth, answer["teach"]["tool"], **answer["teach"]["args"], data=job, outcome="make"))
-    assert kept["model"] == full and kept["precedents"] == 1

@@ -19,7 +19,6 @@ from glyphh_server.models import AdaMeterEvent, AdaUsage, Org
 from glyphh_server.ops import tend
 from glyphh_server.ops.billing import ada_meter
 from glyphh_server.ops.billing.stripe import StripeClient
-from glyphh_server.ops.link.hub import Hub
 from tests.ada.conftest import ADA, pinned
 from tests.conftest import REDIS_URL, _client
 from tests.db.helpers import Person, person, subscribed
@@ -184,7 +183,7 @@ async def test_the_tick_flushes_and_reports_with_ada_cloud_on(
     month = requests.period()
     await counts.set(requests.pending_key(who.org_id, month), 3)
     await counts.sadd(requests.orgs_key(month), str(who.org_id))
-    assert await tend.tend(engine, Hub(counts), ADA, 60, None)  # no Stripe: flushed only
+    assert await tend.tend(engine, counts, ADA, None)  # no Stripe: flushed only
     assert sent(stripe, customer) == []
-    assert await tend.tend(engine, Hub(counts), ADA, 60, meter(stripe))
+    assert await tend.tend(engine, counts, ADA, meter(stripe))
     assert [e["payload[value]"] for e in sent(stripe, customer)] == ["2"]

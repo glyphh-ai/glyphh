@@ -35,10 +35,10 @@ class LinkOut(BaseModel):
 
 @router.get("/me", operation_id="me")
 async def get_me(caller: Caller, conn: Conn, request: Request) -> Me:
-    """The user, their org and role, the plan version with its limits and features, the precedents its fullest runtime
-    holds, and whether Ada Cloud is on (the platform shows Ada then); with it on, the plan's
-    cloud limits and what the org uses of them; and whether they are Glyphh's staff (the platform opens its staff
-    view), and whether Glyphh-hosted models are on (the platform shows their tokens and balance then)."""
+    """The user, their org and role, the plan version with its features, and whether Ada Cloud is on (the platform
+    shows Ada then); with it on, the plan's cloud limits and what the org uses of them; and whether they are Glyphh's
+    staff (the platform opens its staff view), and whether Glyphh-hosted models are on (the platform shows their
+    tokens and balance then)."""
     found = await me.me(conn, caller, cloud_redis(request))
     return _flags(found, request, caller)
 

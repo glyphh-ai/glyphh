@@ -1,4 +1,4 @@
-"""Topping up the overage balance the bots and the Glyphh-hosted models draw on past the plan's tokens (tokens.md): the
+"""Topping up the overage balance the Glyphh-hosted models draw on past the plan's tokens (tokens.md): the
 admin's, in dollars, $10 to $1,000, through Stripe Checkout as one payment, priced in the session itself. The balance
 is credited only when Stripe's webhook says the session completed and was paid, once per session however often it
 is sent; Stripe's page then sends the person back to the platform's Billing with `?topup=1`."""
@@ -34,7 +34,7 @@ class TopupIn(BaseModel):
 
 
 def line(amount_cents: int) -> dict[str, Any]:
-    product = {"name": "Glyphh balance (bots and hosted models)"}
+    product = {"name": "Glyphh balance (hosted models)"}
     price = {"currency": "usd", "unit_amount": amount_cents, "product_data": product}
     return {"price_data": price, "quantity": 1}
 

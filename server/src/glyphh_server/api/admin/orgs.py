@@ -47,17 +47,17 @@ async def get_org(org_id: uuid.UUID, staff: Staff) -> OrgDetail:
 
 @router.post("/orgs/{org_id}/enterprise", operation_id="adminGrantEnterprise")
 async def grant_enterprise(org_id: uuid.UUID, body: EnterpriseGrant, staff: Staff) -> Done:
-    """On Enterprise through `until`, billed on the deal's subscription, with a licence key to then."""
+    """On Enterprise through `until`, billed on the deal's subscription."""
     state = staff.request.app.state
     stripe = StripeClient(state.http, state.settings.stripe_secret_key)  # without billing set up: E_UNAVAILABLE
-    said = await enterprise.grant(state.engine, stripe, org_id, body.until, body.subscription, state.signing_key)
+    said = await enterprise.grant(state.engine, stripe, org_id, body.until, body.subscription)
     await staff.note(until=body.until.isoformat(), subscription=body.subscription)
     return Done(message=said)
 
 
 @router.delete("/orgs/{org_id}/enterprise", operation_id="adminRevokeEnterprise")
 async def revoke_enterprise(org_id: uuid.UUID, staff: Staff) -> Done:
-    """Back on Free, its licence keys revoked; its subscription is then cancelled in Stripe by hand."""
+    """Back on Free; its subscription is then cancelled in Stripe by hand."""
     said = await enterprise.revoke(staff.request.app.state.engine, org_id)
     return Done(message=said)
 

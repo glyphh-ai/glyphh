@@ -1,4 +1,4 @@
-"""`POST /v1/runs`, rrotor's call shape (glyphh contract/contract.json, `result`), so SDK 3.0 works against the cloud
+"""`POST /v1/runs`, the SDK 3.0 runs shape (glyphh contract/contract.json, `result`), so SDK 3.0 works against the cloud
 with only its URL (GLYPHH_RUNTIME_URL=https://ada.glyphh.ai) and key changed. A run of record, query, facts,
 probabilities, decide, learn or settings is answered at once as a `done` Result: a fresh run_id, `seconds` the time
 it took. learn waits for its job up to LEARN_WAIT seconds, then answers the job as it stands. The cloud keeps no runs,
@@ -57,7 +57,7 @@ async def _answer(request: Request, who: AdaCaller, body: Run) -> tuple[Any, int
         found, version = await versioned(request, who, body.model, "model", {})
         return found["spec"].get("settings", {}), version
     if body.function not in INPUTS:
-        await call(request, who, body.model, "model", {})  # a model that is not there says so first, as rrotor does
+        await call(request, who, body.model, "model", {})  # a model that is not there says so first, as the SDK expects
         raise Refused("E_FUNCTION_MISSING", f"An Ada Cloud model has no function {body.function}.", 404)
     args = {k: body.inputs[k] for k in INPUTS[body.function] if body.inputs.get(k) is not None}
     return await versioned(request, who, body.model, body.function, args, body.clearance)
@@ -65,8 +65,8 @@ async def _answer(request: Request, who: AdaCaller, body: Run) -> tuple[Any, int
 
 @router.post("", operation_id="run", dependencies=[Depends(bounded)])
 async def run(body: Run, who: AdaWho, request: Request) -> dict[str, Any]:
-    """One function of a model, answered as rrotor's Result: {run_id, model, version, function, status: done, data,
-    step, prompt, seconds}."""
+    """One function of a model, answered as the SDK 3.0 runs shape's Result: {run_id, model, version, function,
+    status: done, data, step, prompt, seconds}."""
     started = time.perf_counter()
     data, version = await _answer(request, who, body)
     return {

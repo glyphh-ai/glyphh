@@ -1,10 +1,8 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import AliasChoices, Field, field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-from glyphh_server.bot_settings import BotSettings
 
 
 class AdaCloudSettings(BaseSettings):
@@ -85,19 +83,16 @@ class TrafficSettings(BaseSettings):
     github_traffic_repos: str = "glyphh-ai/glyphh"
 
 
-class Settings(AdaCloudSettings, LlmSettings, StaffSettings, TrafficSettings, BotSettings):
+class Settings(AdaCloudSettings, LlmSettings, StaffSettings, TrafficSettings):
     model_config = SettingsConfigDict(env_prefix="GLYPHH_", env_file=".env", extra="ignore", populate_by_name=True)
 
     env: Literal["dev", "test", "prod"] = "dev"
-    # rrotor in the connector (shelved 2026-11-02, back on 2026-11-17): off, the connector neither lists nor calls its
-    # runtime, licence and apps tools, and its instructions name Glyphh's account and Ada only. The API's routes stay
-    # as they are either way.
-    rrotor: bool = True
     database_url: str = "postgresql+asyncpg://glyphh:glyphh@localhost:5432/glyphh"
     # Lets db/reset.py, run by hand, drop every table and make the schema again (development, emergencies). Off by
     # default and never set on deploy: production keeps its data.
     reset_database: bool = False
-    # Live signals only (pub/sub): in production Redis runs on the server's own Fly machine, beside the server.
+    # Counts and queues on their way to Postgres (db/signals.py): in production Redis runs on the server's own Fly
+    # machine, beside the server.
     redis_url: str = "redis://localhost:6379/0"
     version: str = "dev"
     log_level: str = "INFO"
@@ -110,13 +105,6 @@ class Settings(AdaCloudSettings, LlmSettings, StaffSettings, TrafficSettings, Bo
     platform_client_secret: str = ""
     # Signs the values the device sign-in pages carry; 32 characters or more.
     secret_key: str = ""
-    # The Ed25519 private key that signs every licence and licence key: base64 of its raw 32 bytes. Without one outside
-    # prod, one is made at start. GLYPHH_LICENSE_KEY is its old name, still read: to rrotor that name is now the
-    # customer's key string, so the server's is GLYPHH_LICENSE_SIGNING_KEY.
-    license_signing_key: str = Field(
-        "",
-        validation_alias=AliasChoices("GLYPHH_LICENSE_SIGNING_KEY", "GLYPHH_LICENSE_KEY"),
-    )
     google_client_id: str = ""
     google_client_secret: str = ""
     github_client_id: str = ""
@@ -126,10 +114,6 @@ class Settings(AdaCloudSettings, LlmSettings, StaffSettings, TrafficSettings, Bo
     stripe_price_basic: str | None = None
     stripe_price_pro: str | None = None
     stripe_price_team: str | None = None
-    # The Glyphh GitHub App: its id, its private key (PEM) and its slug (its install page is under the slug).
-    github_app_id: str = ""
-    github_app_private_key: str = ""
-    github_app_slug: str = ""
     # Where an invite's link points; the token rides its query. Defaults to {public_url}/join.
     invite_url: str = ""
     # Browser origins /mcp accepts besides the server's own, comma-separated (requests without an Origin always pass).
@@ -156,14 +140,6 @@ class Settings(AdaCloudSettings, LlmSettings, StaffSettings, TrafficSettings, Bo
     @property
     def platform_base(self) -> str:
         return self.platform_url.rstrip("/")
-
-    @property
-    def github_app_configured(self) -> bool:
-        return bool(self.github_app_id and self.github_app_private_key and self.github_app_slug)
-
-    @property
-    def github_app_install_url(self) -> str:
-        return f"https://github.com/apps/{self.github_app_slug}/installations/new"
 
     @property
     def mcp_resource(self) -> str:

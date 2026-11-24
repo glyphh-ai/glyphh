@@ -16,7 +16,6 @@ from glyphh_server.obs import context, events, events_store, tick
 from glyphh_server.obs.events import QUEUE, OpsHandler, event, install, kind_of
 from glyphh_server.obs.logs import fields
 from glyphh_server.ops import tend
-from glyphh_server.ops.link.hub import Hub
 from tests.admin.conftest import Admin
 from tests.conftest import REDIS_URL, SETTINGS, UNREACHABLE_REDIS
 
@@ -86,7 +85,7 @@ async def test_the_tick_moves_events_to_postgres_folded(engine: AsyncEngine, red
         log.warning("stripe call failed %s", marker, extra=fields(path="/v1/stripe/webhook"))
     log.error("other %s", marker)
     await redis.delete(tick.KEY)
-    assert await tend.tend(engine, Hub(redis), SETTINGS, 60, None)
+    assert await tend.tend(engine, redis, SETTINGS, None)
     assert await tick.last(redis) is not None
     async with engine.connect() as conn:
         rows = list(await conn.execute(select(OpsEvent).where(OpsEvent.message.contains(marker))))

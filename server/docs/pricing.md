@@ -1,137 +1,59 @@
-# Pricing and licensing
+# Pricing
 
-How Glyphh charges and how a licence is enforced. Free to adopt without friction on a developer's own machines; the
-paid plans are enforced by rrotor itself, offline, so Glyphh never takes on a customer's infrastructure or compute:
-rrotor runs on the customer's machines and the server only grants its licence. Where today's code differs from this
-is [Against what is built](#against-what-is-built).
+How Glyphh charges for Ada Cloud. A plan sells the org's precedents, its reads a month and its calls a second;
+**never per seat, per model or per key.** The numbers are `db/seed.py`'s, and callers read them from `GET /v1/plans`
+(`ops/plans.py`).
 
 ## The plans
 
 | | Free | Basic | Pro | Team | Enterprise |
 |---|---|---|---|---|---|
-| Price | $0 | $20 a month | $99 a month | $299 a month | By contract, from $10k a year |
-| Runtime nodes | 1 | 1 (no key: as Free) | 3 | 10 | Unlimited |
-| Precedents per node, across all its models | 5,000 | 5,000 (as Free) | 50,000 | 500,000 (TBD) | Unlimited |
-| Multi-node sync | No | No | Yes | Yes | Yes, with high availability |
-| Air-gapped | No | No | Optional | Optional | Yes |
-| Audit log | No | No | No | No | Yes |
-| Ada Cloud precedents, the org's | 1,000 | 10,000 | 100,000 | 1,000,000 | By contract |
-| Ada Cloud reads a month | 5,000, then refused | 50,000, then $1 per 10,000 | 1,000,000, then $1 per 10,000 | 5,000,000, then $1 per 10,000 | By contract |
-| Ada Cloud calls a second | 5 | 10 | 50 | 200 | By contract |
+| Price | $0 | $20 a month | $99 a month | $299 a month | By contract, a year at a time |
+| Precedents, the org's across its models | 1,000 | 10,000 | 100,000 | 1,000,000 | By contract |
+| Reads a month | 5,000, then refused | 50,000, then $1 per 10,000 | 1,000,000, then $1 per 10,000 | 5,000,000, then $1 per 10,000 | By contract |
+| Calls a second | 5 | 10 | 50 | 200 | By contract |
 | Hosted-model tokens a month (TBD) | 250,000 | 5,000,000 | 25,000,000 | 100,000,000 | By contract |
 | Past the tokens | Charged to a prepaid balance | Charged to a prepaid balance | Charged to a prepaid balance | Charged to a prepaid balance | By contract |
-| Connections (bots' accounts at other services) | Every one (TBD) | Every one (TBD) | Every one (TBD) | Every one (TBD) | By contract |
-| Past the connections | Not priced (TBD) | Not priced (TBD) | Not priced (TBD) | Not priced (TBD) | By contract |
+| Single sign-on (OpenID Connect) | No | No | No | No | Yes |
+| Members, installs, models, keys | Unlimited | Unlimited | Unlimited | Unlimited | Unlimited |
 
-**Bots' tokens** are charged on the same meter as the hosted models' (the plan's tokens first, then the balance): on
-Glyphh's Anthropic key at Anthropic's rate plus Glyphh's 20% markup, on the org's own key at the markup alone
-([specs/bots.md](specs/bots.md)). The balance can be topped up whether hosted models are on or not.
+- **A read** is a `decide`, `query`, `probabilities` or `facts`: a decide once per output, a beam once per hop
+  reached. Writes, learns, backtests, imports and exports are not reads. The month is the calendar month, UTC.
+- **Past the month's reads,** a Free org is refused until the month turns (403 `E_LIMIT` `requests`, naming the plan
+  that reads more); a Basic, Pro or Team org goes on, and each read past it is metered on Stripe's `ada_requests`
+  Billing Meter, $1 per 10,000, on the same subscription as the plan's flat price.
+- **The precedent cap** counts the new ids a write would add. An org already holding more than its plan's keeps
+  every precedent, and only new ones are refused (`E_LIMIT` `precedents`) until it is under the cap or upgrades.
+- **Calls a second** are the org's together, every call counted (writes and job polls too): past them, 429 `E_RATE`
+  with `Retry-After`.
+- **Basic, Pro and Team are bought** through Stripe Checkout (`GLYPHH_STRIPE_PRICE_BASIC`, `_PRO`, `_TEAM`); Free
+  needs no card. **Enterprise is by contract,** granted by Glyphh's staff and never bought: its limits are each
+  contract's (none in the code), and it alone has single sign-on.
+- **A plan version never changes its price or limits.** A new price or new limits are a new version; an org stays on
+  the version it subscribed to, except that a change of only the Ada Cloud limits or the token allowance moves every
+  org on the plan to the new version at the next start ([architecture.md](architecture.md#data-model)).
+- The whole of Ada Cloud's plans and metering is in [specs/ada-cloud.md](specs/ada-cloud.md#7-plans-and-metering).
 
-**Connections** are priced per plan version: `connections` included (null: every one) and `connection_cents`, each
-one past them a month (null: not priced). Both are null on every plan until Chris sets them; nothing is charged for a
-connection until then, and the Stripe line that would charge one is not built. `GET /v1/billing` says the org's
-connections against them (`connections: {used, included, over, cents_a_month, due_cents}`).
+## Glyphh-hosted models
 
-**Hosted-model rates** (TBD placeholders), in dollars per million tokens past the plan's month, charged to the org's
-prepaid overage balance (topped up $10 to $1,000 at a time); the price on the page is the charge on the bill:
+Off unless `GLYPHH_LLM` is on ([specs/tokens.md](specs/tokens.md)). A plan's tokens a month draw down first; past
+them, input and output tokens are charged in dollars, never credits, against a prepaid balance the org's admin tops
+up ($10 to $1,000 at a time). With no tokens and no balance left a request is refused, 402 `E_BALANCE`. Free may buy
+a balance too. Every allowance and rate is a placeholder until Chris sets it.
+
+Rates, in dollars per million tokens past the plan's month; the price on the page is the charge on the bill:
 
 | Model | Id | Context | Input | Output |
 |---|---|---|---|---|
 | adaL 34B 1.0 | `adal-34b-1-0` | 32,768 tokens | $0.60 | $2.40 |
 
-- **Glyphh-hosted models** ([specs/tokens.md](specs/tokens.md)): a plan's tokens a month draw down first; past them,
-  input and output tokens are charged in dollars, never credits, against a balance the admin tops up. With no tokens
-  and no balance left a request is refused, 402 `E_BALANCE`. Free may buy a balance too.
+## Setting up
 
-- **Basic is an Ada Cloud plan,** between Free and Pro: self-serve, its Stripe price `GLYPHH_STRIPE_PRICE_BASIC`. It
-  has no licence key (rrotor's tiers are free, pro, team and enterprise), so a node on Basic runs as Free. Ada
-  Cloud's caps are in [specs/ada-cloud.md](specs/ada-cloud.md#7-plans-and-metering).
-- **Free's Ada Cloud caps** are 1,000 precedents and 5,000 reads a month, 5 calls a second, refused at its caps. An
-  org already holding more keeps every precedent, and only new ones are refused (`E_LIMIT` `precedents`) until it is
-  under the cap or upgrades.
-- **Free is the default.** rrotor with no key runs as Free (Community mode): one node, 5,000 precedents, no sync.
-- **A key unlocks the rest, locally,** verified on the node with no call to Glyphh.
-- **A runtime node** is every rrotor node the server hears from for the org, local or self-hosted.
-- **Never per seat, per model or per install.**
-- **Glyphh runs no runtime.** No relay, and no Glyphh DNS for customer runtimes: a self-hosted runtime is at its own
-  address (`RROTOR_PUBLIC_HOST`), a local one on the person's machine.
-
-## The key
-
-- **Ed25519.** The public key is embedded in rrotor and the SDKs; the private key is only on the control plane
-  (api.glyphh.ai) or a secure build pipeline.
-- **Format:** `<BASE64URL_PAYLOAD>.<BASE64URL_SIGNATURE>`, the payload
-  `{license_id, tier, max_nodes, max_precedents, cluster_sync_enabled, issued_at, expires_at, customer_id}`.
-- **It expires at the end of the paid month.** A fresh key is issued on every `invoice.payment_succeeded` and rrotor
-  picks it up at its link's `welcome` or its heartbeat. An Enterprise air-gapped key runs the contract's term and is
-  delivered out of band.
-- **Where rrotor reads it:** `GLYPHH_LICENSE_KEY`, else `/etc/rrotor/license.key`; `RROTOR_LICENCE` and
-  `/data/licence.token` are accepted as aliases.
-
-## rrotor at start
-
-1. **No key:** Free (`max_nodes` 1, `max_precedents` 5,000, sync off).
-2. **A bad signature:** logged loudly, and the node starts in Free (Community) mode. Never fatal.
-3. **Valid but expired:** `[Glyphh Warning]: License key expired. Falling back to Community Tier limits.`, with 14
-   days' grace before the limits drop.
-4. **Valid:** its limits apply.
-
-## Enforcement in rrotor
-
-- **(A) The precedent guard,** on `record()` and `live.learn()`: at `store.count >= max_precedents` it never crashes
-  and does not index; it returns `{"status": "limit_exceeded", "message": "Precedent store capacity limit reached
-  (5,000 max for Community Tier). Upgrade key to index further precedents.", "indexed": false}`.
-- **(B) The cluster sync lock:** with sync off the cluster transport never starts, and rrotor logs
-  `[Glyphh Node]: Cluster synchronization disabled under Community License.`
-- **(C) The heartbeat:** non-blocking, every 24 hours, to `{api}/v1/telemetry/heartbeat` with the `license_id`, a
-  hashed system GUID, the binary's version and the store's total size; it answers with the newest key. It fails open:
-  no answer changes nothing.
-
-## Clusters: the head node
-
-With sync on, one node is elected **head**: it holds the cluster's aggregate state and runs the cluster's log drain;
-the rest follow it. When the head is lost another is elected (high availability, Enterprise). Free is a single node,
-with no head.
-
-## Telemetry, audit and log drains
-
-- **The data stays on the rrotor:** its logs, metrics, traces and audit events never go to Glyphh.
-- **Log drains.** Each rrotor (in a cluster, the head) streams OpenTelemetry (logs, metrics, traces, audit events) to
-  the customer's own collector, never through Glyphh.
-
-## The control plane
-
-- **Issuing:** on Stripe's `invoice.payment_succeeded` or `checkout.session.completed`, the server builds the payload
-  from the subscription's plan, signs it, keeps it in a `licenses` table and delivers the key on the dashboard, in
-  every runtime's link `welcome` and at the next heartbeat.
-- **Revoking:** on `customer.subscription.deleted` the licence is marked revoked; no fresh key follows, so the node
-  drops to Free when its key's month and grace end.
-- **Stripe, once per account:** `STRIPE_SECRET_KEY=sk_… uv run python scripts/stripe-setup.py` (idempotent, prices
-  found by lookup key) makes the flat prices and Ada Cloud's metered reads' price and meter, and prints their settings
-  with a `fly secrets set` line.
-- **Enterprise** is by contract: an annual invoice on its own Stripe subscription, recorded on the org on the server's
-  machine (`fly ssh console -a glyphh-ai-server`) with
-  `python -m glyphh_server.ops.enterprise grant --org <uuid> --until <YYYY-MM-DD> --subscription <sub_…>` and ended
-  with `revoke --org <uuid>`. Grants survive deploys: production keeps its data
-  ([architecture.md](architecture.md#starting-up-and-migrations)).
-
-## Against what is built
-
-Facts only.
-
-| The strategy | Today |
-|---|---|
-| Runtime nodes: every rrotor node, local or self-hosted | `max_machines` (`limits.machines`: Free 1, Pro 3, Team 10, Enterprise unlimited) is signed into the key as `max_nodes` and enforced by rrotor. The server counts every node, softly: each node's heartbeat or `hello` (`node_id`, `cluster_id`, `role`) is kept in `nodes`, and `GET /v1/license/nodes` and the connector's `usage` show "4 of 3, over", never refusing; a runtime that says no node is one while it is seen |
-| Precedents per node: 5,000, 50,000, 500,000, unlimited | `db/seed.py` seeds 5,000, 50,000, 500,000 (TBD) and unlimited, signed into the key as `max_precedents`; the old licence says unlimited. The usage shown is the fullest runtime's, as it last said |
-| One key string, `GLYPHH_LICENSE_KEY` or `/etc/rrotor/license.key` | The server signs it and sends it as `license_key` in every runtime's `welcome` and in the heartbeat's answer, beside the old licence, and shows it at `GET /v1/license/keys` and, masked, in the connector's `plan` and `usage`. Where rrotor reads it is rrotor's. On the server the signing key is `GLYPHH_LICENSE_SIGNING_KEY` (`GLYPHH_LICENSE_KEY`, its old name, still read) |
-| `<payload>.<signature>`, both base64url | As specified: base64url without padding, Ed25519 over the payload's exact bytes (`ops/license_keys.py`). The old licence, JSON `{payload, signature}` over canonical JSON, is still sent beside it, and the Enterprise offline token is still that licence |
-| Payload `license_id`, `tier`, `max_nodes`, `max_precedents`, `cluster_sync_enabled`, `issued_at`, `expires_at`, `customer_id` | Exactly these, in this order, times RFC 3339 UTC; `customer_id` is the org's id. The old licence keeps `licence_id`, `plan`, `limits`, `mods`, `features`, `runtime_id`, `kind`, `grace_days` |
-| A key per paid month, issued on `invoice.payment_succeeded`, kept in `licenses`, emailed | Issued on `checkout.session.completed` and `invoice.payment_succeeded` for the org's own active subscription, expiring at its period's end, kept in `licenses` (the same terms to the same end are the same key); an Enterprise grant issues one through its `--until`; Free and Basic get none. Not emailed: no key is in Stripe's receipt yet; the platform shows it |
-| `customer.subscription.deleted` revokes the licence | Every key of the org's is revoked (no longer delivered) and the org is on Free; so is an Enterprise grant's on revoke or lapse. A node keeps its key to `expires_at` and rrotor's grace |
-| A bad signature: Free mode, logged | rrotor's own behaviour; not set by the server |
-| A `limit_exceeded` result, `indexed: false` | rrotor refuses a `record` past the cap with `E_LIMIT_PRECEDENTS` |
-| Sync, HA, the head node | Not built: `sync` and `ha` are licence flags and `cluster_sync_enabled` a key field; no cluster transport or head election. The server keeps each node's `role` and `cluster_id` as said |
-| Air-gapped optional on Pro and Team | Offline licences are Enterprise only (`POST /v1/runtimes/{id}/offline-licence`, else 403 `E_NOT_IN_PLAN` `offline`); a Pro or Team operator can copy the key from `GET /v1/license/keys` into `/etc/rrotor/license.key` each month |
-| Audit log, log drains | Both rrotor's; the server receives no runtime's logs. Single sign-on by OpenID Connect is built (Enterprise, Settings → Auth); no SAML, SCIM or RBAC. `sub` (the person's user id) is in `/v1/runtime/introspect`'s answer for rrotor's audit |
-| Heartbeat to `/v1/telemetry/heartbeat`: `license_id`, hashed GUID, version, store size; fail-open | `POST /v1/license/verify` with the runtime's token: `{machine, licence_id, version, active_runs}` and, optional, `{node_id, cluster_id, role, precedents}`, answered with the licence and `license_key`; self-hosted runtimes only. A local runtime takes its key in its link's `welcome` |
-| Expired key: Free limits after 14 days' grace | A self-hosted runtime's old licence is live until `expires_at` plus 14 days; past that rrotor refuses only what needs a licensed mod. The server stops delivering a key past its `expires_at` |
+- **Stripe, once per account:** `STRIPE_SECRET_KEY=sk_… uv run python scripts/stripe-setup.py` (safe to run again,
+  prices found by lookup key) makes the flat prices and Ada Cloud's metered reads' price and meter, and prints their
+  settings.
+- **Enterprise** is an annual invoice on its own Stripe subscription, recorded on the org from the staff view
+  (`POST /v1/admin/orgs/{id}/enterprise`) or on the server's machine (`fly ssh console -a glyphh-ai-server`) with
+  `python -m glyphh_server.ops.enterprise grant --org <uuid> --until <YYYY-MM-DD> --subscription <sub_…>`, and ended
+  with `revoke --org <uuid>`. When the date passes the org is back on Free. Grants survive deploys: production keeps
+  its data ([architecture.md](architecture.md#starting-up-and-migrations)).

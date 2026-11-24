@@ -10,7 +10,7 @@
 3. Then learn and calibrate, once (an export brings what its model learned, which is kept when this model reads its
    cases as that one did), and the index is built.
 
-An `ada_sqlite` file (a self-hosted runtime's precedents.sqlite, or an export) goes through sqlite_import.py."""
+An `ada_sqlite` file (an Ada SQLite precedent store, precedents.sqlite, or an export) goes through sqlite_import.py."""
 
 import io
 import json

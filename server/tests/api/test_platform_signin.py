@@ -56,13 +56,6 @@ async def test_no_install_is_current_for_an_access_token(client: httpx.AsyncClie
     assert installs[0]["current"] is False
 
 
-async def test_a_local_runtime_needs_an_install(client: httpx.AsyncClient, engine: AsyncEngine) -> None:
-    _, auth = await granted(engine, await person(engine))
-    res = await client.post("/v1/runtime/local", headers=auth)
-    assert res.status_code == 422
-    assert res.json()["error"]["reason"] == "no_install"
-
-
 async def _consent(client: httpx.AsyncClient) -> str:
     _, consent = await to_allow(client, ask(await register(client)))
     return consent

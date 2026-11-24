@@ -1,6 +1,7 @@
 """Ada versions end to end (docs/specs/ada-cloud.md, 12.10): a server with two kernels installed, ada-1-0 (3.12.2, the
 venv's) and ada-1-1-beta (3.13.0, in /opt/ada/3.13.0), each served by worker processes that imported only their own
-copy. On German Credit (rrotor's benchmarks/credit; 800 learned, 200 held out, as its calibrate.py), one model:
+copy. On German Credit (glyphh-ai/glyphh's benchmarks/credit; 800 learned, 200 held out, as its calibrate.py), one
+model:
 
 1. made on ada-1-0, its 800 cases recorded, learned and calibrated; the 200 decided (the "before" answers);
 2. a model made on ada-1-1-beta beside it: both answer at once, each on its own kernel;
@@ -11,7 +12,7 @@ copy. On German Credit (rrotor's benchmarks/credit; 800 learned, 200 held out, a
 5. the rollback to version 1, on its own kernel: the 200 answered exactly as before the upgrade.
 
     GLYPHH_DATABASE_URL=postgresql+asyncpg://… python scripts/ada-versions-e2e.py --url http://server:8080 \\
-        --host ada.e2e --code ../rrotor/benchmarks --data ../rrotor/benchmarks
+        --host ada.e2e --code ../glyphh/benchmarks --data ../glyphh/benchmarks
 
 It makes a person straight in the database, as scripts/ada-import.py does. Never against production."""
 
@@ -124,6 +125,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--url", required=True)
     parser.add_argument("--host", default="ada.glyphh.ai")
-    parser.add_argument("--code", required=True, help="rrotor's benchmarks/ directory")
+    parser.add_argument("--code", required=True, help="the benchmarks/ directory (glyphh-ai/glyphh)")
     parser.add_argument("--data", required=True, help="where credit/german.data is")
     print(json.dumps(asyncio.run(main(parser.parse_args())), indent=2))

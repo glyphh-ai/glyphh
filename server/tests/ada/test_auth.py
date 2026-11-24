@@ -32,8 +32,6 @@ async def test_keys_are_made_listed_and_revoked_by_a_person(
     assert (await ada.get("/v1/keys", headers=bearer)).status_code == 401  # a key does not make keys
     listed = (await ada.get("/v1/keys", headers=who.headers)).json()
     assert [k["name"] for k in listed] == ["ci"] and "key" not in listed[0]
-    runtime = await ada.get("/v1/runtime/keys", headers=who.headers)  # the Ada host is not the account API
-    assert runtime.status_code == 404
     revoked = await ada.delete(f"/v1/keys/{key['id']}", headers=who.headers)
     assert revoked.json()["revoked_at"]
     assert (await ada.delete(f"/v1/keys/{key['id']}", headers=who.headers)).status_code == 404
@@ -97,15 +95,6 @@ async def test_a_sign_in_calls_with_full_clearance_and_keys_are_kept_briefly(
     assert (await ada.get("/v1/models/shapes", headers=key)).status_code == 200  # from the cache
     other = await key_for(ada, who)
     assert (await ada.get("/v1/models", headers=other)).status_code == 200  # the cache is full: emptied first
-
-
-async def test_cloud_keys_are_never_a_runtimes(engine: AsyncEngine, client: httpx.AsyncClient) -> None:
-    who = await person(engine, "Team")
-    async with engine.begin() as conn:
-        await conn.execute(
-            RuntimeKey.__table__.insert().values(user_id=who.user_id, name="cloud", key_hash="h1", scope="cloud")
-        )
-    assert (await client.get("/v1/runtime/keys", headers=who.headers)).json() == []
 
 
 async def test_with_ada_cloud_off_no_host_reaches_it(engine: AsyncEngine) -> None:

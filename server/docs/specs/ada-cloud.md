@@ -4,19 +4,14 @@
 are built behind `GLYPHH_ADA_CLOUD` (off)**, and what building them changed in this plan is in
 [10.1](#101-steps-2-to-6-as-built) (the sections below are corrected where the build proved them wrong). Written
 2026-10-21 from `origin/main` of
-`ada-private` (kernel 3.11.0), `rrotor`, `server`, `glyphh`, `platform` and `web`; revised the same day to Chris's
+`ada-private` (kernel 3.11.0), `server`, `glyphh`, `platform` and `web`; revised the same day to Chris's
 architecture (no new app or infrastructure: Python worker processes on the server's Redis, Postgres with a schema per
 org and pgvector). Every claim about today cites the file it comes from.
 
 **The direction (Chris, 2026-10-21):** one multi-tenant, Glyphh-run Ada service behind one URL, so a customer needs
 no runtime, no repo and no image. The model is TypeSafe AI's Jev: cloud only, one endpoint, typed answers with
-probabilities, billed per request. Why: self-hosting rrotor is too hard to get running, and the public image
-`ghcr.io/glyphh-ai/rrotor` carries the Ada kernel's source (the IP). Self-hosted rrotor stays, as the Enterprise
-option. Glyphh hosts no per-org runtime: the server only licenses rrotor.
-
-This reverses two standing rulings, and the plan says so where it matters: "nothing of Glyphh's is on the data path"
-and "Glyphh's cloud never keeps a copy of the code or the precedents" (`docs/architecture.md`, Architecture and Ada
-models), and "Free is a node you run yourself" (`docs/pricing.md`).
+probabilities, billed per request. Since 2026-11-24 this is all Glyphh is: nothing is self-hosted and the server
+licenses nothing, so Glyphh holds the precedents and is on every call's path.
 
 ---
 
@@ -51,8 +46,8 @@ glyphh_ak_…` answers `{outcome, probabilities, expected_cost, ask, receipts, m
 
 **A model is a spec Glyphh stores, plus its precedents. No customer code runs.**
 
-Today an Ada model is a GitHub repo of `glyphh.json`, `spec.json` and `model.py`, deployed by commit and run in
-rrotor's sandbox (rrotor `docs/architecture.md` section 8; `examples/ada_incidents/`, `examples/ada_tickets/`). But
+Before the cloud an Ada model was a GitHub repo of `glyphh.json`, `spec.json` and `model.py`, deployed by commit and
+run in a sandbox on the customer's own machine (`examples/ada_incidents/`, `examples/ada_tickets/`). But
 the spec already carries almost everything: `glyphh_spec.py` parses layers, segments, roles (`similarity_weight`,
 `security_weight`, `key_part`, `numeric_config`, `text_encoding`, `lexicons`), `interactions`, `temporal_source`,
 `output` (`report`, `costs`, `ask`), named `outputs` (`values`, `costs`, `ask`; from kernel 3.15.0 a `kind`:
@@ -68,7 +63,7 @@ What today's `model.py` files do that a spec cannot, and how the cloud covers ea
 | The nearest precedent's cause, owner and runbook beside the fix (`_resolution`) | `ada_incidents/model.py` | `decide` takes `include: ["facts"]` and returns the top fact tree, cut by `output.report` and the caller's clearance, which is exactly what `_resolution` reads |
 | Shaping `learn`'s answer (roles, word counts, pairs) | both | The service formats it, once, for every model |
 | `probabilities` that bypass `Model.probabilities` (no word evidence) | both | Gone: the cloud calls the kernel's `Model` methods only. This is a quiet bug in the examples, not a feature |
-| `needs_approval` steps, declared hosts, secrets, files (`daily_sales`) | rrotor base | Not Ada. Not in the cloud; rrotor keeps them |
+| `needs_approval` steps, declared hosts, secrets, files (`daily_sales`) | the sandbox's base | Not Ada. Not in the cloud |
 | Learning weights up front with `Spec.learned(...)` in Python before the first commit | Ada skill, step 3 | Import, then `learn` (section 6) |
 | Seeding by one `model_call record` per case, a sandboxed run each | Ada skill, step 5 | `record_many` and imports (section 6) |
 | Deriving fields (a ratio, a weekday, a lookup) before recording | nowhere yet, but customers will want it | The caller sends derived fields. Not in the spec at launch (section 5, "What needs code") |
@@ -208,7 +203,7 @@ clearance all weigh in). So:
    the calibrated `tau`, the word-evidence bias). Answers, receipts and fact trees are the kernel's, unchanged.
 3. **Small models skip the shortlist.** Below ~~20,000~~ **1,000** precedents (the kernel's `exact_below`, set by
    step 1's numbers: an exact read loads the whole partition, 50 ms at 800 precedents, 3 s at 20,000) the whole
-   partition is read and scored exactly. The answer is then identical to rrotor's. A worker drops such a model from its
+   partition is read and scored exactly. The answer is then the kernel's exact one. A worker drops such a model from its
    cache after the read (it now holds the precedents, which other workers' writes would leave stale) and opens it
    afresh on the next.
 4. **Few roles on a big model are refused.** Kernel 3.12 measured what this section feared: a query giving 2 of 7
@@ -237,7 +232,7 @@ unless one is open; counted in precedents held, not graded ones, which would cos
 `calibrate` ~~read every graded row of the model~~ **read at most the newest 50,000 precedents** (`limits.JOB_SAMPLE`:
 a fully loaded 1M model needs about 16 GB, 20 to 25 KB a precedent in a `Space`) in a job worker, which loads them
 into an in-memory `Space` as today and writes the learned `meta` and taus back; a model of 50,000 or fewer learns
-exactly as rrotor does. When learned word weights or interactions change, the kernel rewrites the sampled glyphs
+on every precedent it holds. When learned word weights or interactions change, the kernel rewrites the sampled glyphs
 (`Model._learn` → `Space.rewrite`) and the job restates every other precedent after it, in batches of 1,000
 (**built** in place for `learn`: reads go on meanwhile, against a mix of old and new glyphs until it ends; a new
 version that changes what a case carries is written into a store of its own and swapped in, 5.2). On Postgres a model
@@ -252,13 +247,12 @@ file). The cloud needs that behind an interface, with two implementations:
 | Piece | What | Days |
 |---|---|---|
 | `Store` protocol | `load(since)` (rows and named outcomes, as `Space.refresh` reads them), `put(row, outcomes)` and `put_many`, `grade`, `forget`, `meta`/`set_meta`, `taus`/`set_tau`, `rewrite(rows)`, `encoding`, `close`; `Space(store=…)` beside `Space(path=…)` | 2 |
-| `SqliteStore` | Today's code moved behind it, unchanged in behaviour: rrotor, the plugin and every benchmark keep working; `readonly` kept | 1 to 2 |
+| `SqliteStore` | Today's code moved behind it, unchanged in behaviour: every benchmark keeps working; `readonly` kept | 1 to 2 |
 | `PostgresStore` | psycopg (sync, in workers), a schema and a model id, `bit` glyphs, batched upserts, `shortlist(query glyph, S)` | 2 to 3 |
 | Shortlist reads | `Model.query/probabilities/facts/decide` take a candidate set from the store when it offers `shortlist`; exact otherwise | 1 to 2 |
-| Tests | The kernel's suite run on both stores; a Postgres in CI; rrotor's suite against the new kernel | 1 to 2 |
+| Tests | The kernel's suite run on both stores; a Postgres in CI | 1 to 2 |
 
-**About 7 to 11 days.** It is the largest single piece of new work, and it stays in `ada-private`, so rrotor and the
-cloud run one kernel.
+**About 7 to 11 days.** It is the largest single piece of new work, and it stays in `ada-private`.
 
 ### 3.6 Limits per request and per spec
 
@@ -294,8 +288,8 @@ What remains, because one worker serves many orgs' models one after another:
   self._ids` is a list search).
 - **`output.ask_below`** (section 2) and the packaging of `glyphh_lexicon` and `lexicon/` (3.2).
 
-Memory per precedent (about 16 KB in rrotor, its `docs/architecture.md` section 8) no longer sizes the cloud: workers
-hold no stores, and in Postgres a precedent is 2 to 4 KB on disk. It still matters to rrotor.
+Memory per precedent (about 16 KB held in a `Space`) does not size the cloud: workers hold no stores, and in Postgres
+a precedent is 2 to 4 KB on disk.
 
 ---
 
@@ -303,14 +297,12 @@ hold no stores, and in Postgres a precedent is 2 to 4 KB on disk. It still matte
 
 ### 4.1 Auth
 
-- **API keys** (`glyphh_ak_…`), made on the API Keys page or the connector, shown once, kept as SHA-256: the
-  `runtime_keys` table and `ops/runtime_keys.py` as they are, with a `scope` column (`cloud`, `runtime`) and a
-  `clearance` column (0 to 1; default 1). A key belongs to its maker and acts in their org. Today's `glyphh_rk_` keys
-  keep working on self-hosted rrotor only.
+- **API keys** (`glyphh_ak_…`), made on the API Keys page or the connector, shown once, kept as SHA-256 in the
+  `runtime_keys` table (`ops/runtime_keys.py`, `glyphh_ada/keys.py`) with `scope` `cloud` and a `clearance` (0 to 1;
+  default 1). A key belongs to its maker and acts in their org.
 - **A Glyphh sign-in** (an OAuth access token from `/oauth/token`) works on the API too, for the platform.
 - **Clearance** comes from the key (or, signed in, from the person's org role: admin 1, member the org's default),
-  never from the body. A request may send `clearance` lower than that, never higher, which is rrotor's rule today
-  (rrotor `docs/architecture.md` section 8).
+  never from the body. A request may send `clearance` lower than that, never higher.
 - The `app` process resolves the key to `(org, user, clearance)`, checks the plan's limits, and only then enqueues;
   a worker trusts the message, never a caller.
 
@@ -339,7 +331,7 @@ server's: `{"error": {"code", "message", "trace_id"}}`, `E_LIMIT` with `reason`,
 | ~~`GET /v1/models/{name}/export`~~ **built:** `POST /v1/models/{name}/export` `{format}`; `GET /v1/downloads/{link}` | Everything back out (section 6): a job (so not a GET), whose done state carries the download link | job |
 | `GET /v1/jobs/{id}`; **built (2026-11-02):** `POST /v1/jobs/{id}/cancel` | Any job's state, progress and `stage`; cancel one (failed `E_CANCELLED`, saying what of its work stays; an ended one `409 E_JOB_ENDED`) | API |
 | `GET /v1/usage` | Precedents, requests this period, against the plan. **Built:** `{plan, month, resets_at, models, precedents: {used, max}, requests: {used, max, over, overage}, requests_per_second}` (`max` null: by contract), the one shape the platform, SDK 3.2 and the connector's `usage` read | API |
-| `POST /v1/runs` `{model, function, inputs, clearance?}` | **Compatibility:** rrotor's call shape (`contract/contract.json` `result`), for `record`, `query`, `facts`, `probabilities`, `decide`, `learn`, `settings`, answered as a `done` Result (a fresh `run_id`, `seconds` the time taken; `learn` waits for its job up to 60 s). SDK 3.0 works against the cloud with only `GLYPHH_RUNTIME_URL` and the key changed | sync or job |
+| `POST /v1/runs` `{model, function, inputs, clearance?}` | **Compatibility:** the call shape SDK 3.0 was built to (`contract/contract.json` `result`), for `record`, `query`, `facts`, `probabilities`, `decide`, `learn`, `settings`, answered as a `done` Result (a fresh `run_id`, `seconds` the time taken; `learn` waits for its job up to 60 s). SDK 3.0 works against the cloud with only `GLYPHH_RUNTIME_URL` and the key changed | sync or job |
 
 `decide` never answers `needs_input`: the cloud has no runs to continue. `ask: true` is the signal.
 
@@ -383,9 +375,7 @@ held a snapshot through the wait, and an import's `CREATE INDEX CONCURRENTLY` wa
 | `ada_learn`, `ada_settings` `{name, changes?}`, `ada_backtest` | Learn and tune (section 5) |
 | `ada_export` `{name}` | A one-hour download link |
 | `ada_forget` `{name, id}` | Forget one case |
-| `create_api_key` | As `create_runtime_key` today, `scope: cloud` |
-
-Today's `runtime*` tools stay for Enterprise orgs with self-hosted runtimes and are hidden for the rest.
+| `create_api_key` | An API key (`scope` `cloud`), shown once |
 
 ---
 
@@ -427,7 +417,7 @@ a new version active at once on the same store; "re-encodes" a job writing a new
 ### 5.2 Versions and rollback
 
 - Today `Model.configure()` keeps changed levers in the store's `meta` (`settings`), over the spec's, unversioned
-  (`glyphh_spec.py`); rrotor's `settings` function exposes that (`examples/*/model.py`). In the cloud **the spec is
+  (`glyphh_spec.py`). In the cloud **the spec is
   the only truth:** a settings change writes a new row in `spec_versions` with those `settings`; workers see the
   version counter move and reload; there are no `meta` overrides.
 - Each version keeps the learned weights and taus it went live with, so a rollback restores them without relearning.
@@ -462,7 +452,7 @@ a new version active at once on the same store; "re-encodes" a job writing a new
   over the in-memory model (it holds at most `limits.JOB_SAMPLE` precedents). So a backtest scores the exact read: the
   same as the live one below 1,000 precedents, and, above, as the shortlist recalls it (step 1: 100% at Banking77's
   10,003 for `S` ≥ 250; less for queries that give few roles, 3.4). The live model is never touched. This is what the benchmarks' `tune_*.py`
-  scripts do by hand (rrotor `benchmarks/banking77/`), and what the Ada skill's Tuning section asks of Claude.
+  scripts do by hand (the Banking77 benchmark's), and what the Ada skill's Tuning section asks of Claude.
 - Answers per candidate: accuracy, log-loss, total and mean cost by the output's `costs`, ask rate (and accuracy on
   the cases it did not ask about), coverage (`sufficient`), a confusion table, and the change against the active
   version. **Built,** with two more: the vote's own accuracy (`top_accuracy`, what the benchmarks' plain `query`
@@ -489,18 +479,17 @@ from.
 | Business rules on top of the vote ("always refuse above $50,000") | The caller applies them. Not in the spec |
 | A custom similarity or a custom scoring metric for backtests | Not offered; the built-in metrics are accuracy, log-loss, cost and ask rate |
 | Sequences of events (`Space` `events`, `Strand`) | The spec path does not use them today; not offered |
-| Anything with network, files or secrets (rrotor's base) | rrotor, Enterprise |
+| Anything with network, files or secrets | Not offered: no customer code runs |
 
 ---
 
 ## 6. Getting history in, and out
 
-### 6.1 Seeding today needs code
+### 6.1 Seeding needed code
 
-On rrotor, seeding is one `model_call record` per case, each a sandboxed run (Ada skill step 5), or Python run by
-hand (`Spec.learned`, the benchmarks' `run.py`). There is no bulk route in rrotor (`src/rrotord/api/routes.py`); the
-kernel's `Space.merge(path)` unions another SQLite store, which rrotor caps all or nothing (`rrotor/ada.py`
-`_cap`). A pure-cloud model replaces all of this with three ways in, none of them code.
+Before the cloud, seeding was one `record` call per case, each a sandboxed run, or Python run by hand
+(`Spec.learned`, the benchmarks' `run.py`), with no bulk route; the kernel's `Space.merge(path)` unions another
+SQLite store. A pure-cloud model replaces all of this with three ways in, none of them code.
 
 ### 6.2 Three ways in
 
@@ -513,9 +502,8 @@ kernel's `Space.merge(path)` unions another SQLite store, which rrotor caps all 
 - **CSV mapping:** a header names a role by path (`error.what.message`) or the mapping maps a header to one;
   `outcome` (or `outcome.<output>`) names the outcome columns; a cell is parsed by its role's kind (a number for
   `numeric_config`, text for `bag_of_words`, a list for `;`-separated values).
-- **`ada_sqlite`:** a self-hosted rrotor's `precedents.sqlite`, read through the kernel's `SqliteStore` and written
-  through `PostgresStore`, after a check of its encoding. This is how an Enterprise or former self-hosted customer
-  moves to the cloud.
+- **`ada_sqlite`:** a kernel store in one SQLite file (a model's export, or one the kernel wrote elsewhere), read
+  through the kernel's `SqliteStore` and written through `PostgresStore`, after a check of its encoding.
 - **During an import `refresh_every` is off,** and the index is dropped and rebuilt at the end (building HNSW once
   is far faster than inserting into it row by row).
 - **Built** (step 3, `importer.py`, `sqlite_import.py`): ~~a staging table~~ the file itself is kept in the org's
@@ -533,17 +521,17 @@ kernel's `Space.merge(path)` unions another SQLite store, which rrotor caps all 
   glyphs copied, an id the model holds keeping its row as merge does; else each case is restated, as an export's.
   What the file's (or the export's) model learned is kept when the model reads its cases the same way and held
   nothing before; otherwise the model learns. One import or re-encode at a time per model (`409 E_BUSY`).
-- **Cost at scale:** 10,003 Banking77 cases encode and record in about 4 s, 7 s with `learn` (rrotor
-  `benchmarks/banking77/README.md`), in memory. In the cloud add the batched `COPY` into Postgres and the index build:
+- **Cost at scale:** 10,003 Banking77 cases encode and record in about 4 s, 7 s with `learn` (the Banking77
+  benchmark's README), in memory. In the cloud add the batched `COPY` into Postgres and the index build:
   target 10,000 cases in under 15 s end to end, 1M in under 30 minutes on two job workers; step 1 measures it.
 
 ### 6.3 The precedent cap
 
 - An import or `record_many` counts the new ids it would add (ids the model holds replace their rows and add
-  nothing), as rrotor's `_cap` does for `merge`, and is refused whole with `E_LIMIT` `precedents` if the org would
+  nothing), and is refused whole with `E_LIMIT` `precedents` if the org would
   pass its plan's cap, unless sent with `"partial": true`, which records up to the cap and reports the rest refused.
 - The count is the org's total across its models (`models.precedent_count`, kept by each write in the same
-  transaction), not per node.
+  transaction).
 - **Built:** the count is the kernel's own `counts` of each live model's active store (an old version's store kept
   for a rollback does not count), summed when a write asks. The cap is the org's plan version's `cloud_precedents`
   (step 6; it was the setting `GLYPHH_ADA_PRECEDENT_CAPS` until then, now gone; Free 1,000 since 2026-10-22, Pro 100,000, Team
@@ -561,8 +549,8 @@ kept in the org's `files` while the link works:
   **As built, `situation` not `data`:** the store never kept the data a case was sent as, only its situation in the
   kernel's terms (5.1), so that is what an export can give. Imported into a model of the same spec it answers exactly
   as the exported one does (receipts, hashes and authors included).
-- `ada_sqlite`: a kernel store written through `SqliteStore`, which a self-hosted rrotor opens as
-  `precedents.sqlite` unchanged. **Built,** glyphs, named outcomes, learned weights and taus included; the kernel's
+- `ada_sqlite`: a kernel store written through `SqliteStore`, one SQLite file the kernel opens
+  unchanged. **Built,** glyphs, named outcomes, learned weights and taus included; the kernel's
   `Model(path=…)` over it answers as the cloud model does.
 - Org-wide export on the platform's Settings page: every model, one archive. (Not built.)
 
@@ -583,9 +571,9 @@ kept in the org's `files` while the link works:
 
 ## 7. Plans and metering
 
-**Nodes mean nothing in the cloud.** What costs Glyphh money is Postgres (precedents held and their indexes), worker
-CPU (reads, learns) and Redis traffic. So a cloud plan sells **precedents per org** and **requests per month**; never
-seats, models or installs (`docs/pricing.md`, the 2026-10-18 ruling).
+What costs Glyphh money is Postgres (precedents held and their indexes), worker
+CPU (reads, learns) and Redis traffic. So a plan sells **precedents per org** and **requests per month**; never
+seats, models or installs (`docs/pricing.md`).
 
 **What counts:** a request is one read (`decide`, `query`, `probabilities`, `facts`; `POST /v1/decide`; `/v1/runs`
 with a read function). Writes, learns, backtests, imports and exports are not counted as requests: they are bounded by
@@ -596,17 +584,14 @@ that hop is asked about.
 | | Free | Basic | Pro | Team | Enterprise |
 |---|---|---|---|---|---|
 | Price | $0 | $20 a month | $99 a month | $299 a month | By contract, from $10k a year |
-| Precedents, the org's total | 1,000 | 10,000 | 100,000 | 1,000,000 | By contract, or self-hosted rrotor |
+| Precedents, the org's total | 1,000 | 10,000 | 100,000 | 1,000,000 | By contract |
 | Requests a month | 5,000 | 50,000 | 1,000,000 | 5,000,000 | By contract |
 | Over the requests | Refused until the month turns (`E_LIMIT` `requests`) | $1 per 10,000 more (metered) | $1 per 10,000 more (metered) | $1 per 10,000 more | By contract |
 | Rate | 5 a second | 10 a second | 50 a second | 200 a second | By contract |
 | Models, members, keys | Unlimited | Unlimited | Unlimited | Unlimited | Unlimited |
-| Backtests, versions, export, audit log | Yes | Yes | Yes | Yes | Yes, plus SSO when built |
-| Self-hosted rrotor | No | No | No | No | Yes (registry credentials, licence key) |
+| Backtests, versions, export, audit log | Yes | Yes | Yes | Yes | Yes, plus single sign-on (built) |
 
-**Basic** (Chris, 2026-10-22) sits between Free and Pro: self-serve, never per seat, no sync, HA, offline or SSO. It
-has no licence key (rrotor's tiers are free, pro, team and enterprise), so a self-hosted node on Basic runs as Free's,
-and no hosting. Its flat price is `GLYPHH_STRIPE_PRICE_BASIC`, beside `_PRO` and `_TEAM`. A Free org past its month
+**Basic** (Chris, 2026-10-22) sits between Free and Pro: self-serve, never per seat, no single sign-on. Its flat price is `GLYPHH_STRIPE_PRICE_BASIC`, beside `_PRO` and `_TEAM`. A Free org past its month
 is now told to upgrade to Basic (the first self-serve plan that reads more). Plans are ordered Free, Basic, Pro,
 Team, Enterprise (`plans.sort`, set from `db/seed.py`'s order at every boot).
 
@@ -616,20 +601,19 @@ Free org moves to (`db/seed.py`). An org already past 1,000 keeps every preceden
 write would add, so new records are refused (`E_LIMIT` `precedents`) while replacing a held one still goes through.
 
 Why these numbers: at 2 to 4 KB a precedent in Postgres, Team's million is 2 to 4 GB of database, which $299 covers.
-A read is a few milliseconds of worker CPU (5.9 ms a message on Banking77, rrotor `benchmarks/banking77/README.md`,
+A read is a few milliseconds of worker CPU (5.9 ms a message on Banking77,
 plus the shortlist and the Redis round trip): the request caps bound abuse and make the step from Free to Pro
 natural; they are not there to recover cost.
 
 **What changes in the code:**
 
 - `plan_versions` (`db/schema.sql`) gains `cloud_precedents`, `cloud_requests`, `cloud_rps`; `db/seed.py` seeds them.
-  `max_machines`, `precedents` (per node) and `sync` stay for Enterprise's self-hosted licence keys.
 - Usage: the `app` process counts each read in Redis (`INCR`, keyed by org and period) before it enqueues, and a
   minute tick flushes to `ada_usage(org_id, period, requests)` in `public`; the rate limit is a Redis token bucket.
 - Stripe: the flat Pro and Team prices stay. One new Billing Meter, `ada_requests`, and a metered price ($1 per
   10,000) on Pro and Team subscriptions, reported daily by the pattern in `ops/billing/meter.py` (each report written
   before it is sent, its id the identifier Stripe counts once). `scripts/stripe-setup.py` makes them.
-- The connector's `plan`, `plans` and `usage` show the cloud numbers; the licence key is shown only to Enterprise.
+- The connector's `plan`, `plans` and `usage` show the cloud numbers.
 
 **Built** (step 6), and what building it changed:
 
@@ -673,7 +657,7 @@ natural; they are not there to recover cost.
 | Isolation | Org from the key, never the body; a schema per org named from its database id; workers trust only messages the `app` process wrote; no customer code; spec bounds (3.6) |
 | In transit | TLS to `ada.glyphh.ai` and `api.glyphh.ai`; Redis and Postgres on Fly's private network |
 | At rest | The managed database's encryption at rest and its backups; Redis holds requests for seconds and replies for at most 60 s |
-| Logs | Never a request's data or answer: model, operation, org, status, latency, size. The rule the server keeps for runtimes (`docs/pricing.md`, Telemetry) |
+| Logs | Never a request's data or answer: model, operation, org, status, latency, size |
 | Audit | Every write that is not a record (spec, settings, activate, import, export, forget, delete, keys) and every refusal, in the org's `audit` table, kept a year, shown on the platform and by the connector's `logs` |
 | Deletion | 6.5 |
 | Export | 6.4, on every plan |
@@ -704,16 +688,12 @@ natural; they are not there to recover cost.
 
 | Thing | What happens |
 |---|---|
-| **rrotor** | Stays, as Enterprise's self-hosted option: its licence keys, clusters and audit log. It takes kernel 3.12 with the `SqliteStore`, behaviour unchanged |
-| **The public image** `ghcr.io/glyphh-ai/rrotor` | Made private now (GHCR package visibility). Enterprise pulls with per-customer credentials: a GHCR token per contract at first. Versions already pulled are out: say so honestly, and consider compiling the kernel (Cython) in the Enterprise image from now on. rrotor's repo and its `part-ada-*` releases are already private |
-| **Free self-hosting** | Ends with the image going private: Free moves to the cloud. This reverses the 2026-10-18/19 "Free local unlimited" ruling (decision 6) |
-| **The self-hosting docs** (rrotor `docs/self-hosting/`, the platform's Add a runtime dialog, `glyphh.ai/install.sh`) | Kept, marked Enterprise, reached from the Enterprise page and the contract; `install.sh` asks for registry credentials |
-| **The platform** | Home becomes Ada: the org's models, usage and the connector URL. New Models pages (list; a model's spec editor, versions and rollback, settings, Import, Try it, Backtest, Export). API Keys makes `cloud` keys with a clearance. Runtimes and Add a runtime show only for orgs with an Enterprise grant |
-| **The `glyphh` plugin's Ada skill** | Rewritten for the cloud: no repo, `model.py`, deploy or runtime; the connector's `ada_*` tools; agreeing the case and writing the spec, importing history, learning, backtesting and tuning (5.4), reading an answer. The rrotor way moves to a short "Enterprise: self-hosted" section |
-| **The SDKs** (`glyphh` on PyPI, `@glyphh-ai/glyphh` on npm) | 3.0 works against the cloud through `POST /v1/runs` with `GLYPHH_RUNTIME_URL=https://ada.glyphh.ai`. 3.1: the URL defaults to `https://ada.glyphh.ai`; the key reads `GLYPHH_API_KEY` (and `GLYPHH_RUNTIME_KEY`); new `decide` shape, `record_many`, `import_file`, `backtest`, `settings`, `versions`, `export`, `create_model`, jobs. Cluster handling stays for rrotor. `contract/contract.json` goes to 4: adds `decision`, `usage`, `job`; keeps `answer`, `result`, `error` |
-| **The server's docs** | `docs/architecture.md` and `docs/pricing.md` rewritten when this is built: Ada Cloud is the product; "nothing of Glyphh's on the data path" holds only for Enterprise's self-hosted rrotor |
-| **The website** | One story: "Decisions from your own precedents, at one endpoint." The hero shows `POST /v1/decide` and its typed answer; the benchmarks stay; Pricing cards say precedents and requests, not nodes; Enterprise is "self-hosted" |
-| **Glyphh-hosted machines** (`GLYPHH_HOSTING`) | Stay off. Once Ada Cloud ships, remove them (hosted mode, the doorman, `machine_months`, the Machines page): Ada Cloud replaces their purpose |
+| **Everything that was not Ada** | Out of the product and the server's code (section 11; confirmed 2026-11-24): nothing is self-hosted, licensed or hosted per org |
+| **The platform** | Home becomes Ada: the org's models, usage and the connector URL. New Models pages (list; a model's spec editor, versions and rollback, settings, Import, Try it, Backtest, Export). API Keys makes `cloud` keys with a clearance |
+| **The `glyphh` plugin's Ada skill** | Rewritten for the cloud: no repo, `model.py`, deploy or runtime; the connector's `ada_*` tools; agreeing the case and writing the spec, importing history, learning, backtesting and tuning (5.4), reading an answer |
+| **The SDKs** (`glyphh` on PyPI, `@glyphh-ai/glyphh` on npm) | 3.0 works against the cloud through `POST /v1/runs` with `GLYPHH_RUNTIME_URL=https://ada.glyphh.ai`. 3.1: the URL defaults to `https://ada.glyphh.ai`; the key reads `GLYPHH_API_KEY` (and `GLYPHH_RUNTIME_KEY`); new `decide` shape, `record_many`, `import_file`, `backtest`, `settings`, `versions`, `export`, `create_model`, jobs. `contract/contract.json` goes to 4: adds `decision`, `usage`, `job`; keeps `answer`, `result`, `error` |
+| **The server's docs** | `docs/architecture.md` and `docs/pricing.md` rewritten: Ada Cloud is the product |
+| **The website** | One story: "Decisions from your own precedents, at one endpoint." The hero shows `POST /v1/decide` and its typed answer; the benchmarks stay; Pricing cards say precedents and requests |
 
 ---
 
@@ -725,15 +705,15 @@ Claude, honest rather than hopeful.
 | # | Step | What ships | Tested by | Days |
 |---|---|---|---|---|
 | 0 | **Kernel 3.12 fixes** (`ada-private`) | Per-model `lexicon`; an LRU `_SYMBOLS`; `forget`; `record_many` with an id index; `output.ask_below`; packaging of `glyphh_lexicon` and `lexicon/` | The kernel's tests; Banking77 and credit results unchanged | 2 to 3 |
-| 1 | **The kernel's storage interface** (3.5) | `Store`, `SqliteStore`, `PostgresStore` with `bit` glyphs and `shortlist`; shortlist-and-re-rank reads; `CREATE EXTENSION vector` checked on production; a recall and latency benchmark (credit, Banking77, synthetic 1M) choosing `S` and the exact threshold | The kernel's suite on both stores; rrotor's suite on the new kernel; recall of the exact top `k` within `S` at least 99% on the benchmarks | 7 to 11 |
+| 1 | **The kernel's storage interface** (3.5) | `Store`, `SqliteStore`, `PostgresStore` with `bit` glyphs and `shortlist`; shortlist-and-re-rank reads; `CREATE EXTENSION vector` checked on production; a recall and latency benchmark (credit, Banking77, synthetic 1M) choosing `S` and the exact threshold | The kernel's suite on both stores; recall of the exact top `k` within `S` at least 99% on the benchmarks | 7 to 11 |
 | 2 | **Workers, queues and storage in the server** | `src/glyphh_ada/`: org schemas made and migrated at start; the `ada` and `adajobs` process groups in `fly.toml`; Redis Streams with consumer groups, reply lists, timeouts, claims; jobs with progress; the worker's model cache and version counter; `cloud` keys with clearance; models, spec, record, record_many, grade, forget, the reads, learn, calibrate; `ada.glyphh.ai` as a second host; the `/v1/runs` shim | 100% coverage as the server keeps; a two-org isolation test; SDK 3.0's suite against it; killing a worker mid-request loses nothing kept; load: 200 reads a second on 100 models, p99 under 150 ms (**built; measured in 10.1:** 155 a second on eight workers at 1,000 precedents a model, p99 71 ms) | 8 to 11 |
 | 3 | **In and out** | Imports (JSONL, CSV with mapping, `ada_sqlite`) as jobs; the cap at import; export (JSONL, SQLite); model and org deletion | A 1M-row import end to end; an export re-imported answers the same (**built; measured in 10.1:** a million checked, recorded and learned in 17 minutes, 93 with its HNSW index; an export re-imported answers identically, tested) | 3 to 5 |
 | 4 | **Tuning** | Settings as versions; activate and rollback; re-encode jobs into a new partition; backtest with candidates | Backtest on credit and Banking77 reproduces the benchmarks' held-out numbers (**built; measured in 10.1:** every number reproduced) | 4 to 5 |
 | 5 | **The connector** | `mcp/tools/ada.py`; `create_api_key`; upload and download links | The MCP test suite; a Claude session that builds a model from a CSV, tunes one lever and decides (**built; tested in 10.1:** the scripted session as a test, `tests/ada/test_connector.py`) | 2 |
 | 6 | **Plans and metering** | Cloud caps in `plan_versions`; Redis counting and rate limits; `ada_requests` meter and price; `plan`, `plans`, `usage` updated | Stripe test mode: a Pro org over its requests is invoiced the overage; Free is refused at its cap (**built; tested in 10.1** with Stripe faked at the HTTP layer, as the suite does: the meter event of the reads over, the metered price added; Free refused) | 3 to 4 |
 | 7 | **SDKs, contract, skill** | SDK 3.1 (Python, TypeScript), contract 4 with fixtures, the rewritten Ada skill | The SDKs' suites against a local server; the skill tried end to end in Claude Code | 3 to 4 |
-| 8 | **The platform** | Home, Models (spec editor, versions, settings, Import, Try it, Backtest, Export), API Keys with clearance, Usage; Runtimes behind Enterprise | The platform's tests; a person new to Glyphh gets from sign-in to a first decision in under ten minutes | 6 to 8 |
-| 9 | **Launch** | Image private; self-hosting docs marked Enterprise; website and pricing; privacy policy and terms (with a lawyer); `docs/architecture.md` and `pricing.md` rewritten; a security review (keys, schemas, worker messages, upload links, spec bounds); a week's beta with three design partners; the flag on | The review's findings closed | 4 to 6 + legal |
+| 8 | **The platform** | Home, Models (spec editor, versions, settings, Import, Try it, Backtest, Export), API Keys with clearance, Usage | The platform's tests; a person new to Glyphh gets from sign-in to a first decision in under ten minutes | 6 to 8 |
+| 9 | **Launch** | Website and pricing; privacy policy and terms (with a lawyer); `docs/architecture.md` and `pricing.md` rewritten; a security review (keys, schemas, worker messages, upload links, spec bounds); a week's beta with three design partners; the flag on | The review's findings closed | 4 to 6 + legal |
 
 **Total: about 42 to 59 working days: 9 to 12 weeks for one engineer, 6 to 8 with two** (steps 3, 5 and 8 run beside
 4 and 6). A usable private beta (steps 0, 1, 2, the `record_many` part of 3, 5 and the skill from 7) is about 5 weeks.
@@ -760,7 +740,7 @@ first; steps 3 and 4 [after it](#steps-3-and-4); steps 5 and 6 [last](#steps-5-a
 | `learn` and `calibrate` load every graded row | The newest 50,000 (`limits.JOB_SAMPLE`); the rest restated in batches when learning changes what a case carries. A 1,000-precedent model learns and calibrates in 8.9 s |
 | `SET LOCAL search_path` to the org's schema alone | The schema then `public` (pgvector's operators), per message; every statement names its schema; and row-level security on every table of the schema that **fails closed** (a session without the org sees nothing) |
 | Claimed after 30 s | Claimed once a worker has stopped heartbeating 5 s (sync) or 60 s (jobs); a write is made once (the `requests` table: the caller's `Idempotency-Key` or the message's id, in the write's transaction), so a write taken over after its worker died after committing answers and writes nothing |
-| `cloud` keys in `runtime_keys` | As planned (`scope`, `clearance`), filtered out of everything a runtime holds; made at the Ada host, `POST /v1/keys`, by a signed-in person (the connector's `create_api_key` is step 5); a resolved key is kept 10 s in the process, so revoking takes up to 10 s |
+| `cloud` keys in `runtime_keys` | As planned (`scope`, `clearance`); made at the Ada host, `POST /v1/keys`, by a signed-in person (the connector's `create_api_key` is step 5); a resolved key is kept 10 s in the process, so revoking takes up to 10 s |
 | Models, spec versions, settings | Make, read, list, delete; a spec version is 1 until step 4 (no `PUT …/spec`, no settings changes): on Postgres a model is never restated when opened, so a spec or settings change must be a job that rewrites the store, which is step 4's re-encode (**step 4: built**) |
 | `refresh_every` enqueues a `refresh` job | Off in workers; not enqueued yet (step 4) (**step 4: built,** a `learn` job, counted in precedents held) |
 | The worker's model cache | As planned, plus: at most 256 models, a minute old at most (a lost bump costs a minute), and a model read whole (under 1,000) is dropped after the read |
@@ -890,7 +870,7 @@ restated nothing. The run in the table is a fresh one with both fixed.
 | `mcp/tools/ada.py` | Four modules (the server keeps files under 200 lines); also `ada_grade`, `ada_calibrate`, `api_keys`, `revoke_api_key`; `ada_import` takes `content` or `rows` inline; `ada_job` waits |
 | `plan_versions` gains `cloud_precedents`, `cloud_requests`, `cloud_rps` | And `cloud_overage` (metered or refused past the month: not derivable). New versions cannot sell on the same Stripe price (it is unique), so a cloud-limits-only version takes over the price and the orgs of the one before |
 | `GET /v1/usage`: precedents, requests | One nested shape for the API, the platform (PR platform#19), SDK 3.2 and the connector: `{plan, month, resets_at, models, precedents: {used, max}, requests: {used, max, over, overage}, requests_per_second}`, extending step 4's `{plan, models, precedents, requests: null}` (server #18) |
-| Reported daily by the hosting meter's pattern | And as soon as a month ends; by calendar month, stamped when sent, so a month's last day lands on the next Stripe period's invoice. A subscription made before Ada Cloud is given the metered price at its first report |
+| Reported daily | And as soon as a month ends; by calendar month, stamped when sent, so a month's last day lands on the next Stripe period's invoice. A subscription made before Ada Cloud is given the metered price at its first report |
 | The rate limit for reads | For every call (writes and job polls too), as 3.6 says; a Free org polling a job twice a second spends two of its five |
 | (not in the plan) | Workers start one process per CPU they may use (affinity and the container's `cpu.max` quota), not the host's count |
 
@@ -930,9 +910,9 @@ but Enterprise's; Team's million not sold before its index build memory is decid
 | Redis is on the request path now; an outage stops reads | Redis health | The server already depends on it; a managed Redis with failover; requests fail fast with `503 E_UNAVAILABLE` rather than hang |
 | A slow job starves a group | Queue depth per stream | Separate `ada` and `adajobs` groups; scale `adajobs` on queue depth |
 | Glyphh now holds customer data | — | Section 8's list, a DPA, and an honest privacy policy before launch, not after |
-| Kernel versions already public in the image | `ghcr.io/glyphh-ai/rrotor` still pulls without credentials (checked 2026-10-21) | Cannot be undone; make it private now (step 9 says now); the advantage moves to the service and the newer kernel |
+| Kernel versions already public in an image published before the cloud | It pulled without credentials (checked 2026-10-21) | Cannot be undone; the advantage moves to the service and the newer kernel |
 | Reads are CPU-bound in Python: the kernel builds a `Space` of the 1,000 candidates for every shortlisted read | 10.1: 45 to 50 ms a read, about 20 a second a worker | More workers; a smaller `S` where recall allows (bench/results.txt: `S` = 250 holds 100% at 20k full queries); in the kernel, re-ranking without building a whole `Space` |
-| Ending Free self-hosting loses developers who want it local | Signups, feedback | A Free cloud with a card-free start; Enterprise trials of rrotor on request |
+| With nothing to run locally, developers who want it local are lost | Signups, feedback | A Free cloud with a card-free start |
 | Per-request billing through Vercel's AI Gateway (the Jev model) is unverified here | — | Decision 5 |
 
 ---
@@ -942,13 +922,12 @@ but Enterprise's; Team's million not sold before its index build memory is decid
 Decided by Chris on 2026-10-21 and so not open: Ada runs inside `glyphh-ai-server` as worker process groups on its
 Redis; Postgres with a schema per org and pgvector; processes, not threads.
 
-**Also decided by Chris, 2026-10-21 ("let's build it"): Ada Cloud is the whole product.** No machines, no runtimes, no
-licence keys or licence files, no self-hosted rrotor offered to customers, Enterprise included. A customer has the
+**Also decided by Chris, 2026-10-21 ("let's build it"): Ada Cloud is the whole product.** Nothing is self-hosted
+and nothing is licensed, Enterprise included. A customer has the
 platform and the Glyphh sign-in (the plugin's OAuth to the server, the one connector) and API keys for their code.
-This overrides section 9's Enterprise rows and decision 6: rrotor, its licence keys, the Runtimes pages, Add a runtime,
-the self-hosting docs and `install.sh` leave the product (rrotor stays as an internal repo), and Glyphh-hosted
-machines are removed rather than kept off (decision 11), in step 9. Decisions 1 to 5 and 7 to 10 are taken as
-recommended; decision 12 does not arise (there are no paying self-hosted customers).
+Confirmed 2026-11-24: Glyphh is Ada only, and everything else is out of the server's code. Decisions 1 to 5 and 7 to
+10 are taken as recommended; decisions 6, 11 and 12 were about self-hosting and Glyphh-hosted machines and no longer
+arise.
 
 | # | Decision | Recommendation |
 |---|---|---|
@@ -957,13 +936,10 @@ recommended; decision 12 does not arise (there are no paying self-hosted custome
 | 3 | The cloud caps (section 7) | ~~Free 5k / 10k requests~~ **Free 1k / 5k requests (2026-10-22), Pro 100k / 1M, Team 1M / 5M**; Basic ($20) 10k / 50k added 2026-10-22 |
 | 4 | What a billable request is | **Reads only;** writes bounded by the precedent cap |
 | 5 | Bill through Stripe (built) or through Vercel's AI Gateway like Jev | **Stripe first** (the meter pattern exists, `ops/billing/meter.py`); list on Vercel's marketplace later if it brings customers |
-| 6 | Make `ghcr.io/glyphh-ai/rrotor` private, ending Free self-hosting | **Yes, now;** Free moves to the cloud; this reverses the 2026-10-18/19 Free-local ruling |
 | 7 | The API's address | **`https://ada.glyphh.ai`, a second hostname of `glyphh-ai-server`;** the connector stays at `api.glyphh.ai/mcp` |
 | 8 | Region | **`iad` only at launch;** an EU database and workers when the first EU customer asks |
-| 9 | The audit log on every plan (it is Enterprise-only on rrotor) | **Every plan:** in the cloud it costs almost nothing and buyers ask for it |
+| 9 | The audit log on every plan | **Every plan:** in the cloud it costs almost nothing and buyers ask for it |
 | 10 | A confidence bar (`output.ask_below`) beside cost-based `ask` | **Yes:** it is how people think before they think in costs (both examples use 0.6) |
-| 11 | Retire Glyphh-hosted machines once Ada Cloud ships | **Yes:** remove the code, not just the flag, a month after launch |
-| 12 | Existing paid self-hosted customers, if any | Keep their keys to the end of their period; offer `ada_sqlite` import to the cloud or an Enterprise contract |
 
 ---
 

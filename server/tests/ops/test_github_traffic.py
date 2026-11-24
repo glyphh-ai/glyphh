@@ -16,7 +16,6 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from glyphh_server.models import GitHubTrafficDay, GitHubTrafficRepo, GitHubTrafficTop
 from glyphh_server.ops import tend
 from glyphh_server.ops.github_traffic import GitHub, GitHubError
-from glyphh_server.ops.link.hub import Hub
 from glyphh_server.ops.traffic import github
 from tests.conftest import SETTINGS
 
@@ -183,7 +182,7 @@ async def test_the_pull_runs_once_an_hour_from_the_tick(engine: AsyncEngine, cle
     fake = FakeGitHub()
     gh = _gh(fake)
     settings = SETTINGS.model_copy(update={"github_traffic_repos": f" {REPO}, "})
-    assert await tend.tend(engine, Hub(redis), settings, 60, None, None, gh)
+    assert await tend.tend(engine, redis, settings, None, None, gh)
     asked = len(fake.asked)
     assert asked == 4 and list((await _kept(engine))[0]) == [REPO]
     assert not await github.hourly(engine, redis, gh, [REPO])

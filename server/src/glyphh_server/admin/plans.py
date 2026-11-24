@@ -1,4 +1,4 @@
-"""Every plan and every version of it, for staff: prices, Stripe's price ids, limits, Ada Cloud's caps and how many
+"""Every plan and every version of it, for staff: prices, Stripe's price ids, Ada Cloud's caps and how many
 orgs are on each version."""
 
 import uuid
@@ -18,11 +18,6 @@ class VersionRow(BaseModel):
     billing_interval: str | None
     stripe_price_id: str | None
     self_serve: bool
-    max_machines: int | None
-    precedents: int | None
-    sync: bool
-    ha: bool
-    offline: bool
     sso: bool
     cloud_precedents: int | None
     cloud_requests: int | None
@@ -42,8 +37,7 @@ class PlanRow(BaseModel):
 
 VERSION = (
     PlanVersion.id, PlanVersion.version, PlanVersion.price_cents, PlanVersion.billing_interval,
-    PlanVersion.stripe_price_id, PlanVersion.self_serve, PlanVersion.max_machines, PlanVersion.precedents,
-    PlanVersion.sync, PlanVersion.ha, PlanVersion.offline, PlanVersion.sso, PlanVersion.cloud_precedents,
+    PlanVersion.stripe_price_id, PlanVersion.self_serve, PlanVersion.sso, PlanVersion.cloud_precedents,
     PlanVersion.cloud_requests, PlanVersion.cloud_rps, PlanVersion.cloud_overage, PlanVersion.created_at,
 )  # fmt: skip
 

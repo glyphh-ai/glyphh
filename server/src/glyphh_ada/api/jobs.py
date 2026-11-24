@@ -22,7 +22,7 @@ class NewExport(BaseModel):
     format: Literal["jsonl", "ada_sqlite"] = Field(
         "jsonl",
         description="jsonl: a zip of the precedents, every spec version and what was learned; ada_sqlite: "
-        "a kernel store a self-hosted runtime opens as precedents.sqlite",
+        "an Ada SQLite precedent store (precedents.sqlite)",
     )
 
 

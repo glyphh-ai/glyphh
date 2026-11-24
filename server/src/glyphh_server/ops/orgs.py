@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from glyphh_server.db.seed import FREE
 from glyphh_server.models import Org, User
-from glyphh_server.ops.bots import orchestrator
 from glyphh_server.ops.plans import newest_version
 
 
@@ -19,9 +18,7 @@ def org_name(name: str | None, email: str) -> str:
 async def _new_org(conn: AsyncConnection, name: str) -> uuid.UUID:
     free = await newest_version(conn, FREE)
     made = insert(Org).values(name=name, plan_version_id=free.id).returning(Org.id)
-    org_id: uuid.UUID = (await conn.execute(made)).scalar_one()
-    await orchestrator.ensure(conn, org_id)  # every org has its orchestrator bot from the start
-    return org_id
+    return (await conn.execute(made)).scalar_one()
 
 
 async def _crown(conn: AsyncConnection, org_id: uuid.UUID, user_id: uuid.UUID) -> None:
