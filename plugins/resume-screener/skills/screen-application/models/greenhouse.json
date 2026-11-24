@@ -1,0 +1,39 @@
+{
+  "question": "Does this candidate's Greenhouse record look like a real person's?",
+  "outcomes": ["fine", "suspect"],
+  "seed": null,
+  "learn": false,
+  "unproven": "Written from Greenhouse's Harvest v3 reference; never run against a real Greenhouse account.",
+  "case": {"g": {"s": {"source": "$item.greenhouse.source", "referred": "$item.greenhouse.referred",
+                       "prospect": "$item.greenhouse.prospect", "located": "$item.greenhouse.located",
+                       "questions": "$item.greenhouse.questions", "answered": "$item.greenhouse.answered",
+                       "answer_words": "$item.greenhouse.answer_words", "emails": "$item.greenhouse.emails",
+                       "phones": "$item.greenhouse.phones", "websites": "$item.greenhouse.websites",
+                       "socials": "$item.greenhouse.socials", "company": "$item.greenhouse.company",
+                       "title": "$item.greenhouse.title", "time_zone": "$item.greenhouse.time_zone",
+                       "tags": "$item.greenhouse.tags", "new_candidate": "$item.greenhouse.new_candidate",
+                       "id": "$item.id"}}},
+  "spec": {
+    "name": "greenhouse",
+    "layers": [{"name": "g", "segments": [{"name": "s", "roles": [
+      {"name": "source", "similarity_weight": 1.0},
+      {"name": "referred", "similarity_weight": 1.0},
+      {"name": "prospect", "similarity_weight": 0.5},
+      {"name": "located", "similarity_weight": 0.3},
+      {"name": "questions", "similarity_weight": 0.3, "numeric_config": {"min_value": 0, "max_value": 40, "bin_width": 2}},
+      {"name": "answered", "similarity_weight": 0.8, "numeric_config": {"min_value": 0, "max_value": 40, "bin_width": 2}},
+      {"name": "answer_words", "similarity_weight": 0.8, "numeric_config": {"min_value": 0, "max_value": 1000, "bin_width": 25}},
+      {"name": "emails", "similarity_weight": 0.5, "numeric_config": {"min_value": 0, "max_value": 10, "bin_width": 1}},
+      {"name": "phones", "similarity_weight": 0.5, "numeric_config": {"min_value": 0, "max_value": 10, "bin_width": 1}},
+      {"name": "websites", "similarity_weight": 0.3, "numeric_config": {"min_value": 0, "max_value": 10, "bin_width": 1}},
+      {"name": "socials", "similarity_weight": 0.3, "numeric_config": {"min_value": 0, "max_value": 10, "bin_width": 1}},
+      {"name": "company", "similarity_weight": 0.3},
+      {"name": "title", "similarity_weight": 0.3},
+      {"name": "time_zone", "similarity_weight": 0.2},
+      {"name": "tags", "similarity_weight": 0.5},
+      {"name": "new_candidate", "similarity_weight": 0.5},
+      {"name": "id", "key_part": true, "similarity_weight": 0}
+    ]}]}],
+    "output": {"ask_below": 0.7}
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "question": "Is this application a repeat of another?",
+  "outcomes": ["alone", "repeat"],
+  "seed": "held",
+  "learn": false,
+  "case": {"who": {"s": {"name": "$item.name", "label": "$item.label", "id": "$item.id"}}},
+  "spec": {
+    "name": "others",
+    "layers": [
+      {"name": "history", "similarity_weight": 1.0, "segments": [{"name": "s", "roles": [
+        {"name": "employers", "similarity_weight": 1.0},
+        {"name": "titles", "similarity_weight": 0.6},
+        {"name": "spans", "similarity_weight": 0.8},
+        {"name": "school", "text_encoding": "bag_of_words", "similarity_weight": 0.6},
+        {"name": "history_who", "similarity_weight": 0}
+      ]}]},
+      {"name": "words", "similarity_weight": 1.0, "segments": [{"name": "s", "roles": [
+        {"name": "summary", "text_encoding": "bag_of_words", "similarity_weight": 0.6},
+        {"name": "duties", "text_encoding": "bag_of_words", "similarity_weight": 1.0},
+        {"name": "letter", "text_encoding": "bag_of_words", "similarity_weight": 1.0},
+        {"name": "words_who", "similarity_weight": 0}
+      ]}]},
+      {"name": "contact", "similarity_weight": 1.0, "segments": [{"name": "s", "roles": [
+        {"name": "phones", "similarity_weight": 1.0},
+        {"name": "emails", "similarity_weight": 1.0},
+        {"name": "handles", "similarity_weight": 0.5},
+        {"name": "links", "similarity_weight": 0.5},
+        {"name": "contact_who", "similarity_weight": 0}
+      ]}]},
+      {"name": "when", "similarity_weight": 1.0, "segments": [{"name": "s", "roles": [
+        {"name": "windows", "similarity_weight": 1.0},
+        {"name": "when_who", "similarity_weight": 0}
+      ]}]},
+      {"name": "who", "similarity_weight": 0, "segments": [{"name": "s", "roles": [
+        {"name": "name", "similarity_weight": 0},
+        {"name": "label", "similarity_weight": 0},
+        {"name": "id", "key_part": true, "similarity_weight": 0}
+      ]}]}
+    ],
+    "settings": {"lexicon": false},
+    "output": {"ask_below": 0.7}
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "question": "How well does this applicant fit the role?",
+  "outcomes": ["strong", "borderline", "poor"],
+  "seed": "fit",
+  "learn": true,
+  "case": {
+    "role": {"s": {"title": "$item.role"}},
+    "resume": {
+      "skills": {"known": "$item.skills", "terms": "$item.resume.skills"},
+      "experience": {"titles": "$item.titles", "years": "$item.years", "jobs": "$item.resume.jobs",
+                     "duties": "$item.resume.duties"},
+      "summary": {"words": "$item.resume.summary", "headline": "$item.resume.headline"},
+      "education": {"level": "$item.education", "school": "$item.resume.education"}
+    },
+    "match": {"s": {"in_titles": "$item.resume.match.titles", "in_recent": "$item.resume.match.recent",
+                    "in_summary": "$item.resume.match.summary", "in_duties": "$item.resume.match.duties"}},
+    "letter": {"s": {"letter": "$item.letter"}},
+    "email": {"s": {"email": "$item.opening"}},
+    "key": {"s": {"id": "$item.id"}}
+  },
+  "spec": {
+    "name": "fit",
+    "layers": [
+      {"name": "role", "similarity_weight": 1.0, "segments": [{"name": "s", "roles": [
+        {"name": "title", "text_encoding": "bag_of_words"}
+      ]}]},
+      {"name": "resume", "similarity_weight": 1.0, "segments": [
+        {"name": "skills", "similarity_weight": 1.0, "roles": [
+          {"name": "known", "similarity_weight": 1.0},
+          {"name": "terms", "similarity_weight": 0.4}
+        ]},
+        {"name": "experience", "similarity_weight": 1.0, "roles": [
+          {"name": "titles", "text_encoding": "bag_of_words", "similarity_weight": 1.0},
+          {"name": "years", "similarity_weight": 1.0, "numeric_config": {"min_value": 0, "max_value": 40, "bin_width": 2}},
+          {"name": "jobs", "similarity_weight": 0.3, "numeric_config": {"min_value": 0, "max_value": 12, "bin_width": 1}},
+          {"name": "duties", "text_encoding": "bag_of_words", "similarity_weight": 0.4}
+        ]},
+        {"name": "summary", "similarity_weight": 0.3, "roles": [
+          {"name": "words", "text_encoding": "bag_of_words", "similarity_weight": 1.0},
+          {"name": "headline", "text_encoding": "bag_of_words", "similarity_weight": 0.5}
+        ]},
+        {"name": "education", "similarity_weight": 0.5, "roles": [
+          {"name": "level", "similarity_weight": 1.0},
+          {"name": "school", "text_encoding": "bag_of_words", "similarity_weight": 0.3}
+        ]}
+      ]},
+      {"name": "match", "similarity_weight": 1.0, "segments": [{"name": "s", "roles": [
+        {"name": "in_titles", "numeric_config": {"min_value": 0, "max_value": 100, "bin_width": 25}},
+        {"name": "in_recent", "numeric_config": {"min_value": 0, "max_value": 100, "bin_width": 25}},
+        {"name": "in_summary", "numeric_config": {"min_value": 0, "max_value": 100, "bin_width": 25}},
+        {"name": "in_duties", "numeric_config": {"min_value": 0, "max_value": 100, "bin_width": 25}}
+      ]}]},
+      {"name": "letter", "similarity_weight": 0.15, "segments": [{"name": "s", "roles": [
+        {"name": "letter", "text_encoding": "bag_of_words"}
+      ]}]},
+      {"name": "email", "similarity_weight": 0.05, "segments": [{"name": "s", "roles": [
+        {"name": "email", "text_encoding": "bag_of_words"}
+      ]}]},
+      {"name": "key", "similarity_weight": 0, "segments": [{"name": "s", "roles": [
+        {"name": "id", "key_part": true, "similarity_weight": 0}
+      ]}]}
+    ],
+    "output": {"ask_below": 0.7}
+  }
+}
