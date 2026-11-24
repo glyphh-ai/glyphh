@@ -3,7 +3,7 @@
     python holdout.py <issues.jsonl> <task> [--holdout 0.2] [--min-sim 0.35] [--seed 1]
 
 task: `kind` (vscode's triage outcome), `sig` (kubernetes' sig/* area), `k8s-kind` (kubernetes' kind/*).
-Runs the kernel in-process, exactly as the runtime does (the Ada kernel inside rrotor, not in this repository)."""
+Runs the Ada kernel in-process (the kernel is not in this repository)."""
 
 from __future__ import annotations
 
@@ -16,9 +16,9 @@ import sys
 import time
 from pathlib import Path
 
-RROTOR = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(RROTOR / "tests" / "kernel"))
-sys.path.insert(0, str(RROTOR / "src"))
+KERNEL_REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(KERNEL_REPO / "tests" / "kernel"))
+sys.path.insert(0, str(KERNEL_REPO / "src"))
 
 import glyphh_spec  # noqa: E402  (the vendored kernel)
 

@@ -32,7 +32,7 @@ class Api:
 @pytest.fixture
 def home(monkeypatch, tmp_path):
     monkeypatch.setenv("HOME", str(tmp_path))
-    for name in ("GLYPHH_API_KEY", "GLYPHH_RUNTIME_KEY", "GLYPHH_ADA_URL", "GLYPHH_RUNTIME_URL"):
+    for name in ("GLYPHH_API_KEY", "GLYPHH_ADA_URL"):
         monkeypatch.delenv(name, raising=False)
     return tmp_path
 

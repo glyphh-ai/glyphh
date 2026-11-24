@@ -24,8 +24,7 @@ tickets.record({"ticket": {...}}, "refund")                     # a confirmed ou
 
 The key is made on the platform's API Keys page (https://platform.glyphh.ai), or by Claude through the Glyphh
 connector; it acts in your org, with the clearance it was made with. `GLYPHH_ADA_URL` moves the address (a local
-server under test); 3.0's `GLYPHH_RUNTIME_URL` and `GLYPHH_RUNTIME_KEY` are still read. With no key given or set,
-`Ada()` uses the key `glyphh login` keeps for this machine (below).
+server under test). With no key given or set, `Ada()` uses the key `glyphh login` keeps for this machine (below).
 
 ## The glyphh command
 
@@ -62,7 +61,6 @@ glyphh export tickets --to tickets.zip
 | `beam` | A chain of models: one model's outcome is the next model's question (`--hops JSON`, `--width`, `--values`, `--miss`) |
 | `learn`, `calibrate`, `backtest`, `settings`, `versions`, `activate`, `upgrade` | Tune, compare, roll back, move Ada versions |
 | `export`, `job`, `cancel` | Everything out; any job's state and stage (`--wait`); stop a job |
-| `bot ...` | Bots: make one from a job, run it, answer and correct its gates, trust and keep it ([below](#bots)) |
 
 Every answer is the API's own JSON on stdout, so it pipes into `jq`; a refusal is `{"error": {code, message}}` on
 stderr with exit code 1 (2 for a usage mistake). A JSON argument is the JSON itself, `@file` for a file's, or `-` for
@@ -152,142 +150,8 @@ go through `POST /v1/runs` and answer a `Result` (`run_id`, `status`, `data`, ..
 once, so a decision never waits for input: it says `ask`.
 
 The API and its answers' shapes are in [`contract/contract.json`](https://github.com/glyphh-ai/glyphh/tree/main/contract).
-Pin `glyphh>=3`: versions up to 2.6.7 are a different, older library.
-
-## Bots
-
-A bot is a program that controls a Claude agent: a folder in `~/.glyphh/bots/<slug>/` (`GLYPHH_BOTS` moves it)
-holding `bot.json` (a loop of steps, its gates, what it touches), `agent.md` (its Claude agent), `program.py` (its
-code steps) and `skills/*/SKILL.md`. The runner walks the loop: a `run` step is a `program.py` function; a `gate` is
-an Ada model of the bot's own that learns from your answers (under its confidence, or with no precedent yet, you are
-asked, and your answer is kept as a precedent, so it asks less run after run); an `agent` step is Claude, called lean
-(`claude -p` with the bot's agent, no tools, no MCP servers, no settings, no session kept), with the step's skill and
-the bot's memory before it: its own memory, instructions and personality models, and your glyphh
-(`me-*-agentic-memory-*`) when you have one. Hard gates are code: a run step answering `{"_end": "why"}` ends the run,
-and a step with an `approval` waits for your yes until the bot is trusted to act alone. Claude Code's `claude` must
-be on the PATH (`GLYPHH_CLAUDE` names another).
-
-The orchestrator makes bots and learns to make them, with its own memory and three gates (`orch-make-bot`,
-`orch-trust-bot`, `orch-keep-bot`), each learning only from your verdicts and the bots' records: `glyphh bot new`
-asks make_bot, then a builder (`claude -p` with Read and Write, in the new bot's folder only) writes the package from
-[`BUILDING.md`](src/glyphh/bots/BUILDING.md), an example bot and what earlier bots taught it; the package is checked
-(a bot that may send, pay or delete with no approval step, or touches more than you said, is set aside), installed
-and trusted `ask_all`. Every run is kept in the orchestrator's memory.
-
-The gates (3.9), each declared in bot.json and enforced by the runner:
-
-- **Per-item gates**: a `gate` step with `"each": "$fetch.items"` decides every item of a list; the items Ada is sure
-  of at once, the unsure ones asked as one batch a run (one by one at a terminal; in a routine the run stops with the
-  list and `glyphh bot continue SLUG 1=read 2=skip rest=skip` answers them all). The step's data is a list per
-  outcome (`$worth.read`) and each item's decision, who made it and P.
-- **Asking policy per gate**: `ask_below`, `min_precedents`, `audit` (a share of sure calls still asked), `shadow`
-  (always asked, agreement measured), `max_questions` a run and a `default` for the rest.
-- **World-answered gates** (`"world": true`): the case is kept until `glyphh bot outcome` (or
-  `ctx.gate(g).record_outcome`) records what really happened. **Ladders** (a `ladder` step): the cheapest of ordered
-  options a gate predicts will work, up a rung on a failed `check`, what it took recorded. **Learned approvals**
-  (`approval_gate`): a yes/no gate that stands in for the person only when it is sure and trust allows; trust
-  `ask_outward` asks only for steps that send, pay or delete, and nothing pays or deletes alone. **Agent output
-  gates**: an agent step's `schema` (JSON Schema) and `check`, one retry, then the run fails.
-- **Hard gates**: `limits` (`usd_per_run`, `usd_per_day` from Claude's reported cost and `ctx.spend`;
-  `runs_per_day`; `quiet_hours`; `max_items`; `seconds`, `agent_turns`, `steps`), `requires` (a small safe
-  expression over earlier data: skip the step or end the run), `glyphh bot pause`; all refused at load if malformed.
-- **Words for the person** (3.14): a step that ends the run early (a gate routed to `end`, a `requires` with
-  `"otherwise": "end"`) may carry `empty`, the bot's own sentence for it ("Nothing is waiting on your review, so
-  there was nothing to rank or post."): it is the run's `reason`, and the engine's line (`gate worth: read 0, skip
-  30; the run ends here`) stays in the log. bot.json's `takes` says what the text a run is given (`$input`) is used
-  as ("a GitHub search") and `try` gives an example of it. Each at most 300 characters.
-
-```bash
-glyphh bot install examples/bots/hn_reader        # the demo: a per-item gate on Hacker News's front page
-glyphh bot run hn_reader                          # asks you about the stories it is unsure of, one batch a run
-glyphh bot report hn_reader                       # report.html: who decided each story, the ask rate falling
-glyphh bot install examples/bots/launch_watch     # its gate and memory models in Ada, its seed lines
-glyphh bot run launch_watch                       # asks you at the gate until it has learned your days
-glyphh bot wrong launch_watch <run> skip          # the gate got that run wrong: what it should have been
-glyphh bot routine launch_watch                   # launchd on a Mac (elsewhere, the cron line to add)
-glyphh bot new "each morning, sum up my repo's new issues" --recurs 7 --touches read_only
-glyphh bot review                                 # trust_bot and keep_bot for every bot, from its record
-glyphh bot verdict launch_watch trust ask_outward
-```
-
-| Command | Does |
-|---|---|
-| `glyphh bot init`, `check FOLDER`, `install FOLDER\|SLUG [--job J]` | The orchestrator's models; a package checked (every problem at once); a bot installed |
-| `glyphh bot new JOB [--recurs N] [--touches T] [--answer make\|not_yet\|no]` | make_bot, then the builder; `needs_input` until Ada or you decide |
-| `glyphh bot run SLUG [--routine]`, `continue SLUG [ANSWER ...]` | One run; a question at the terminal is asked there, in a routine (or with no terminal) the run stops `needs_input` until `continue` (a batch: `1=read 2=skip rest=skip`, or a JSON map) |
-| `glyphh bot wrong SLUG RUN\|last OUTCOME [--gate G] [--item N]` | A gate's call (or one item's) corrected, kept as a precedent and counted against the bot's record |
-| `glyphh bot outcome SLUG RUN\|last GATE [ITEM] OUTCOME` | What really happened to a case a gate decided, kept as a precedent |
-| `glyphh bot gates SLUG [--runs N]`, `report SLUG` | Each gate's record (precedents, Ada vs you, ask rate, audits, shadow, overrules); `report.html` in the bot's folder |
-| `glyphh bot pause SLUG [--why W]`, `resume SLUG` | The kill switch: a paused bot refuses to run, its routine included |
-| `glyphh bot status [SLUG]`, `review [--answer BOT.GATE=OUTCOME ...]`, `verdict SLUG trust\|keep OUTCOME` | The orchestrator and its bots, or one bot's gates, memory and runs; trust and keep from records; your call |
-| `glyphh bot routine SLUG [--remove]` | `glyphh bot run SLUG --routine` on the bot's cron: `~/Library/LaunchAgents/ai.glyphh.bot.<slug>.plist` on a Mac, else the cron line |
-
-The API key is `GLYPHH_API_KEY`, else `GLYPHH_API_KEY=` in `~/.glyphh/bots/.env` (keep it mode 600), else the key
-`glyphh login` kept. Ada model names: `bot-<slug>-gate-<gate>`, `bot-<slug>-<memory|instructions|personality>` and
-`orch-<...>`, at most 63 characters (a slug is at most 46). From Python, `glyphh.bots`: `Orchestrator(ada)`
-(`install`, `new`, `runner(slug)`, `review`, `verdict`, `status`), `Runner` (`run`, `resume`, `wrong`, `outcome`, `pause`, `unpause`, `gates`, `report`, `status`),
-`Bot.load(folder)`. Examples: [`examples/bots`](https://github.com/glyphh-ai/glyphh/tree/main/examples/bots).
-
-A host that runs bots away from their home (rrotor's built-in `glyphh-bot` program, Glyphh's cloud) uses
-`glyphh.bots.remote`: `go(files, ada=, claude=, program=, state=, given=, answer=)` runs one go of a bot whose package
-and state it holds, `HttpProgram(url, token)` calls the bot's tools at the host (`POST {tool, input, run_id}` with the
-bearer token, answered `{result}` or `{error}`), and `RunResult.to_result()` / `from_result()` carry the run as
-rrotor's `Result`.
-
-## Your org's hosted bots
-
-The bots Glyphh hosts for your org (in its cloud, or on one of your rrotors) are `HostedBots`, on the same API key
-as Ada (GLYPHH_API_KEY, or `glyphh login`'s), at the Glyphh API (https://api.glyphh.ai; GLYPHH_API_URL moves it):
-
-```python
-from glyphh import HostedBots
-
-bots = HostedBots()                                   # or Ada().bots
-bots.list("inbox")                                    # search the org's bots
-run = bots.run("inbox-cat", "lunch on Friday?", wait=True)   # waits until it ends or asks the person
-if run.waiting:                                       # run.question: a gate unsure, or an approval (run.approval)
-    run = bots.answer(run, "yes", wait=True)
-bots.approvals()                                      # every run waiting on the person
-bots.wrong(run, "skip", gate="worth")                 # a gate called it wrong: learned as a precedent
-bots.install("news-brief")                            # one of the templates Glyphh ships (bots.templates())
-```
-
-From a shell: `glyphh bots list|get|run|runs|status|answer|cancel|wrong|approvals|gates|templates|template|install`
-(`glyphh bot ...` stays the bots on this machine).
-
-## Your local runtime: programs and CLIs
-
-`Runtime` is a client for rrotor, the runtime you install on your own machine (a Docker image, bound to
-`127.0.0.1:7777`; the glyphh plugin's `rrotor` skill installs it from Claude). It is not Ada Cloud and shares nothing
-with it but this package: it hosts your **programs** (a `glyphh.json` manifest and `program.py`, run in a sandbox,
-with a local secrets vault, cron schedules, a SQLite database and approvals) and your **CLIs** (a kind of program,
-`"kind": "cli"`, run one command at a time in the same sandbox). Glyphh only grants it a licence; with none it runs
-as Community.
-
-```python
-from glyphh import Runtime
-
-rt = Runtime()                                    # RROTOR_URL or http://127.0.0.1:7777; RROTOR_TOKEN or ~/.glyphh/rrotor/token
-rt.deploy("./daily_sales")                        # the folder's HEAD commit, as a git bundle (or repo=, commit=)
-run = rt.call("daily_sales", "start", {"day": "2026-10-30"})
-if run.needs_approval:                            # show the person run.prompt; only on their yes:
-    run = rt.approve(run.run_id)                  # or rt.approve(run.run_id, False)
-print(run.status, run.data)
-
-rt.set_secret("github", "GH_TOKEN", token)       # kept encrypted on the runtime; never read back
-out = rt.run_cli("github", ["pr", "list"])        # out.exit_code, out.stdout, out.stderr
-```
-
-| | |
-|---|---|
-| `Runtime` | `programs()`, `program(name)`, `deploy(path, commit=)` / `deploy(repo=, commit=, token=)` / `deploy(bundle=, commit=)`; `call(program, function, inputs, version=, clearance=)`, `resume(run_id, answer)`, `approve(run_id, approved=True)`, `cancel(run_id)`, `run(run_id)`, `log(run_id)`, `approvals()`; `secrets(program)`, `set_secret`, `delete_secret`; `schedules()`, `pause_schedule`, `resume_schedule`; `clis()`, `run_cli(cli, args, stdin=, files=)`; `licence()`, `set_licence(key)`, `health()` |
-| `Run` | `run_id`, `program`, `version`, `function`, `status`, `data`, `step`, `prompt`, `seconds`; `done`, `waiting`, `needs_approval`, `needs_input`, `failed`, `ended`; a CLI command's `exit_code`, `stdout`, `stderr`, `files` |
-| `Program`, `ProgramVersion`, `RunInfo`, `Approval`, `Secret` (`name`, `declared`, `set`: never a value), `Schedule`, `Cli`, `Licence` | The API's answers, typed (`body` keeps each one's JSON) |
-| `RrotorError` | An `AdaError` too; typed by code: `RrotorAuthError`, `RrotorForbiddenError`, `LocalOnlyError`, `ProgramMissingError`, `FunctionMissingError`, `RunMissingError`, `ScheduleMissingError`, `ManifestError`, `DeployError`, `InputsError`, `RunStateError`, `NotProgramError`, `NotCliError`, `CliDeniedError`, `NotHeadError`, `LicenceError`, `NotInPlanError`; `E_UNREACHABLE` when rrotor is not running |
-
-Reads are sent again while rrotor is unreachable for a moment; a write never is. A self-hosted rrotor is
-`Runtime("https://rrotor.example.com", "<a runtime key>")`. Its shapes are in
-[`contract/runtime.json`](https://github.com/glyphh-ai/glyphh/tree/main/contract), apart from Ada's contract.
+Pin `glyphh>=4`: versions up to 2.6.7 are a different, older library, and 3.x also carried what Glyphh no longer
+is (4.0 is Ada alone: see the [changelog](https://github.com/glyphh-ai/glyphh/blob/main/sdk/CHANGELOG.md)).
 
 ## License
 

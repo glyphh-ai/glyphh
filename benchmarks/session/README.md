@@ -1,8 +1,7 @@
 # A session's memory: what a turn needs from the turns before it, and what carrying all of them costs
 
 > **Running these scripts.** `mine.py`, `spend.py`, `spend2.py` and `measure.py` need only Python and your own Claude
-> Code transcripts; `recall.py` also runs against the Ada kernel inside rrotor (Glyphh's runtime), which is not in
-> this repository. The numbers are one machine's and will differ on yours.
+> Code transcripts; `recall.py` also runs against the Ada kernel, which is not in this repository. The numbers are one machine's and will differ on yours.
 
 The idea under test: a Claude Code session carries its whole transcript into every call; a precedent store could
 carry only the turns a new turn needs, and the bill would fall by the difference. Two questions, both answered on

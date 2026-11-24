@@ -1,16 +1,9 @@
 # glyphh
 
-The Glyphh plugin for Claude Code, 1.22.0 (release notes: [CHANGELOG.md](CHANGELOG.md)): your Ada Cloud account, the
-Ada skill, your glyphh, the glyphh command, Glyphh bots, rrotor (your local runtime for programs and CLIs), pipelines
-into rrotor's graph (its semantic layer) and apps on it, what Claude made published to your organisation's rrotor as
-apps, and the file ledger. Ada Cloud is Ada as an API that
-Glyphh runs: nothing to install or host. It speaks contract 5 of Ada Cloud (Ada versions); a server that speaks a
-newer one is said plainly in the panel and by the skill, with how to update the plugin. rrotor is the other way
-round: a container you run on your own machine, which hosts your programs, CLIs and apps in a sandbox; Glyphh only
-grants it a licence.
-
-`GLYPHH_RROTOR=0` in Claude Code's environment hides rrotor's parts of the panel (the Apps section,
-`/glyphh publish`, `/glyphh link` and the Account section's rrotor row).
+The Glyphh plugin for Claude Code, 2.0.0 (release notes: [CHANGELOG.md](CHANGELOG.md)): Ada. Your Ada Cloud account,
+the Ada skill, the glyphh command, and the file ledger. Ada Cloud is Ada as an API that Glyphh runs: nothing to
+install or host. It speaks contract 5 of Ada Cloud (Ada versions); a server that speaks a newer one is said plainly
+in the panel and by the skill, with how to update the plugin.
 
 ```
 /plugin marketplace add glyphh-ai/glyphh
@@ -23,26 +16,18 @@ grants it a licence.
 | Sign-in from the chat (a skill, [`skills/glyphh-sign-in/SKILL.md`](skills/glyphh-sign-in/SKILL.md)) | Ask Claude *"sign in to Glyphh"*: Claude calls the account mod's `glyphh_login` |
 | Ada (a skill, [`skills/ada/SKILL.md`](skills/ada/SKILL.md), with `references/`) | Claude agrees a case with you, writes its spec, loads your history, backtests, tunes and asks Ada models in Ada Cloud, and makes an API key for your code, through the Glyphh connector's `ada_*` tools (`https://api.glyphh.ai/mcp`, which the plugin adds as `glyphh-cloud` in `.mcp.json`; you sign in to it once by OAuth, and a Glyphh connector you already added stands in for it). It says which Ada version a model runs, offers a newer stable with a backtest first (`ada_backtest` with `ada`, then `ada_upgrade` only when you agree, and how to roll back), explains betas, and warns of deprecations |
 | The glyphh command (a skill, [`skills/glyphh-cli/SKILL.md`](skills/glyphh-cli/SKILL.md)) | The same Ada work through the shell: `glyphh` from `pip install glyphh`, JSON out, on an API key (`glyphh login` keeps one for the machine, or `GLYPHH_API_KEY`) |
-| Glyphh bots (a skill, [`skills/glyphh-bots/SKILL.md`](skills/glyphh-bots/SKILL.md)) | Ask Claude *"make me a bot that ..."*: through `glyphh bot` (SDK 3.9) the orchestrator decides whether the job becomes a bot (its make_bot gate, in Ada), its builder writes the package (`bot.json`, `agent.md`, `program.py`, skills) into `~/.glyphh/bots/<slug>/` with the right gate for the job (per-item gates for lists, ladders for cost, learned approvals for outward actions, world-answered gates for outcomes that arrive later, hard limits always), and it is checked and installed. Claude runs a bot, asks you each gate's or approval's question (a list's unsure items as one batch) and carries the run on with your answers, records a run or item a gate got wrong and what really happened, shows what its gates learned (`gates`, and `report`: an HTML page with the ask rate falling run by run), pauses and resumes it, reviews each bot's trust and keep from its record, and installs a routine. Hard gates are the bot's code and limits (spend, runs a day, quiet hours, items), learned gates are Ada models that learn from your answers; no bot acts outward without your yes until it is trusted |
-| rrotor (a skill, [`skills/rrotor/SKILL.md`](skills/rrotor/SKILL.md), with `scripts/rrotor.sh`) | Ask Claude *"install rrotor"* (or *"update rrotor"*: `rrotor.sh update` pulls the release this plugin pins, 0.5.0, and makes the container again on its volume; CI holds that pin, the compose default and the Helm chart to one value): it finds Apple's `container`, OrbStack or Docker, pulls `ghcr.io/glyphh-ai/rrotor` at the version this release pins, runs it as `glyphh-rrotor` on `127.0.0.1:7777` only with the volume `glyphh-rrotor-data` at `/data`, keeps a local token in `~/.glyphh/rrotor/token` (0600; the container holds only its SHA-256), and adds rrotor's MCP server to Claude Code: `claude mcp add --transport http --scope user rrotor http://127.0.0.1:7777/mcp --header "Authorization: Bearer $(cat ~/.glyphh/rrotor/token)"`. Then Claude deploys, calls and schedules programs, asks you at each approval, keeps secrets on the runtime, and runs CLIs through rrotor's tools |
-| Pipelines and the graph (a skill, [`skills/rrotor-graph/SKILL.md`](skills/rrotor-graph/SKILL.md)) | Ask Claude *"connect our HubSpot to rrotor"* or *"build a pipeline for ..."*: rrotor (0.4.0) keeps one graph, its semantic layer (nodes, edges and ranked search over the organisation's data). Claude reads what it holds (`graph_schema`), writes a pipeline (a program on a schedule whose manifest says `"graph": "write"`: plain Python that reads the source with a key from the vault and writes records with `ctx.graph.rows`), deploys it, and has you set its key in a form (`secrets_form`: what you type goes to rrotor's vault, never into the chat). Apps Claude publishes then read the graph through their own functions (`graph: "read"`), and Claude answers from it with `graph_search`. Search is by words, not by meaning: no model runs on rrotor |
-| Programs and CLIs (a skill, [`skills/rrotor-programs/SKILL.md`](skills/rrotor-programs/SKILL.md)) | How Claude writes a program (`glyphh.json` and `program.py`: inputs, approvals, secrets, schedules, `ctx.db`, declared hosts) and a CLI's manifest (`"kind": "cli"`, a pinned install, allow and approval patterns) |
-| Publish (a skill, [`skills/publish/SKILL.md`](skills/publish/SKILL.md)) | *"Publish this to my org"*: what Claude made (a Claude Code artifact, a React page, a Markdown document or a Claude Doc, a Mermaid or SVG diagram, a deck or a design exported to PDF or an image, a dashboard) goes to your organisation's rrotor as an app (`"kind": "app"` with a `type`, the rrotor's `app_publish`), any claude.ai connector call or Claude Dashboard chart rewritten into a function the page calls as the viewer, and waits for a reviewer (your admin, or the reviewer groups set in Settings → Auth) in the organisation's catalogue: the platform's Apps page, the connector's `apps` cards in Claude, or the mod's own Apps section (`/glyphh apps`); `/glyphh publish <file>` does the publish from the mod directly |
-| Your glyphh (a skill, [`skills/glyphh-memory/SKILL.md`](skills/glyphh-memory/SKILL.md)) | Ask Claude *"build my glyphh"*: it installs the Agentic memory template from Glyphh's template library through the connector (`template_install`), which adds `glyphh_remember`, `glyphh_recall`, `glyphh_personality`, `glyphh_instructions` and `glyphh_forget` to your own connector over Ada models of your own, then keeps what you tell it, your rules and corrections, and the personality it grows with you. Any AI on the Glyphh connector reads the same glyphh |
-| The glyphh hooks (command hooks, `hooks/glyphh_context.py`) | Your glyphh in Claude's context: at a session's start your personality and rules, with each prompt what bears on it (`POST /v1/me/glyphh/context` with this install's token). Signed out, with nothing installed or offline, they add nothing |
 | The file ledger (command hooks, `hooks/ledger.py`) | What Claude last changed in each file and why, handed back when it reads the file again |
 
 The skills and the ledger work without the variable; without it, sign-in from the chat points you to `/mcp` and the
-`glyphh-cloud` connector. Programs are not Ada models: rrotor runs no Ada, and
-the Ada skills never touch rrotor.
+`glyphh-cloud` connector.
+
+Other plugins and skills for Claude are at [github.com/glyphh-ai/plugins](https://github.com/glyphh-ai/plugins).
 
 ## Commands
 
 | Command | Does |
 |---|---|
-| `/glyphh [section]` | The panel: Sign in, Account, Org, Plan, Billing, Apps. Where another command or skill has the name, it is `/glyphh-account` |
-| `/glyphh publish <file> [--name n] [--title t] [--description d] [--type t] [--roles a,b]` | One file Claude wrote, a page (`.html`, `.jsx`, `.tsx`), a document (`.md`, `.pdf`), a diagram (`.mmd`, `.svg`) or an image (`.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`), to the local rrotor (`POST /v1/apps` on `127.0.0.1:7777`, the token from `~/.glyphh/rrotor/token`) as an app awaiting review; the reply says the type, the version, who reviews it and the Open link. The type follows the extension unless `--type` (page, dashboard, doc, diagram, deck, design) says it; a PDF or an image goes as base64; any other file is refused before rrotor is called. The name comes from the title (the page's `<title>` or first heading, else the file's name) when not given; roles default to everyone |
-| `/glyphh link` | This machine's rrotor linked to Glyphh: the server issues the local runtime's token to this install (`POST /v1/runtime/local`, rotated each time), rrotor takes it (`PUT /v1/runtime/token` on `127.0.0.1:7777`) and connects out; the reply says when it is online. Linked, it shows on the platform's Runtimes page, its apps reach the organisation's catalogue, and it gets the organisation's licence key. The Account section's **link** does the same |
+| `/glyphh [section]` | The panel: Sign in, Account, Org, Plan, Billing. Where another command or skill has the name, it is `/glyphh-account` |
 | `/glyphh signin`, `/glyphh signout` | Sign in by device flow (the code and link are also printed); sign this device out |
 | *"sign in to Glyphh"* | The same sign-in from the chat (the `glyphh-sign-in` skill and the mod's `glyphh_login` tool) |
 
@@ -61,11 +46,10 @@ one line each.
 | Section | Does |
 |---|---|
 | Sign in | `POST /v1/device/code {name, surface, mod_version, machine_id}`; shows the code and link (opened in the browser pane on the desktop, printed in a terminal); polls `POST /v1/device/token` at `interval`, 5 s slower on `slow_down`, until the token, `expired_token` or `access_denied`. Copy link, Cancel |
-| Account | Name (Enter renames), email, sign-in providers (link, unlink), installs (revoke one; revoking this one signs out), this machine's rrotor (its link state from `GET /v1/health`: none installed, not running, not linked, linking, linked as its runtime id; **link** or **link again**; "Update to <version>" with **update** when it is older than the release this plugin pins, which runs the rrotor skill's `rrotor.sh update`), Sign out |
+| Account | Name (Enter renames), email, sign-in providers (link, unlink), installs (revoke one; revoking this one signs out), Sign out |
 | Org | Name (an admin renames), members and roles (an admin removes, never the admin), invites: send (the link to copy), revoke |
 | Plan | The plan and the org's Ada Cloud use this month (`/v1/me`'s `cloud`): precedents held of the plan's, reads of the plan's, the reads past it (metered), and the day the count starts again; the org's models by Ada version (`cloud.ada`, the shape of the Ada host's `GET /v1/ada`): the latest stable, each version's status (a beta labelled, a deprecated one with its end date) and models, and for a deprecated one what happens on that date and what to do; a newer contract than the plugin's 5 is one line saying to update it; every plan by price with its precedents, reads a month and what reads past the month cost (`/v1/plans`'s `cloud`) |
 | Billing (admin) | Stripe Checkout for Basic, Pro or Team without a subscription (`POST /v1/billing/checkout`), else a change of plan (`POST /v1/billing/plan`); **Talk to us** for Enterprise (`sales@glyphh.ai`, copied); card and invoices (`POST /v1/billing/portal`). Stripe opens in the browser pane, or as a link in a terminal |
-| Apps | What Claude made and published to the organisation's rrotors (`GET /v1/apps?q=&page=&state=&type=`, 24 a page) as cards: title, the type (Page, Dashboard, Doc, Diagram, Deck, Design), the rrotor and version, description, the roles (or Everyone), who published it and when, **Open** (the app at its rrotor, in the browser pane or as a link); a search field, a type filter button cycling All types → Pages → … → Designs, and Previous/Next. A reviewer (`/v1/me`'s `reviewer`) has the views Published, Awaiting review and Rejected, with **Approve**, **Reject** (a reason, asked in the card) and **Retire** (`POST /v1/apps/{id}/approve\|reject\|retire`) |
 
 The plans (members, installs and models unlimited on each; reads are decide, query, probabilities and facts calls,
 counted by calendar month, UTC):
@@ -121,16 +105,13 @@ Signing out removes `install.json` (and a `license.json` an older plugin left).
 
 ## What it does on your computer
 
-**Where it sends things.** The mod and the glyphh hooks talk to one host, `https://api.glyphh.ai`
-(`GLYPHH_SERVER_URL` changes it, for development). The rrotor parts (hidden with `GLYPHH_RROTOR=0`) talk
-to `http://127.0.0.1:7777` on your own computer. Nothing else leaves the machine.
+**Where it sends things.** The mod talks to one host, `https://api.glyphh.ai` (`GLYPHH_SERVER_URL` changes it, for
+development). Nothing else leaves the machine.
 
 | When | What is sent to `api.glyphh.ai` |
 |---|---|
 | Signing in (`/v1/device/code`, `/v1/device/token`) | The computer's short host name, the surface (desktop or terminal), the plugin's version and `machine_id`, a sha256 hash of this machine's id; the id itself never leaves |
-| Using the panel | Your install's token, and the account, org, member, key and billing requests you make there |
-| A session's start, signed in (`glyphh_context.py session`) | Your install's token, to fetch your personality and rules |
-| Each prompt, signed in (`glyphh_context.py prompt`) | Your install's token and the first 2,000 characters of your prompt, to fetch what your glyphh holds that bears on it; signed out, nothing is sent |
+| Using the panel | Your install's token, and the account, org, member and billing requests you make there |
 
 **What it reads to identify the machine.** `machine_id` keys installs by machine, so one computer counts once. It comes
 from the hardware id (`ioreg` on macOS, `/etc/machine-id` or `/var/lib/dbus/machine-id` on Linux, the `MachineGuid`
@@ -146,16 +127,15 @@ registry value or `wmic csproduct` on Windows), else the primary network interfa
 | `/bin/sh` with a fixed script of `umask`, `mkdir`, `cat`, `chmod` and `mv` | Writes `install.json` with mode 0600; the token goes on stdin, never on a command line |
 | `/bin/rm -f` | Removes `install.json` when you sign out |
 | `osascript` | On the desktop, clicks View > Show Browser in Claude so the sign-in page can be seen; without Accessibility permission nothing happens |
-| `sh skills/rrotor/scripts/rrotor.sh update` | When you press Update on the rrotor row in the Account section |
 
-The command hooks run `python3` on `hooks/ledger.py` and `hooks/glyphh_context.py`. The plugin ships no local MCP server
-and no built or bundled code: every file is the readable source that runs. `.mcp.json` names one server,
-`glyphh-cloud`, the remote Glyphh connector at `https://api.glyphh.ai/mcp`, which runs nothing on your computer: what
-you ask of it goes to that address once you have signed in to it by OAuth.
+The command hooks run `python3` on `hooks/ledger.py`. The plugin ships no local MCP server and no built or bundled
+code: every file is the readable source that runs. `.mcp.json` names one server, `glyphh-cloud`, the remote Glyphh
+connector at `https://api.glyphh.ai/mcp`, which runs nothing on your computer: what you ask of it goes to that
+address once you have signed in to it by OAuth.
 
 **What it writes.** Only under `~/.glyphh`: the files above and two small logs, `open-log.txt` (whether a page opened)
 and `ask-log.txt` (a prompt that could not be submitted). It edits no build, start-up, settings or instructions file.
-It reads its own `plugin.json` for its version and, with rrotor shown, a file you name to publish.
+It reads its own `plugin.json` for its version.
 
 **What it asks of Claude.** The mod calls one tool itself, `preview_start` on Claude's browser pane, to open the Glyphh
 sign-in page. If that is refused it submits one prompt asking Claude to open that page in the pane; the prompt holds
@@ -203,12 +183,10 @@ through the engine on both surfaces.
 | `hooks/glyphh/api.ts` | The API client: base URL, bearer, refusals, `E_LIMIT` |
 | `hooks/glyphh/device.ts`, `account.ts`, `identities.ts` | Device-flow sign-in; install.json, `/v1/me`, sign-out, revoked installs; linked providers |
 | `hooks/glyphh/home.ts`, `machine.ts` | `~/.glyphh` and the 0600 writer; the device id |
-| `hooks/glyphh/actions.ts`, `panel.tsx`, `sections/`, `ui.tsx`, `shape.ts`, `inline.tsx` | What each section does; the panel and its sections; reading the server's answers; the inline sign-in |
+| `hooks/glyphh/actions.ts`, `panel.tsx`, `sections/`, `ui.tsx`, `shape.ts`, `ada.ts`, `inline.tsx` | What each section does; the panel and its sections; reading the server's answers; the Ada versions' lines; the inline sign-in |
 | `hooks/glyphh/command.ts`, `open.ts`, `state.ts` | `/glyphh`; opening pages in the browser pane; the panel's note |
-| `hooks/glyphh/apps.ts`, `rrotor.ts`, `sections/apps.tsx` | The catalogue's cards, search, type filter, paging and reviews; `/glyphh publish` (the type by extension, binary files as base64); the one call to the local rrotor (`POST /v1/apps`) |
-| `hooks/glyphh/link.ts` | This machine's rrotor linked to Glyphh: its health, the token from `POST /v1/runtime/local` handed to `PUT /v1/runtime/token`, the wait for it to connect; `/glyphh link` |
-| `skills/` | `ada/SKILL.md` (with `references/spec.md` and `references/tuning.md`), `glyphh-sign-in/SKILL.md`, `glyphh-cli/SKILL.md`, `glyphh-bots/SKILL.md`, `glyphh-memory/SKILL.md`, `rrotor/SKILL.md` (with `scripts/rrotor.sh`), `rrotor-programs/SKILL.md`, `rrotor-graph/SKILL.md`, `publish/SKILL.md` |
-| `hooks/glyphh/shelved.ts` | The switch (`GLYPHH_RROTOR=0`) that hides the panel's rrotor parts |
+| `hooks/ledger.py` | The file ledger's command hooks |
+| `skills/` | `ada/SKILL.md` (with `references/spec.md` and `references/tuning.md`), `glyphh-sign-in/SKILL.md`, `glyphh-cli/SKILL.md` |
 | `types/index.d.ts` | The account's types and the `$.state` contract |
 
 **`$` stays in its file.** The engine reads a module's source before running it and follows `$` only into functions

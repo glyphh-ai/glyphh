@@ -13,16 +13,10 @@ export type AuthState =
     }
   | { status: 'in'; install_id: string }
 
-export type GlyphhSection = 'account' | 'org' | 'plan' | 'billing' | 'apps'
+export type GlyphhSection = 'account' | 'org' | 'plan' | 'billing'
 
 /** The panel's last word: what an action did or why not, and a page to open. */
 export type GlyphhNote = { text: string; isError: boolean; link?: string }
-
-/** The Apps section's place in the catalogue: the search, the page, the view
- *  (a reviewer's `draft` and `rejected` beside `approved`), the type shown
- *  (one of page, dashboard, doc, diagram, deck, design; '' for all), the count
- *  the server gave, and the card whose rejection waits for a reason. */
-export type AppsView = { q: string; page: number; state: string; type: string; total: number; rejecting: string | null }
 
 /** A JSON object the server answered, kept as it came. */
 export type Json = { [key: string]: unknown }
@@ -37,7 +31,6 @@ declare module 'claude-code' {
       lists: Record<string, Json[]>
       note: GlyphhNote | null
       inviteLink: string | null
-      apps: AppsView
     }
   }
 }

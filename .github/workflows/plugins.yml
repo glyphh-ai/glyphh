@@ -38,14 +38,6 @@ jobs:
             claude plugin validate --strict "$dir"
             echo "::endgroup::"
           done
-      - name: The rrotor release is pinned once, the same everywhere
-        run: |
-          script=$(sed -n 's/^PINNED_VERSION="\([0-9.]*\)".*/\1/p' plugins/glyphh/skills/rrotor/scripts/rrotor.sh)
-          hooks=$(sed -n "s/^export const RROTOR_PINNED = '\([0-9.]*\)'.*/\1/p" plugins/glyphh/hooks/glyphh/rrotor.ts)
-          compose=$(sed -n 's/.*rrotor:\${RROTOR_VERSION:-\([0-9.]*\)}.*/\1/p' deploy/compose/docker-compose.local.yml)
-          helm=$(sed -n 's/^appVersion: "\([0-9.]*\)".*/\1/p' deploy/helm/rrotor/Chart.yaml)
-          echo "script=$script hooks=$hooks compose=$compose helm=$helm"
-          [ -n "$script" ] && [ "$script" = "$hooks" ] && [ "$script" = "$compose" ] && [ "$script" = "$helm" ] || { echo "::error::the rrotor pin differs: rrotor.sh PINNED_VERSION, hooks/glyphh/rrotor.ts RROTOR_PINNED, deploy/compose/docker-compose.local.yml and deploy/helm/rrotor/Chart.yaml appVersion must agree"; exit 1; }
       - name: Each marketplace entry is its plugin's name and version
         run: |
           node -e '
@@ -65,10 +57,3 @@ jobs:
           echo '{"session_id":"ci","tool_name":"Edit","tool_input":{"file_path":"/src/app.py","old_string":"a","new_string":"b"}}' | python3 hooks/ledger.py record
           echo '{"session_id":"ci","tool_input":{"file_path":"/src/app.py"}}' | python3 hooks/ledger.py recall | grep -q 'replaced \\"a\\" with \\"b\\"'
           echo '{"session_id":"ci"}' | python3 hooks/ledger.py prompt | grep -q '/src/app.py'
-      - name: "glyphh: the glyphh hooks say nothing signed out or offline"
-        working-directory: plugins/glyphh
-        run: |
-          python3 -m py_compile hooks/glyphh_context.py
-          test -z "$(echo '{}' | GLYPHH_HOME="$RUNNER_TEMP/none" python3 hooks/glyphh_context.py session)"
-          mkdir -p "$RUNNER_TEMP/glyphh-home" && echo '{"install_id":"i","token":"t"}' > "$RUNNER_TEMP/glyphh-home/install.json"
-          test -z "$(echo '{"prompt":"hi"}' | GLYPHH_HOME="$RUNNER_TEMP/glyphh-home" GLYPHH_SERVER_URL=http://127.0.0.1:9 python3 hooks/glyphh_context.py prompt)"

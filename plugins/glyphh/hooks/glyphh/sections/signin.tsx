@@ -56,7 +56,7 @@ export function SignIn(ctx: Ctx, a: AuthState) {
   }
   return (
     <Box flexDirection="column" gap="md">
-      {k.Head('Sign in to Glyphh', 'With Google or GitHub, to see your account, your organisation, your plan and the apps published to it.')}
+      {k.Head('Sign in to Glyphh', 'With Google or GitHub, to see your account, your organisation and your plan.')}
       {a.status === 'out' && a.error ? k.Note('signin-error', a.error, 'error') : null}
       {k.Buttons([{ key: 'signin', label: 'Sign in', primary: true, onPress: () => beginSignIn(gh, surface) }])}
     </Box>

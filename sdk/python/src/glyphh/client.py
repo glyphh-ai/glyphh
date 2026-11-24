@@ -16,10 +16,7 @@ import warnings
 from dataclasses import dataclass, field
 from email.utils import parsedate_to_datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Iterator, List, Mapping, Optional, Sequence, Set, Tuple, Union
-
-if TYPE_CHECKING:  # pragma: no cover
-    from .hosted import HostedBots
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Mapping, Optional, Sequence, Set, Tuple, Union
 
 from .errors import (
     AdaDeprecationWarning,
@@ -27,12 +24,11 @@ from .errors import (
     AdaTimeoutError,
     ClientTooOldError,
     JobFailedError,
-    ReadOnlyError,
     error,
 )
 from .credentials import read_key
 
-#: Where Ada answers. GLYPHH_ADA_URL (or 3.0's GLYPHH_RUNTIME_URL) moves it, e.g. to a local server under test.
+#: Where Ada answers. GLYPHH_ADA_URL moves it, e.g. to a local server under test.
 DEFAULT_URL = "https://ada.glyphh.ai"
 #: The contract (contract/contract.json) this SDK speaks. A server that speaks a newer one (its Glyphh-Contract
 #: header, or /v1/ada's `contract`) is refused with ClientTooOldError, asking for the SDK to be upgraded.
@@ -54,7 +50,6 @@ WAITING = ("needs_input", "needs_approval")
 FINAL = ("done", "failed", "expired", "cancelled")
 #: An Ada model's functions that only read: safe to send again when Ada could not be reached.
 READS = ("query", "facts", "probabilities", "decide", "beam")
-CLUSTER_SEQ, MIN_SEQ = "rrotor-cluster-seq", "rrotor-min-seq"
 #: An import's format by its file's extension.
 FORMATS = {
     ".jsonl": "jsonl",
@@ -97,18 +92,12 @@ class Result:
 
     @property
     def waiting(self) -> bool:
-        """The run asks: `needs_input` or `needs_approval` (a self-hosted runtime's; the cloud answers `ask`)."""
+        """The run asks: `needs_input` or `needs_approval`. Ada Cloud never does: a decision says `ask` instead."""
         return self.status in WAITING
 
     @property
     def ended(self) -> bool:
         return self.status in FINAL
-
-    @property
-    def limit_exceeded(self) -> bool:
-        """A self-hosted runtime's: done but indexed nothing, the store at its licence's cap. The cloud refuses with
-        `LimitError` instead."""
-        return self.done and isinstance(self.data, dict) and self.data.get("status") == "limit_exceeded"
 
     @classmethod
     def of(cls, body: Mapping[str, Any]) -> "Result":
@@ -166,7 +155,6 @@ class Decision:
     done = True
     waiting = False
     ended = True
-    limit_exceeded = False
 
     @classmethod
     def of(cls, body: Mapping[str, Any], model: str = "", version: int = 0, ada: Optional[str] = None) -> "Decision":
@@ -540,12 +528,12 @@ TRANSIENT = ("E_UNREACHABLE", "E_UNAVAILABLE", "E_TIMEOUT")
 
 
 def _retryable(err: AdaError, safe: bool) -> bool:
-    """Refused before anything ran (429, a self-hosted cluster's E_NO_HEAD): any call. Ada unreachable for a moment
-    (E_UNREACHABLE, E_UNAVAILABLE, E_TIMEOUT, a proxy's 502, 503, 504): a call that is safe to send again, a read or
-    a write carrying an Idempotency-Key (made once however often it is sent)."""
+    """Refused before anything ran (429): any call. Ada unreachable for a moment (E_UNREACHABLE, E_UNAVAILABLE,
+    E_TIMEOUT, a proxy's 502, 503, 504): a call that is safe to send again, a read or a write carrying an
+    Idempotency-Key (made once however often it is sent)."""
     if err.code in NEVER_AGAIN:
         return False
-    if err.code == "E_NO_HEAD" or err.status == 429:
+    if err.status == 429:
         return True
     return safe and (err.code in TRANSIENT or err.status in (502, 503, 504))
 
@@ -555,17 +543,12 @@ NEVER_AGAIN = ("E_ADA_UNAVAILABLE", "E_CLIENT_TOO_OLD")
 
 
 def _result(body: Mapping[str, Any]) -> Result:
-    r = Result.of(body)
-    if r.status == "failed" and isinstance(r.data, dict) and r.data.get("code") == "E_READ_ONLY":
-        reason = str(r.data.get("reason") or f"{r.function} wrote, and it is marked read-only")
-        raise ReadOnlyError("E_READ_ONLY", reason, 200, {"run_id": r.run_id, "function": r.function})
-    return r
+    return Result.of(body)
 
 
-def _parsed(status: int, content: bytes, got: Mapping[str, str], make: Callable[..., AdaError] = error) -> Any:
-    """An answer's JSON, or its refusal raised as the typed error (`make` picks the class: a local runtime's refusals
-    have their own). An answer of a newer contract than this SDK's (Glyphh-Contract) is refused first, whatever it
-    says: ClientTooOldError."""
+def _parsed(status: int, content: bytes, got: Mapping[str, str]) -> Any:
+    """An answer's JSON, or its refusal raised as the typed error. An answer of a newer contract than this SDK's
+    (Glyphh-Contract) is refused first, whatever it says: ClientTooOldError."""
     too_old = _too_old(got.get(CONTRACT_HEADER))
     if too_old is not None:
         raise too_old
@@ -579,7 +562,7 @@ def _parsed(status: int, content: bytes, got: Mapping[str, str], make: Callable[
         code = err.get("code") or fallback
         detail = {k: v for k, v in err.items() if k not in ("code", "message")}
         message = err.get("message") or f"Ada answered {status}"
-        raise make(code, message, status, detail, _retry_after(got.get("retry-after")))
+        raise error(code, message, status, detail, _retry_after(got.get("retry-after")))
     return parsed
 
 
@@ -614,11 +597,10 @@ class Ada:
         *,
         transport: Optional[Transport] = None,
         retry_deadline: float = RETRY_DEADLINE,
-        read_your_writes: bool = True,
     ) -> None:
-        found = url or os.environ.get("GLYPHH_ADA_URL") or os.environ.get("GLYPHH_RUNTIME_URL") or DEFAULT_URL
+        found = url or os.environ.get("GLYPHH_ADA_URL") or DEFAULT_URL
         self.url = found.rstrip("/")
-        self.key = key or os.environ.get("GLYPHH_API_KEY") or os.environ.get("GLYPHH_RUNTIME_KEY") or ""
+        self.key = key or os.environ.get("GLYPHH_API_KEY") or ""
         if not self.key:  # the key `glyphh login` kept for this machine
             self.key = read_key() or ""
         if not self.key:
@@ -628,24 +610,11 @@ class Ada:
                 "on the platform's API Keys page, or ask Claude through the Glyphh connector).",
             )
         self._send = transport or _urllib
-        self.retry_deadline, self.read_your_writes = retry_deadline, read_your_writes
-        self._seq, self._lock = 0, threading.Lock()
+        self.retry_deadline = retry_deadline
+        self._lock = threading.Lock()
         self._noticed: Set[str] = set()
         #: Ada's versions: `ada.versions()`.
         self.ada = AdaReleases(self)
-
-    @property
-    def bots(self) -> "HostedBots":
-        """The org's hosted bots, on this client's key and transport (glyphh.hosted.HostedBots: the Glyphh API at
-        GLYPHH_API_URL, else https://api.glyphh.ai)."""
-        from .hosted import HostedBots
-
-        return HostedBots(key=self.key, transport=self._send, retry_deadline=self.retry_deadline)
-
-    @property
-    def cluster_seq(self) -> int:
-        """A self-hosted cluster's highest `Rrotor-Cluster-Seq` answered (0: none; always 0 against the cloud)."""
-        return self._seq
 
     # the wire
 
@@ -696,10 +665,7 @@ class Ada:
         headers = {"authorization": f"Bearer {self.key}", "accept": "application/json", **(extra or {})}
         if raw is not None:
             headers["content-type"] = "application/json"
-        if self.read_your_writes and self._seq:
-            headers[MIN_SEQ] = str(self._seq)
         status, content, got = self._exchange(method, f"{self.url}{path}", headers, raw)
-        self._saw(got.get(CLUSTER_SEQ))
         answer = _parsed(status, content, got)
         self._notice(got.get(NOTICE_HEADER))
         return answer
@@ -713,14 +679,6 @@ class Ada:
                 return
             self._noticed.add(notice)
         warnings.warn(f"Glyphh Ada: {notice}", AdaDeprecationWarning, stacklevel=5)
-
-    def _saw(self, seq: Optional[str]) -> None:
-        try:
-            n = int(seq or 0)
-        except ValueError:
-            return
-        with self._lock:
-            self._seq = max(self._seq, n)
 
     # models
 
@@ -865,27 +823,6 @@ class Ada:
         """What the org uses of Ada Cloud against its plan: its models, the precedents they hold, and its requests
         this calendar month (UTC), with when they start again and the calls a second the plan allows."""
         return Usage.of(self._call("GET", "/v1/usage"))
-
-    # SDK 3.0's calls for a self-hosted runtime: the cloud keeps no runs and deploys no repos
-
-    def deploy(self, repo: str, commit: str, token: Optional[str] = None) -> Dict[str, Any]:
-        """A self-hosted runtime's: a commit of a model's GitHub repo as its next version. The cloud has no deploys:
-        a model is its spec (`create_model`, `Model.set_spec`)."""
-        return dict(self._call("POST", "/v1/models/deploy", _drop_none(repo=repo, commit=commit, token=token)))
-
-    def run(self, run_id: str) -> Dict[str, Any]:
-        """A self-hosted runtime's run. The cloud answers every run at once and keeps none (E_RUN_MISSING)."""
-        return dict(self._call("GET", f"/v1/runs/{_quote(run_id)}"))
-
-    def log(self, run_id: str) -> List[Any]:
-        return list(self._call("GET", f"/v1/runs/{_quote(run_id)}/log")["lines"])
-
-    def resume(self, run_id: str, answer: Any) -> Result:
-        """A self-hosted runtime's run that waits. The cloud never waits: a decision says `ask` instead."""
-        return _result(self._call("POST", f"/v1/runs/{_quote(run_id)}/continue", {"answer": answer}))
-
-    def cancel(self, run_id: str) -> Result:
-        return _result(self._call("POST", f"/v1/runs/{_quote(run_id)}/cancel", {}))
 
 
 class AdaReleases:
@@ -1193,9 +1130,6 @@ class Model:
         if clearance is not None:
             body["clearance"] = clearance
         return _result(self.ada._call("POST", "/v1/runs", body, read=function in READS))
-
-    def resume(self, run_id: str, answer: Any) -> Result:
-        return self.ada.resume(run_id, answer)
 
     def record(
         self,

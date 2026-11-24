@@ -14,15 +14,10 @@ import {
   BusyError,
   DEFAULT_URL,
   FewRolesError,
-  HeadLostError,
   JobFailedError,
   LimitError,
   ModelMissingError,
-  NoHeadError,
-  NotCommittedError,
   RateError,
-  ReadOnlyError,
-  RunLostError,
   SpecError,
   SpecReadingError,
   retryAfter,
@@ -453,14 +448,11 @@ test("3.0's calls name their functions, and a long learn is waited for", async (
 });
 
 test("the URL defaults to Ada Cloud, and the key comes from the environment", async () => {
-  for (const name of ["GLYPHH_ADA_URL", "GLYPHH_RUNTIME_URL", "GLYPHH_API_KEY", "GLYPHH_RUNTIME_KEY"]) delete process.env[name];
+  for (const name of ["GLYPHH_ADA_URL", "GLYPHH_API_KEY"]) delete process.env[name];
   assert.throws(() => new Ada(), (e) => e.code === "E_CONFIG" && /GLYPHH_API_KEY/.test(e.message));
-  process.env.GLYPHH_RUNTIME_KEY = "glyphh_rk_old";
+  process.env.GLYPHH_API_KEY = "glyphh_ak_env";
   assert.equal(new Ada().url, DEFAULT_URL);
   assert.equal(DEFAULT_URL, "https://ada.glyphh.ai");
-  process.env.GLYPHH_API_KEY = "glyphh_ak_env";
-  process.env.GLYPHH_RUNTIME_URL = "https://old.example/";
-  assert.equal(new Ada().url, "https://old.example");
   process.env.GLYPHH_ADA_URL = "http://ada:8080/";
   assert.equal(new Ada().url, "http://ada:8080");
 });
@@ -485,52 +477,12 @@ test("a rate refusal without the header waits as its body says", async () => {
   assert.deepEqual(slept, [2]);
 });
 
-// a self-hosted cluster's refusals and read-your-writes, kept from 3.1 (nothing of them reaches the cloud)
-
-const NO_HEAD = [503, { error: { code: "E_NO_HEAD", message: "The cluster has no head." } }, { "Retry-After": "2" }];
-const DONE = { run_id: "r1", model: "incidents", version: 1, function: "record", status: "done", data: { id: "a1" }, step: null, prompt: null, seconds: 0.1 };
-
-test("a cluster's no head is retried, and its seq sent back", async () => {
-  const { slept, clock } = fakeClock();
-  const { ada, calls } = fake(NO_HEAD, NO_HEAD, [200, DONE, { "Rrotor-Cluster-Seq": "1042" }], [200, { models: [] }], { clock });
-  assert.deepEqual((await ada.model("incidents").record({ a: 1 })).data, { id: "a1" });
-  assert.deepEqual(slept, [2, 2]);
-  await ada.models();
-  assert.equal(ada.clusterSeq, 1042);
-  assert.equal(calls.at(-1).headers["rrotor-min-seq"], "1042");
-  const many = fake(...Array(6).fill(NO_HEAD), { clock, retryDeadline: 9 });
-  await assert.rejects(many.ada.model("incidents").record({ a: 1 }), NoHeadError);
-  assert.equal(many.calls.length, 5);
-  const off = fake([200, DONE, { "Rrotor-Cluster-Seq": "9" }], [200, DONE], { readYourWrites: false });
-  await off.ada.model("incidents").record({ a: 1 });
-  await off.ada.model("incidents").record({ a: 1 });
-  assert.equal(off.calls[1].headers["rrotor-min-seq"], undefined);
-});
-
-for (const [code, status, error] of [["E_HEAD_LOST", 503, HeadLostError], ["E_NOT_COMMITTED", 503, NotCommittedError], ["E_RUN_LOST", 410, RunLostError]]) {
-  test(`a cluster's refusal is typed and not sent again: ${code}`, async () => {
-    const { slept, clock } = fakeClock();
-    const { ada, calls } = fake([status, { error: { code, message: "x" } }], { clock });
-    await assert.rejects(ada.model("incidents").record({ a: 1 }), error);
-    assert.equal(calls.length, 1);
-    assert.deepEqual(slept, []);
-  });
-}
-
-test("a reading function that wrote, and a record past a runtime's cap", async () => {
-  const failed = { ...DONE, function: "query", status: "failed", data: { code: "E_READ_ONLY", reason: "query writes" } };
-  const { ada } = fake([200, failed], [200, { ...DONE, data: { status: "limit_exceeded", indexed: false, message: "cap", cap: 5000 } }]);
-  await assert.rejects(ada.model("incidents").query({ a: 1 }), (e) => e instanceof ReadOnlyError && e.detail.run_id === "r1");
-  assert.equal((await ada.model("incidents").record({ a: 1 })).limit_exceeded, true);
-});
-
 test("Retry-After as a date, and a transport that answers no headers", async () => {
   assert.equal(retryAfter("Wed, 21 Oct 2015 07:28:00 GMT"), 0);
   assert.equal(retryAfter("1.5"), 1.5);
   assert.equal(retryAfter("soon"), undefined);
   const { ada } = fake([200, { models: [] }]);
   assert.deepEqual(await ada.models(), []);
-  assert.equal(ada.clusterSeq, 0);
 });
 
 // Ada versions (contract 5)

@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "glyphh"
-version = "3.16.0"
-description = "Ada for Python and the glyphh command: typed decisions from your own precedents, from Ada Cloud (https://ada.glyphh.ai) with an API key or a Glyphh sign-in; Glyphh bots, programs that run a Claude agent behind gates that learn; and a client for your local rrotor, the runtime that hosts your programs and CLIs."
+version = "4.0.0"
+description = "Ada for Python and the glyphh command: typed decisions from your own precedents, from Ada Cloud (https://ada.glyphh.ai) with an API key."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -24,7 +24,6 @@ dependencies = []
 glyphh = "glyphh.cli:main"
 
 [project.optional-dependencies]
-api = ["anthropic>=0.80"]
 dev = ["pytest>=7", "jsonschema>=4.18"]
 
 [project.urls]

@@ -1,7 +1,7 @@
 # Benchmark: credit decisions — Ada against an LLM, on the same hold-out
 
-> **Running these scripts.** `run.py` and `calibrate.py` run against the Ada kernel inside rrotor (Glyphh's
-> runtime), which is not in this repository. What can be checked from here is what is published: the hold-out's
+> **Running these scripts.** `run.py` and `calibrate.py` run against the Ada kernel, which is not in this
+> repository. What can be checked from here is what is published: the hold-out's
 > labels (`results/holdout_labels.json`), both judges' answers (`results/llm_run*.json`) and the judges' brief
 > (`judge_prompt.md`). To rerun the LLM side: `./fetch.sh` for `german.data`; the split is `run.py`'s first step
 > (the 1,000 rows shuffled with `random.Random(7)`, the first 800 to `train.jsonl`, the last 200 to `holdout.jsonl`
@@ -53,7 +53,7 @@ Ada answered (`sufficient`) on 100% of cases at every setting.
 
 ## Cost and time
 
-Ada on a hosted runtime machine (Fly shared-cpu, $0.019 an hour). The LLM per token; its price is bracketed by two
+Ada on a small cloud machine (Fly shared-cpu, $0.019 an hour). The LLM per token; its price is bracketed by two
 public rates because the model's own was not to hand.
 
 | Ada | Time | Cost |
@@ -80,7 +80,7 @@ Ada's ingest is paid once; every decision after is a query.
   probability, so a cost threshold over-refuses (71 good loans). Learned weights, calibration and a cost matrix in
   the spec fixed it (below).
 - **Determinism:** the two LLM runs disagreed on 12 of 200 decisions. Ada never does.
-- **Cost per decision:** Ada is three to five orders of magnitude cheaper, and keeps the data in the runtime.
+- **Cost per decision:** Ada is three to five orders of magnitude cheaper, and keeps the data in its own store.
 - **Ada's reasons to exist** are the receipts (which precedents), the clearance layers, asking when it should, and
   learning one confirmed case at a time with no retraining.
 
@@ -105,7 +105,7 @@ step is the kernel's own, not the script's: the script only names the costs and 
 3. **`output.costs = {good: {bad: 5}, bad: {good: 1}}`** in the spec; `decide` returns the outcome with the least
    expected cost under the calibrated probabilities. **`output.ask = 0.5`** prices asking a person at half a refused
    good loan (chosen before any run); `decide` answers `ask: true` where every outcome's expected cost is above it.
-4. **The runtime's way, as a check**: the same spec unlearned, the 800 recorded in order with `refresh_every=100`,
+4. **The store's own way, as a check**: the same spec unlearned, the 800 recorded in order with `refresh_every=100`,
    so the model learns its weights from its own store and calibrates (on its newest 200) eight times as it fills.
 
 `k` and `min_sim` were put to five-fold cross-validation inside the 800 too, but `decide` reads the 25 nearest
@@ -161,4 +161,4 @@ uv run python benchmarks/credit/score.py benchmarks/credit/results/llm_run1.json
 ```
 
 `run.py` writes `train.jsonl`, `holdout.jsonl` and `holdout_labels.json`; the judges' answers are in `results/`.
-The kernel is Ada's, the one rrotor ships; it is not in this repository (see the note at the top).
+The kernel is Ada's; it is not in this repository (see the note at the top).

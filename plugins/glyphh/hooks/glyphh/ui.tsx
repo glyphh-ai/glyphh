@@ -4,7 +4,7 @@
 // Chip, Actions and Empty; nothing else draws text of its own style.
 import type { Elements, RenderSurface } from 'claude-code'
 
-import type { AppsView, Json } from '../../types'
+import type { Json } from '../../types'
 import type { Host } from './host'
 
 /** The elements every panel uses: the terminal's and the desktop's alike. */
@@ -20,10 +20,6 @@ export type Ctx = {
   surface: RenderSurface
   me: Json | null
   lists: Record<string, Json[]>
-  /** Where the Apps section stands (its search, page, view and type). */
-  apps: AppsView
-  /** rrotor's parts of the panel shown; hidden with GLYPHH_RROTOR=0 (./shelved). */
-  rrotor?: boolean
 }
 
 /** A colour with a meaning, from Claude's theme. */
@@ -49,7 +45,7 @@ export type RowProps = {
   key: string
   primary: string
   secondary?: string
-  /** The primary's colour, for a state (an online rrotor, a plan the org is on). */
+  /** The primary's colour, for a state (a plan the org is on). */
   tone?: Tone
   /** A small word after the primary: the row's kind or state. */
   chip?: { text: string; tone?: Tone }

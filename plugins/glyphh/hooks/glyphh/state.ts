@@ -6,11 +6,7 @@ export const SECTIONS: { id: GlyphhSection; label: string }[] = [
   { id: 'org', label: 'Org' },
   { id: 'plan', label: 'Plan' },
   { id: 'billing', label: 'Billing' },
-  { id: 'apps', label: 'Apps' },
 ]
-
-/** The sections the panel offers: Apps only while rrotor is shown (./shelved). */
-export const shownSections = (rrotor: boolean) => SECTIONS.filter(s => s.id !== 'apps' || rrotor)
 
 /** The panel's last word. */
 export const say = (gh: Host, text: string, isError = false, link?: string) =>

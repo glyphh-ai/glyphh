@@ -3,28 +3,22 @@
 // through atoms declared beside the call; so every `$` call and atom lives in
 // index.tsx, and the modules here work on this interface. (It also makes them
 // plain to test.)
-import type { FsEntry, HttpInit, HttpResponse, McpToolResult, ProcessRunInit, ProcessRunResult, RenderSurface, Timer } from 'claude-code'
+import type { HttpInit, HttpResponse, McpToolResult, ProcessRunInit, ProcessRunResult, RenderSurface, Timer } from 'claude-code'
 
-import type { AppsView, AuthState, GlyphhNote, GlyphhSection, Json } from '../../types'
+import type { AuthState, GlyphhNote, GlyphhSection, Json } from '../../types'
 
 /** One state value: read it, or change it from what it is. */
 export type Value<T> = { get(): Promise<T>; set(fn: (v: T) => T): Promise<void> }
 
 export type Host = {
-  /** `rrotor`: GLYPHH_RROTOR, '0' to hide rrotor's parts of the panel (./shelved). */
-  env: { home(): Promise<string | undefined>; server(): Promise<string | undefined>; rrotor(): Promise<string | undefined> }
+  env: { home(): Promise<string | undefined>; server(): Promise<string | undefined> }
   http: { fetch(url: string, init?: HttpInit): Promise<HttpResponse> }
   fs: {
     read(path: string): Promise<string>
-    /** A binary file's bytes, as base64 (the engine's `{ as: 'bytes' }` read). */
-    readBytes(path: string): Promise<string>
     write(path: string, text: string): Promise<void>
-    exists(path: string): Promise<boolean>
-    list(path: string): Promise<FsEntry[]>
   }
   process: { run(argv: readonly string[], init?: ProcessRunInit): Promise<ProcessRunResult> }
   clock: { now(): Promise<number>; after(ms: number, fn: () => void): Timer }
-  store: { get(key: string): Promise<unknown>; set(key: string, value: unknown): Promise<void> }
   mcp: { call(server: string, tool: string, args?: Record<string, unknown>): Promise<McpToolResult> }
   surface(): Promise<RenderSurface | null>
   copy(text: string, surface?: RenderSurface): Promise<boolean>
@@ -40,6 +34,5 @@ export type Host = {
     lists: Value<Record<string, Json[]>>
     note: Value<GlyphhNote | null>
     inviteLink: Value<string | null>
-    apps: Value<AppsView>
   }
 }

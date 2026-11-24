@@ -2,376 +2,51 @@
 
 Both packages carry one version; a tag `sdk-v<version>` publishes both.
 
-## 3.16.0 — 2026-11-23
+## 4.0.0 — 2026-11-24
 
-Hosted bots became Claude agents you talk to (the server's `docs/specs/bot-agent-loop.md`). Python only; the
-TypeScript package carries the version unchanged.
+Glyphh is one thing: Ada. Both packages are now the Ada Cloud client alone (and, in Python, the `glyphh` command for
+it). A major version because public modules are gone; everything of Ada answers as in 3.16. Contract 5 still.
 
-- `glyphh.hosted`: `BotTemplate.apps` reads the server's new answer (each app `{app, name, tools}`) as well as the
-  old one (slugs), and `BotTemplate.runs_on` says where a template can run (`cloud`, `rrotor`, or only `rrotor`).
-  Running, answering, cancelling and correcting a hosted bot are unchanged: `run(slug, "what you would say to it")`.
-- `glyphh bot` and `glyphh.bots` (a packaged bot's loop, run on your own Claude) are unchanged and keep working. The
-  server no longer walks a loop with them; it still uses their store, policy and Ada plumbing for what a hosted
-  bot's decisions learn.
+Removed, with no replacement in these packages:
 
-## 3.15.0 — 2026-11-22
+- Everything that was not Ada: the modules, classes, errors and commands for anything but Ada Cloud models (in
+  Python, every submodule but `glyphh.client`, `glyphh.errors`, `glyphh.credentials` and `glyphh.cli`; in
+  TypeScript, every export that was not part of the Ada client), their contracts and fixtures, their examples and
+  deploy files. Code that imports one of them keeps working on `glyphh<4` / `@glyphh-ai/glyphh@3` only as long as
+  the server still answers it: the server is removing those APIs too.
+- The `glyphh` command keeps every Ada command and loses the rest.
+- Python's `api` extra (`pip install glyphh[api]`): the package has no optional dependency again.
+- What SDK 3.0 and 3.1 kept for a server you ran yourself: `Ada.deploy`, `Ada.run`, `Ada.log`, `Ada.resume`,
+  `Ada.cancel` (a job is still stopped with `cancel_job` / `cancelJob`), `Model.resume`, `read_your_writes` /
+  `readYourWrites`, `cluster_seq` / `clusterSeq`, `Result.limit_exceeded`, the errors `NoHeadError`,
+  `HeadLostError`, `NotCommittedError`, `RunLostError` and `ReadOnlyError`, and the 3.0 environment names
+  `GLYPHH_RUNTIME_URL` and `GLYPHH_RUNTIME_KEY`: set `GLYPHH_ADA_URL` and `GLYPHH_API_KEY`.
 
-A bot's effort: how hard Claude works on its agent steps. Python only; the TypeScript package carries the version
-unchanged.
+Unchanged: `Ada`, `Model` (TypeScript `AdaModel`), `decide`, `beam`, models and their versions, cases, jobs, imports
+and exports, backtests, Ada versions and upgrades, `usage`, every typed Ada refusal, retries and idempotency, and
+3.0's `record`, `query`, `facts`, `probabilities`, `learn` and `call` through `POST /v1/runs`.
 
-- `ApiClaude(..., effort=None)`: one of `EFFORTS` (`low`, `medium`, `high`, `xhigh`, `max`), sent with each agent
-  step's request as the Claude API's `output_config: {"effort": ...}`. It is sent only when the step's model takes
-  it (`EFFORT_MODELS`: Claude Opus 5.5, Sonnet 5.5 and Haiku 5.5 take all five; `effort_for(model, effort)` says);
-  for any other model, or with no effort given, the request goes as before and the model's own default holds. A
-  step never fails over its effort.
-- `glyphh bot` on the Claude API (`GLYPHH_BOT_CLAUDE=api`) takes it from `GLYPHH_BOT_EFFORT`.
-- `Claude` (`claude -p`) is unchanged: it takes no effort.
+Other plugins and skills for Claude live at https://github.com/glyphh-ai/plugins.
 
-## 3.14.0 — 2026-11-22
+## 3.x
 
-A bot says in its own words why a run ended early, and what it takes. Python only; the TypeScript package carries
-the version unchanged.
+What 3.x added to Ada, all of it in 4.0:
 
-- A loop step may carry `empty`: what to tell the person when that step ends the run early (a per-item gate whose
-  `on` rule goes to `end`, a gate whose outcome goes to `end`, a step whose `requires` does not hold with
-  `"otherwise": "end"`). It is then the run's `reason` (`RunResult.reason`, what `glyphh bot run` prints, a
-  `Result`'s `data.reason`); the engine's line (`gate worth: keep 0, drop 3; the run ends here`) is still the log's
-  last line. Without `empty`, nothing changes.
-- bot.json may carry `takes` (what the text a run is given, `$input`, is used as: "a GitHub search") and `try` (an
-  example of it), for hosts to show beside where that text is typed.
-- `glyphh bot check` and `Bot.load` refuse an `empty`, `takes` or `try` that is not a non-empty string of at most
-  300 characters.
-- The example bots (`hn_reader`, `launch_watch`) say `empty` on the gate that ends their run; BUILDING.md and the
-  glyphh-bots skill describe the three keys.
-
-## 3.13.0 — 2026-11-22
-
-Hosted bots: the bots Glyphh hosts for your org, from your own code, as Ada models are. Python and TypeScript.
-
-- `HostedBots(url=None, key=None, transport=None)` (TypeScript `new HostedBots({url, key, transport})`, or
-  `Ada().bots` / `new Ada().bots` on the same key): the Glyphh API at `DEFAULT_API_URL` (https://api.glyphh.ai;
-  GLYPHH_API_URL moves it) with the API key Ada takes, as a bearer. `list(q)` / `search(q)`, `get(slug)`,
-  `bot(slug)` (`HostedBot`: `info`, `run`, `runs`, `gates`), `run(slug, input, wait=)`, `runs(slug)`, `get_run`
-  (`getRun`), `wait(run, timeout=, poll=, on_progress=)` until the run ends or asks the person, `answer(run, answer,
-  wait=)`, `cancel(run)`, `wrong(run, outcome, gate=, item=)`, `approvals()`, `gates(slug)`, `templates(q)`,
-  `template(slug)` and `install(slug, name=)`. Reads are sent again while the API is unreachable; a run, an answer, a
-  cancel or an install is sent once.
-- `BotInfo`, `BotRun` (Python: `going`, `waiting`, `approval`, `ended`), `BotTemplate`; a run's `question` carries
-  `step` and `approval` when the server says them.
-- `glyphh bots list|get|gates|run|runs|status|answer|cancel|wrong|approvals|templates|template|install`: the hosted
-  bots from a shell (`--wait` on run, status and answer). `glyphh bot ...` stays the bots on this machine.
-
-## 3.12.0 — 2026-11-21
-
-Remote bots: a bot or a swarm runs on a chosen rrotor, its package and state held by the server. Python only; the
-TypeScript package carries the version unchanged.
-
-- `HttpProgram(url, token, tools=None)`: a bot's program whose functions are its host's tools. Each call POSTs
-  `{"tool", "input", "run_id"}` to `url` with the bearer `token`; `{"result": ...}` is the step's data, `{"error": ...}`
-  (a 4xx or 5xx with one too) fails the step (`ToolError`). `fetch` is a tool like the others: the host fetches.
-- `glyphh.bots.remote.go(files, ada=, claude=, program=, state=, given=, answer=)`: one go of a bot a host holds, its
-  package (files by path, no code) and its runner's `state` (runs.sqlite, base64) opened in a folder of its own: a
-  run from its first step, or with `answer` the waiting run carried on. Its gate and memory models are made once per
-  shape of its gates and seed. Also `write_package`, `pack_state`, `output_of` and `installed`.
-- `RunResult.to_result()` and `RunResult.from_result()`: the run as rrotor's `Result` (`{status, data, step,
-  prompt}`: `done`, `needs_input`, `needs_approval` for an approval, `failed`), `data` carrying the whole run, its
-  `output`, `tokens` and `state` too; a Result the bot never reached (rrotor failed, cancelled or let it expire) reads
-  back as `failed`, saying what rrotor said.
-- `RunResult` names the `step` a waiting run waits at and whether it is an `approval`, and carries `output`,
-  `tokens` and `state` when a host ran it (all None otherwise: `to_dict` is unchanged).
-
-## 3.11.0 — 2026-11-21
-
-Bots anywhere: the same loop runs at a terminal, on rrotor and in Glyphh's cloud. Python only; the TypeScript
-package carries the version unchanged.
-
-- `ApiClaude`: a bot's agent steps over the Claude API on the person's own Anthropic API key (`api_key`, else
-  `ANTHROPIC_API_KEY`), so they pay Anthropic for their tokens themselves. agent.md's `model` (`opus`, `sonnet`,
-  `haiku` or a model id) wins over its default, Claude Opus 5.5. Needs `pip install 'glyphh[api]'`.
-- `glyphh bot` uses it when `GLYPHH_BOT_CLAUDE=api` (rrotor sets it; `GLYPHH_BOT_MODEL` picks the model), else
-  `claude -p` as before.
-- `Answer` carries `input_tokens` and `output_tokens` (from `claude -p`'s usage too); `Runner.tokens` sums them
-  for a host that reports them.
-- `fill` (a step's `input`, a gate's fields) fills `$id.path` inside objects and lists too, not only a string.
-- `Runner.run(given=...)`: what the run is given to work on, `$input` to its steps (no step may be called `input`).
-- `Bot.load(folder, program=...)`: the host gives the functions bot.json names instead of program.py.
-- A gate's `case` may be its fields (layer, segment, role, as Ada's case is) instead of a function: `$item.x` is a
-  per-item gate's item, `$step.x` an earlier step's data.
-
-## 3.10.0 — 2026-11-04
-
-The beam: a chain of models, one model's outcome the next model's question. Contract 5 still: the `beam` schema is
-additive.
-
-- `beam(start, hops, width=, values=, miss=, clearance=)` (Python) and `beam(start, hops, { width, values, miss,
-  clearance })` (TypeScript) on `Ada`, `POST /v1/beam`. The beam starts with `start` holding mass 1; each hop
-  `{model, role: "layer.segment.role", fixed?: {role: value}, output?}` asks its model about every value the beam
-  holds (the value placed in `role`, `fixed` beside it) and passes each value's mass on by the model's calibrated
-  probabilities, summing where paths meet; after every hop but the last only the `width` (default 10) heaviest
-  values are kept. `values` with `miss` (0..1) lets the chain pass through a model that does not know: `miss` of
-  the hop's mass spreads evenly over `values`, all of it when the model has nothing to say; without `values` such a
-  path ends and its mass is lost.
-- The answer, `Beam`: `outcome` (the heaviest end) and `p` (its share of the mass that arrived; `None`/`null` and
-  0.0 when none), `ends` (every end's share), `paths` (each end's likeliest single path, best first: `value`, `p`,
-  `trail_p`, `steps` from the start), `lost` (mass that arrived nowhere), `hops` (each model and the version that
-  answered), `ada` (the last hop's Ada version), `data`.
-- It is a read: one read per hop against the plan's month, retried as the other reads are (`READS` names it). The
-  Glyphh-Ada headers are on the answer.
-- The `glyphh` command: `glyphh beam START --hops JSON [--width N] [--values a,b] [--miss M] [--clearance C]`, the
-  hops as JSON, `@file` or `-`, the answer as JSON.
-- The contract names the `beam` schema; a hop naming a model the key does not own is refused as a decide is,
-  `E_MODEL_MISSING` (404).
-
-## 3.9.0
-
-Bots' gates: a bot's program holds the hard gates (code and `limits`, never learned, never overridden) and calls
-learned gates (Ada models) for the judgment calls, each learning only from the person's answers, corrections and real
-outcomes. Everything is declared in bot.json, enforced by the runner and checked when a package loads. Bots of 3.8
-load and run as before; a run waiting from 3.8 carries on. Contract 5 still; the TypeScript package changes only its
-version.
-
-- **Per-item gates**: a `gate` step with `"each": "$step.path"` decides every item of a list (the gate's `case`
-  function gets one item; `ctx.data` is the run's data). The items Ada is sure of are decided at once; the unsure
-  ones are asked as one batch a run: one by one at a terminal, or (in a routine, with no terminal) the run stops
-  `needs_input` with `batch` and `answer_with`, and `resume` / `glyphh bot continue SLUG 1=read 2=skip rest=skip`
-  (or a JSON map, or interactively) answers them all. Every answer is a precedent. The step's data is a list per
-  outcome (`$worth.read`) plus `decisions` (each item's outcome, who decided, P, Ada's guess, agreement) and counts;
-  `on` routes after the loop (`empty:<o>`, `any:<o>`, `all:<o>`, `else`). `$id.path` now reads into a step's data
-  everywhere (`input`, prompts, `each`).
-- **Asking policy per gate** (`Policy`, `Call`): `ask_below` (overrides the spec's, and is written into it at
-  install), `min_precedents`, `audit` (a steady share of Ada's sure calls still asked: agreement or overrule),
-  `shadow` (always asked, agreement measured), `max_questions` a run (the rest take `default`, or wait for the next
-  run), `default` (never kept as a precedent). Single gates take the same policy.
-- **World-answered gates** (`"world": true`): the case is kept, the person's call meanwhile is not recorded, and
-  `Runner.outcome` / `glyphh bot outcome SLUG RUN|last GATE [ITEM] OUTCOME` / `ctx.gate(g).record_outcome(outcome,
-  item)` records what really happened (an overrule where Ada had decided otherwise). `ctx.gate(name)` is now a
-  `Gate`: `decide(case, item=None)` (a `Call` under the gate's policy, with the Ada Decision's `outcome`, `ask` and
-  `probabilities`), `record(case, outcome)`, `record_outcome`, and the model's own calls.
-- **Ladders**: a `ladder` step (`try`, `check`, `start`, `on_fail`, optionally `each`): the gate's outcomes are rungs,
-  cheapest first; it starts on the cheapest the gate predicts will work, climbs on a failed check, and records the
-  rung that worked. The `coder` example now runs on one.
-- **Learned approvals and trust**: an approval step may name an `approval_gate` (outcomes yes and no) that learns the
-  person's yes and no; it stands in only when it is sure and trust allows, and every answer is kept. Trust now means
-  what it says: `ask_all` asks every approval, `ask_outward` only steps that send, pay or delete (a step's own
-  `touches`, default the bot's), `autonomous` none, but never a pay or a delete without a sure approval gate.
-- **Agent output gates**: an agent step's `schema` (a JSON Schema subset) and `check` (a program function); a wrong
-  answer is sent back once with what is wrong, then the run fails. The step's data is the JSON.
-- **Hard limits**: `usd_per_run` and `usd_per_day` (from `claude -p`'s `total_cost_usd`, now read by
-  `Claude.answer`, and `ctx.spend(usd)`; `ctx.budget()`): a step that would pass one ends the run; `runs_per_day`
-  and `quiet_hours` (routine runs) answer `skipped`; `max_items` caps a list; `requires` on any step (a small safe
-  expression: comparisons, and/or/not, `len()`, numbers, strings, `$id.path`; no eval) skips it or, with
-  `"otherwise": "end"`, ends the run. Malformed limits, policies and steps are refused at load, each said.
-- **The kill switch**: `Runner.pause` / `unpause`, `glyphh bot pause SLUG [--why W]` and `glyphh bot resume SLUG`: a
-  paused bot refuses to run, its routine and `continue` included; `status` says it.
-- **Visibility**: `glyphh bot gates SLUG [--runs N]` (`gate_stats`): per gate, precedents, policy, decisions by Ada
-  vs the person and defaults, the ask rate overall and run by run, audit and shadow agreement, overrules (wrong,
-  audit, world), world outcomes waiting, ladders' escalations. `glyphh bot report SLUG` (`write_report`) writes a
-  self-contained dark `report.html` in the bot's folder: the last gated run's items with each decision, who made it
-  and P; asked you N, decided M by itself, you overruled K; the ask rate run by run as an inline SVG sparkline; the
-  gates' records; links to what the bot made in `out/`. `wrong` takes `--item` and `last`.
-- **The demo bot**, `examples/bots/hn_reader`: Hacker News's front page (hn.algolia.com), a per-item gate `worth`
-  (read or skip, from title, site, kind, points, comments and age) asking at most 10 unsure stories a run, a digest
-  held to a `check` (every kept story linked), `out/digest.md`, hard limits. The orchestrator's builder now gets it
-  as a second example, and `BUILDING.md` says which gate suits which job.
-
-## 3.8.0
-
-Glyphh bots, in the Python package: programs that control a Claude agent, behind gates that learn. Nothing of 3.7
-changes; contract 5 still. The TypeScript package changes only its version.
-
-- `glyphh.bots`: a bot is a folder (`bot.json`, `agent.md`, `program.py`, `skills/*/SKILL.md`) in
-  `~/.glyphh/bots/<slug>/` (`GLYPHH_BOTS`). `Bot.load` checks a package whole and names every problem
-  (`BotError`, `E_BOT`, its `problems`): the loop's steps and targets, the gates' outcomes and specs, the program's
-  functions, skills, hosts, a routine's cron, Ada model names within 63 characters, and no bot that sends, pays or
-  deletes without an approval step.
-- `Runner`: the loop's `run` steps (program functions; `{"_end": why}` ends the run), `gate` steps (an Ada model of
-  the bot's own, `bot-<slug>-gate-<gate>`: Ada's call when it is sure, else the person's answer, kept as a
-  precedent), `agent` steps (`claude -p` with the bot's agent and nothing else: no tools, no MCP servers, no settings,
-  no session; the step's skill and the bot's memory before it: its `bot-<slug>-memory|instructions|personality`
-  models and the person's glyphh), and `approval` (the person's yes until the bot is trusted `autonomous`). Runs are
-  kept in the bot's `runs.sqlite`; a question in a routine stops the run `needs_input` and `resume` carries it on;
-  `wrong` records a gate's correction. Code steps get `ctx`: `http_json` (https, the bot's hosts only, its own
-  User-Agent), `db()`, `state`, `gate`, `log`, `today`.
-- `Orchestrator`: its own memory and gates (`orch-make-bot`, `orch-trust-bot`, `orch-keep-bot`), learning only from
-  the person's verdicts and the bots' records; `install`, `new` (make_bot, then a builder agent with Read and Write in
-  the new bot's folder, from `BUILDING.md`, an example bot and what earlier bots taught it; a bot that is not right,
-  or touches more than asked, is set aside in `.rejected/`), `review` and `verdict` (trust and keep), `status`, and
-  every run kept in its memory. A retired bot does not run.
-- The `glyphh` command: `glyphh bot init|check|install|new|run|continue|wrong|status|review|verdict|routine`, JSON on
-  stdout as every command; a failed run exits 1. `routine` installs a launchd job on a Mac and prints the cron line
-  elsewhere. The key is `GLYPHH_API_KEY`, else `~/.glyphh/bots/.env`, else the one `glyphh login` kept.
-- Examples in `examples/bots/`: `launch_watch`, `lab` (the orchestrator as a bot running experiments on how Claude
-  codes best, under a hard budget) and `coder` (each task to the cheapest model a learned gate says gets it done).
-
-## 3.7.0
-
-Jobs can be stopped, and say what they are doing. Contract 5 still: both additions are additive.
-
-- `cancel_job(job)` (Python) and `cancelJob(job)` (TypeScript) on `Ada`, by the job or its id
-  (`POST /v1/jobs/{id}/cancel`): a job not started ends at once, a running one at its next step, within seconds. It
-  ends `failed` with `E_CANCELLED`, its message saying what of its work stays, so `wait` raises (throws)
-  `JobFailedError`. Asking again answers the job as it stands; a job that has already ended is refused,
-  `E_JOB_ENDED` (409). `cancel(run_id)` is still 3.0's call for a run.
-- `Job.stage`: what a running job is doing now, with its counts ("restating 41,000 of 52,000 precedents"), and
-  `cancelling` once asked to stop. Python's `Job.cancelled` says a job ended by a cancel.
-- The `glyphh` command: `glyphh cancel <job id>`, and progress on stderr shows the stage.
-- The contract names the job's `stage` and the codes `E_JOB_ENDED`, `E_CANCELLED`, `E_JOB_STALLED` (a running job
-  whose worker stopped and no other took up) and `E_JOB_LOST` (one that stopped its worker three times).
-
-## 3.6.0
-
-`Runtime`, in both packages: a client for your local rrotor, the runtime you install (a Docker image on
-`127.0.0.1:7777`) that hosts your programs and CLIs. It sits beside the Ada Cloud client and changes nothing of it:
-`Ada`, its contract (5) and every Ada call answer as in 3.5.
-
-- The address is `RROTOR_URL`, else `http://127.0.0.1:7777`; the token is `RROTOR_TOKEN`, else the local token the
-  plugin's installer keeps in `~/.glyphh/rrotor/token`. A self-hosted rrotor takes its URL and a runtime key.
-- Programs: `programs()`, `program(name)`, `deploy` (a folder at a commit, sent as a git bundle; a GitHub repo and its
-  full commit; or a bundle's bytes), `call(program, function, inputs)`, `resume` (MCP's program_continue),
-  `approve(run_id, approved)`, `cancel`, `run` (a run's status), `log`, `approvals()`. These are the 3.0 calls for a
-  self-hosted runtime (`deploy`, `run`, `log`, `resume`, `cancel`), renamed to programs and pointed at rrotor's
-  paths (`/v1/programs/deploy`, `/v1/runs/...`); the `Ada` methods of those names stay as they were.
-- Secrets: `secrets(program)` (names, declared, set), `set_secret` / `setSecret`, `delete_secret` / `deleteSecret`.
-  No call ever answers a value.
-- Schedules: `schedules()`, `pause_schedule` / `pauseSchedule`, `resume_schedule` / `resumeSchedule`.
-- CLIs: `clis()`, `run_cli(cli, args, stdin=, files=)` / `runCli(cli, args, { stdin, files })`: exit code, stdout and
-  stderr, or `needs_approval`.
-- The runtime: `licence()`, `set_licence(key)` / `setLicence(key)` (a local rrotor only), `health()`.
-- Typed answers (`Run`, `RunInfo`, `Program`, `ProgramVersion`, `Approval`, `Secret`, `Schedule`, `Cli`, `Licence`;
-  TypeScript also `CliOutput`) and typed refusals, each a `RrotorError` and so an `AdaError`: `RrotorAuthError`,
-  `RrotorForbiddenError`, `LocalOnlyError`, `ProgramMissingError`, `FunctionMissingError`, `RunMissingError`,
-  `ScheduleMissingError`, `ManifestError`, `DeployError`, `InputsError`, `RunStateError`, `NotProgramError`,
-  `NotCliError`, `CliDeniedError`, `NotHeadError` (`head`), `LicenceError`, `NotInPlanError`. A cluster's
-  `E_NO_HEAD`, `E_RUN_LOST` and the rest keep their 3.1 classes.
-- Reads are sent again while rrotor is unreachable for a moment; writes never are (a cluster's `E_NO_HEAD` and a 429
-  are waited out). A cluster's `Rrotor-Cluster-Seq` is sent back as `Rrotor-Min-Seq`.
-- `contract/runtime.json` and `contract/runtime-fixtures.json`: the runtime's shapes and the cases both SDKs are
-  tested against, written from rrotor's code; `contract/contract.json` is Ada Cloud's alone, unchanged.
-
-## 3.5.0
-
-The `glyphh` command (Python): Ada Cloud from a terminal, for people and for agents with a shell. Nothing of 3.4
-breaks; the TypeScript package changes only its version.
-
-- `pip install glyphh` installs `glyphh` (and `python -m glyphh`): `login`, `logout`, `whoami`, `models`, `model`,
-  `spec`, `create`, `delete`, `record`, `record-many`, `grade`, `forget`, `import`, `learn`, `calibrate`, `decide`,
-  `query`, `probabilities`, `facts`, `backtest`, `settings`, `versions`, `activate`, `upgrade`, `export`, `job`,
-  `usage`, `releases`. Every answer is the API's JSON on stdout; a refusal is `{"error": {...}}` on stderr, exit 1.
-- It runs on an API key, as the SDK does: `glyphh login` checks one against Ada and keeps it 0600 in
-  `~/.glyphh/credentials.json` (`--key-stdin` from a pipe); `GLYPHH_API_KEY` wins over it; `glyphh logout` forgets it
-  (the key stays live until revoked).
-- `Ada()` with no key given or set uses the key `glyphh login` kept.
-
-## 3.4.0
-
-Typed outputs and discriminated unions (Ada kernel 3.15.0, on `ada-1-2-beta`). A spec's named output can say what
-its answer is with `kind`: `choice` (the default), `score` (ordered levels), `noul` (yes or no), `number`
-(`number: {min, max, step}`) or `many` (any of its values at once); `when: {output, in}` makes it a branch of a
-union, asked only when another output's outcome is one of those. Nothing of 3.3 breaks.
-
-- Recording: `record(..., outcomes=)` and `grade(id, value)` take every kind of outcome (`Outcome`, both SDKs): one
-  of the output's values, `True`/`False` for a noul, a number, a list of values for a many output.
-- A `Decision` (and each of its `outputs`) carries what its kind adds: `p` (a noul's P(true)), `value` (a number's
-  expected value), `level` (a score's expected level), and `applies` on a union's branch (`False`: not asked, the
-  output it hangs on was decided an outcome that leaves it out). A many output's `outcome` is a list, its
-  `probabilities` each value's P(true). Each is absent (None / undefined) where the kind does not give it.
-
-## 3.3.0
-
-Ada versions (contract 5): every model version runs one Ada version, named `ada-<major>-<minor>` (`-beta` for a
-beta), its answers always computed by it; moving to another is the caller's choice. Nothing of 3.2 breaks: `info()`,
-`models()` and `versions()` answer the same dicts (Python) and objects (TypeScript), with the Ada read out.
-
-- `ada.versions()` (`GET /v1/ada`; `client.ada` in both): every Ada version, newest first (`name`, `kernel`,
-  `status` stable, beta, deprecated or retired, `beta`, `open`, `released`, `deprecated`, `ends`,
-  `changes_answers`, `aliases`, `summary`, `notes`, the org's `models` on it), the `latest_stable` and the server's
-  `contract`; `ada.latest_stable()` / `ada.latestStable()`.
-- `create_model(name, spec, ada=)` / `createModel(name, spec, { ada })`: left out, the latest stable (`ada-1-0`
-  today); a beta only by its name.
-- A model's Ada: `info()` carries `ada`, `ada_status` and `ada_notice` (`upgrade`, `beta`, `deprecated`, `moved`,
-  `retired`, with `to` and `ends`; Python: a `ModelInfo`, still a dict, and an `AdaNotice`); each of `models()` its
-  `ada`; each of `versions()` its `ada` and `kernel` (Python: `ModelVersion`, still a dict); a `Decision` its `ada`;
-  `usage()` the org's Ada versions (`ada`, the `/v1/ada` shape). A `beta` notice on a stable model says a beta is
-  open to try; a model on the beta has `ada_status` beta and no notice.
-- `backtest(candidates, ada=)` / `backtest(candidates, { ada })`: the active spec scored on another Ada (a
-  candidate may name its own `ada` too); the result's active run and each candidate carry their `ada`.
-- `upgrade(ada=None, note=, backtest=, wait=True)` / `upgrade({ ada, note, backtest, wait })` (`POST
-  /v1/models/{name}/upgrade`): a new version of the active spec on that Ada (none: the latest stable; an older one
-  is a downgrade), re-encoded by a job that is waited for with its progress; active once it is done. Roll back with
-  `activate(version)`.
-- Typed refusals, each an `AdaVersionError` with `ada` and `latest` (the latest stable, the fix):
-  `AdaVersionUnknownError` (`E_ADA_UNKNOWN`), `AdaVersionRetiredError` (`E_ADA_RETIRED`),
-  `AdaVersionDeprecatedError` (`E_ADA_DEPRECATED`), `AdaBetaClosedError` (`E_ADA_BETA`),
-  `AdaVersionUnavailableError` (`E_ADA_UNAVAILABLE`, a 503 never retried); an upgrade to the Ada the model runs is
-  `NoChangeError`.
-- A model on a deprecated Ada, or just moved off a retired one (`Glyphh-Ada-Notice`), is said once per client and
-  notice: Python `warnings.warn` with `AdaDeprecationWarning` (a `FutureWarning`, shown by default), TypeScript
-  `new Ada({ onWarning })` (default `console.warn`).
-- Each SDK states what it speaks: `SUPPORTED_CONTRACT` (5) and `SUPPORTED_ADA` (`ada-1-0`, `ada-1-1-beta`; other
-  names the server lists are sent as they are). An answer whose `Glyphh-Contract` (or `/v1/ada`'s `contract`) is
-  newer is refused, never read half-understood: `ClientTooOldError` (`E_CLIENT_TOO_OLD`, `contract`, `supported`),
-  saying how to upgrade. An older server, or none of the header, is read as before.
-- `contract/contract.json` 5: `headers`, `ada_versions`, `model`, `models`, `versions`, `upgrade`, `backtest` added,
-  `ada` required on `decision`, the five `E_ADA_*` codes; fixtures for each (`result_schema` checks a job's result).
-
-## 3.2.0
-
-Ada Cloud (the spec's "SDK 3.1"; 3.1.0 was already published, for clustered runtimes). Nothing of 3.0 or 3.1 breaks.
-
-- The address defaults to `https://ada.glyphh.ai` (`GLYPHH_ADA_URL` moves it; `GLYPHH_RUNTIME_URL` is still read);
-  the key is read from `GLYPHH_API_KEY`, then `GLYPHH_RUNTIME_KEY`.
-- `decide(model, data, output=, outputs=, include=, clearance=)` on `Ada` and on a model is `POST /v1/decide`: a
-  `Decision` (`outcome`, `probabilities`, `expected_cost`, `ask`, `receipts`, `facts`, `outputs`, `model`,
-  `version`), which reads as a `Result` too (`done`, `status`, `data`).
-- Models: `create_model` / `createModel`, `info`, `spec`, `delete_model` / `deleteModel`; versions: `set_spec` /
-  `setSpec`, `settings()` and `settings(changes)`, `versions`, `activate`.
-- Cases: `record_many` / `recordMany` (any number, a thousand a request), `grade`, `forget`.
-- Jobs, waited for with their progress (`on_progress` / `onProgress`): `import_file` / `importFile` (a path or bytes,
-  to a signed upload link, then the import), `export` (and `download`), `backtest`, `calibrate`, `learn_job` /
-  `learnJob`; `job`, `wait`. `learn` waits for a learn that outlasts `/v1/runs`'s minute.
-- `usage()`, typed (`Usage`): `plan`, `month` and `resets_at`, `models`, `precedents` (`used`, `max`), `requests`
-  (`used`, `max`, `over`, `overage`) and `requests_per_second`, as the server answers it (and as `cloud` on the
-  account API's /v1/me and /v1/billing); in Python it reads as the answer's dict too.
-- `LimitError` carries `reason`, `used`, `max`, `plan`, `upgrade` (the plan that reads more; none: talk to sales) and
-  `resets_at` / `resetsAt` (when the month's requests start again); `RateError` (429 `E_RATE`, past the plan's calls
-  a second) carries `retry_after` / `retryAfter` from `Retry-After` (else the body's `retry_after`) and `max`.
-- Typed errors for the cloud's codes: `AuthError`, `LimitError`, `RateError`, `InvalidError`, `TooLargeError`,
-  `ModelMissingError`, `JobMissingError`, `PrecedentMissingError`, `VersionMissingError`, `SpecError`,
-  `SpecLimitError`, `SpecReadingError`, `FewRolesError`, `MappingError`, `ImportRefusedError`, `BacktestError`,
-  `BusyError`, `NotReadyError`, `NoChangeError`, `IdempotencyError`, `ConflictError`, `VersionGoneError`,
-  `ExpiredError`, `AdaTimeoutError`, `UnavailableError`, `JobFailedError`.
-- Every write carries an `Idempotency-Key`, so it is sent again, like a read, while Ada is unreachable for a moment
-  (`E_UNAVAILABLE`, `E_TIMEOUT`, 502 to 504); a 429 is waited out by its `Retry-After` for any call.
-- `contract/contract.json` 4: `decision`, `job`, `usage` added; `answer`, `result`, `error` kept; the self-hosted
-  `limit_exceeded` and `cluster` entries gone (the SDKs keep handling them). The fixtures' usage and refusals (429
-  `E_RATE`, 403 `E_LIMIT` requests) are the server's real answers (glyphh-ai/server's ada-cloud-connector).
-
-## 3.1.0
-
-For a clustered self-hosted runtime ([running a cluster](https://docs.glyphh.ai/run-a-cluster)):
-
-- `E_NO_HEAD` (503, no head: writes wait, reads go on) is retried with backoff, `Retry-After` honoured; so is a read
-  (a GET; `query`, `facts`, `probabilities`) the runtime could not answer (unreachable, or a proxy's 502, 503, 504).
-  A write that may have been applied is never sent again. `retry_deadline` / `retryDeadline` (seconds, default 30;
-  0: never retry).
-- Read-your-writes: the highest `Rrotor-Cluster-Seq` answered is sent as `Rrotor-Min-Seq` on later calls, so a
-  read sees the client's writes on whichever node answers it. `read_your_writes=False` / `readYourWrites: false`
-  turns it off; `cluster_seq` / `clusterSeq` shows it.
-- `E_HEAD_LOST` (503: the head went while it had the write, which may have been applied) is `HeadLostError`, never retried.
-- Typed errors, each an `AdaError`: `NoHeadError`, `NotCommittedError` (the write is kept: do not resend it),
-  `RunLostError` (410), `ReadOnlyError` (a function marked `"writes": false` wrote on a follower; raised from the
-  `failed` run).
-- `result.limit_exceeded`: a `done` run that indexed nothing, the store at the licence key's precedent cap.
-- A transport may answer headers: `(status, body, headers)` in Python, `{status, body, headers}` in TypeScript.
-
-## 3.0.0
-
-- The packages are `glyphh` on PyPI (`from glyphh import Ada`) and `@glyphh-ai/glyphh` on npm, from this repository.
-  The API is that of `glyphh-ada` and `@glyphh-ai/ada` 0.4.0: change the install and the import.
-- A major version on purpose: `glyphh` up to 2.6.7 on PyPI is a different, older library. Code for 2.x does not run on
-  3.x; anything pinned to `glyphh<3` keeps the old one.
-- A runtime's address may be self-hosted, `https://<host>`, as well as `https://<machine>.glyphh.app`.
-
-## 0.4.0
-
-`learn()`.
+- 3.10.0 (2026-11-04): the beam. `beam(start, hops, width, values, miss, clearance)` on `Ada`, `POST /v1/beam`: a
+  chain of models, one model's outcome the next model's question, one read per hop; the answer is a `Beam`
+  (`outcome`, `p`, `ends`, `paths`, `lost`, `hops`, `ada`). `glyphh beam` in the command.
+- 3.7.0: jobs can be stopped and say what they are doing. `cancel_job(job)` / `cancelJob(job)` (`POST
+  /v1/jobs/{id}/cancel`; the job ends `failed` with `E_CANCELLED`), `Job.stage`, `glyphh cancel`.
+- 3.5.0: the `glyphh` command (Python): Ada Cloud from a terminal, on an API key that `glyphh login` checks and
+  keeps 0600 in `~/.glyphh/credentials.json`; `Ada()` with no key given or set uses it.
+- 3.4.0: typed outputs and discriminated unions (on `ada-1-2-beta`): a named output's `kind` (`choice`, `score`,
+  `noul`, `number`, `many`) and `when`; a `Decision` carries `p`, `value`, `level` and `applies`.
+- 3.3.0: Ada versions (contract 5): `ada.versions()`, `create_model(..., ada=)`, `backtest(..., ada=)`,
+  `upgrade()`, the `AdaVersionError` family, `AdaDeprecationWarning` / `onWarning`, `SUPPORTED_CONTRACT`,
+  `SUPPORTED_ADA` and `ClientTooOldError`.
+- 3.2.0: Ada Cloud. The address defaults to `https://ada.glyphh.ai`; `decide` and its `Decision`; models, versions,
+  cases (`record_many`, `grade`, `forget`), jobs (`import_file`, `export`, `backtest`, `calibrate`, `learn_job`),
+  `usage()`, `LimitError` and `RateError`, the typed errors for the cloud's codes, an `Idempotency-Key` on every
+  write.
+- 3.0.0: the packages became `glyphh` on PyPI (`from glyphh import Ada`) and `@glyphh-ai/glyphh` on npm. `glyphh`
+  up to 2.6.7 on PyPI is a different, older library.

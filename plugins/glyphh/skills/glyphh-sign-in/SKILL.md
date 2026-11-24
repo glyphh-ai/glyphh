@@ -18,6 +18,4 @@ Call the `glyphh_login` tool (this plugin's account mod answers it). It takes no
 
 Never ask the user for a password or token.
 
-Once signed in, the Glyphh connector's `whoami` says who they are: name, email, organisation and role, and now
-their `groups` (from the organisation's single sign-on, if any) and `reviewer` (whether they review the apps
-published to the organisation's rrotors: the `publish` skill).
+Once signed in, the Glyphh connector's `whoami` says who they are: name, email, organisation and role.

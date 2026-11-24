@@ -22,17 +22,12 @@ from glyphh import (
     BusyError,
     Decision,
     FewRolesError,
-    HeadLostError,
     Job,
     JobFailedError,
     LimitError,
     ModelMissingError,
-    NoHeadError,
-    NotCommittedError,
     RateError,
-    ReadOnlyError,
     Result,
-    RunLostError,
     SpecError,
     SpecReadingError,
     UnavailableError,
@@ -175,7 +170,7 @@ def test_a_decision_from_v1_decide_reads_as_3_0s_result_too():
     body = c["response"]["body"]
     assert (d.outcome, d.probabilities, d.ask, d.model, d.version, d.ada) == (body["outcome"], body["probabilities"], False, "tickets", body["version"], "ada-1-0")
     assert d.receipts == body["receipts"] and d.facts == body["facts"] and d.outputs is None
-    assert d.done and d.status == "done" and not d.waiting and d.data == body and not d.limit_exceeded
+    assert d.done and d.status == "done" and not d.waiting and d.data == body
 
 
 def test_a_decision_that_asks_and_one_of_several_outputs():
@@ -457,10 +452,6 @@ def test_a_read_is_sent_again_and_a_3_0_write_without_a_key_is_not(clock):
     with pytest.raises(AdaError) as caught:
         client.model("tickets").record({"a": 1}, "keep")
     assert caught.value.code == "E_UNREACHABLE" and len(fake.calls) == 1
-    client, fake = ada(OSError("reset"))
-    with pytest.raises(AdaError):
-        client.resume("r1", "yes")
-    assert len(fake.calls) == 1
 
 
 def test_too_many_requests_waits_as_retry_after_says_then_raises(clock):
@@ -506,7 +497,7 @@ def test_3_0s_calls_name_their_functions_and_a_long_learn_is_waited_for(clock):
 
 
 def test_the_url_defaults_to_ada_cloud_and_the_key_comes_from_the_environment(monkeypatch, tmp_path):
-    for name in ("GLYPHH_ADA_URL", "GLYPHH_RUNTIME_URL", "GLYPHH_API_KEY", "GLYPHH_RUNTIME_KEY"):
+    for name in ("GLYPHH_ADA_URL", "GLYPHH_API_KEY"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("HOME", str(tmp_path))  # no key kept on this machine
     with pytest.raises(AdaError) as caught:
@@ -514,12 +505,9 @@ def test_the_url_defaults_to_ada_cloud_and_the_key_comes_from_the_environment(mo
     assert caught.value.code == "E_CONFIG" and "GLYPHH_API_KEY" in caught.value.message
     assert "glyphh login" in caught.value.message
     glyphh.credentials.save_key("glyphh_ak_kept")  # what glyphh login keeps
-    assert Ada().key == "glyphh_ak_kept"
-    monkeypatch.setenv("GLYPHH_RUNTIME_KEY", "glyphh_rk_old")
-    assert Ada().key == "glyphh_rk_old" and Ada().url == DEFAULT_URL == "https://ada.glyphh.ai"
+    assert Ada().key == "glyphh_ak_kept" and Ada().url == DEFAULT_URL == "https://ada.glyphh.ai"
     monkeypatch.setenv("GLYPHH_API_KEY", "glyphh_ak_env")
-    monkeypatch.setenv("GLYPHH_RUNTIME_URL", "https://old.example/")
-    assert (Ada().key, Ada().url) == ("glyphh_ak_env", "https://old.example")
+    assert Ada().key == "glyphh_ak_env"
     monkeypatch.setenv("GLYPHH_ADA_URL", "http://ada:8080/")
     assert Ada().url == "http://ada:8080"
 
@@ -554,63 +542,35 @@ def test_a_rate_refusal_without_the_header_waits_as_its_body_says(clock):
     assert client.decide("tickets", {}).outcome and clock == [2.0]
 
 
-# a self-hosted cluster's refusals and read-your-writes, kept from 3.1 (nothing of them reaches the cloud)
-
-NO_HEAD = (503, {"error": {"code": "E_NO_HEAD", "message": "The cluster has no head."}}, {"Retry-After": "2", "Rrotor-Cluster-Seq": "1041"})
-DONE = {"run_id": "r1", "model": "incidents", "version": 1, "function": "record", "status": "done", "data": {"id": "a1"}, "step": None, "prompt": None, "seconds": 0.1}
-
-
-def test_a_clusters_no_head_is_retried_and_its_seq_sent_back(clock):
-    client, fake = ada(NO_HEAD, NO_HEAD, (200, DONE, {"Rrotor-Cluster-Seq": "1042"}), (200, {"models": []}))
-    assert client.model("incidents").record({"a": 1}).data == {"id": "a1"} and clock == [2.0, 2.0]
-    client.models()
-    assert client.cluster_seq == 1042 and fake.calls[-1][2]["rrotor-min-seq"] == "1042"
-    client, fake = ada(*[NO_HEAD] * 6, retry_deadline=9)
-    with pytest.raises(NoHeadError):
-        client.model("incidents").record({"a": 1})
-    assert len(fake.calls) == 5
-    client, fake = ada((200, DONE, {"Rrotor-Cluster-Seq": "9"}), (200, DONE), read_your_writes=False)
-    client.model("incidents").record({"a": 1})
-    client.model("incidents").record({"a": 1})
-    assert "rrotor-min-seq" not in fake.calls[1][2]
-
-
-@pytest.mark.parametrize(("code", "status", "error"), [("E_HEAD_LOST", 503, HeadLostError), ("E_NOT_COMMITTED", 503, NotCommittedError), ("E_RUN_LOST", 410, RunLostError)])
-def test_a_clusters_refusals_are_typed_and_not_sent_again(clock, code, status, error):
-    client, fake = ada((status, {"error": {"code": code, "message": "x"}}))
-    with pytest.raises(error):
-        client.model("incidents").record({"a": 1})
-    assert len(fake.calls) == 1 and clock == []
-    failed = {**DONE, "function": "query", "status": "failed", "data": {"code": "E_READ_ONLY", "reason": "query writes"}}
-    client, _ = ada((200, failed))
-    with pytest.raises(ReadOnlyError) as caught:
-        client.model("incidents").query({"a": 1})
-    assert caught.value.detail == {"run_id": "r1", "function": "query"}
-    limited = {**DONE, "data": {"status": "limit_exceeded", "indexed": False, "message": "cap", "cap": 5000}}
-    client, _ = ada((200, limited))
-    assert client.model("incidents").record({"a": 1}).limit_exceeded
-
-
 def test_retry_after_as_a_date_and_a_transport_that_answers_no_headers(clock):
     assert glyphh.client._retry_after("Wed, 21 Oct 2015 07:28:00 GMT") == 0.0
     assert glyphh.client._retry_after("1.5") == 1.5 and glyphh.client._retry_after("soon") is None
     client, _ = ada((200, {"models": []}))
-    assert client.models() == [] and client.cluster_seq == 0
+    assert client.models() == []
 
 
 def test_the_docs_tell_the_cloud_story():
-    """What a customer and Claude read about Ada: Ada Cloud and an API key, nothing to host. The runtime (rrotor, its
-    programs and CLIs) has its own docs and skills; only the Ada skill is kept free of it, so Claude never mixes an
-    Ada model up with a program."""
+    """What a customer and Claude read: Glyphh is Ada, Ada Cloud and an API key, nothing to host. No doc, skill or
+    manifest names what Glyphh no longer is."""
     for doc in ("README.md", "sdk/python/README.md", "sdk/typescript/README.md"):
         assert "ada.glyphh.ai" in (ROOT / doc).read_text(), doc
-    ada_skill = [ROOT / "plugins/glyphh/skills/ada/SKILL.md", *sorted((ROOT / "plugins/glyphh/skills/ada/references").glob("*.md"))]
-    for path in ada_skill:
+    docs = [
+        ROOT / "README.md",
+        ROOT / "CONTRIBUTING.md",
+        ROOT / "sdk/python/README.md",
+        ROOT / "sdk/typescript/README.md",
+        ROOT / "plugins/glyphh/README.md",
+        ROOT / "plugins/glyphh/.claude-plugin/plugin.json",
+        ROOT / ".claude-plugin/marketplace.json",
+        *sorted((ROOT / "plugins/glyphh/skills").rglob("*.md")),
+    ]
+    for path in docs:
         text = path.read_text()
-        for gone in ("rrotor", "self-host", "Self-host", "install.sh", "runtime key", "model.py", "glyphh.app", "licence key", "license key"):
+        for gone in ("rrotor", "self-host", "Self-host", "install.sh", "runtime key", "model.py", "glyphh.app", "licence key", "license key", "glyphh bot", "glyphh.bots", "HostedBots", "Runtime", "glyphh-memory", "Pipedream"):
             assert gone not in text, (path.name, gone)
+    assert "github.com/glyphh-ai/plugins" in (ROOT / "README.md").read_text()
     assert "GLYPHH_API_KEY" in (ROOT / "sdk/python/README.md").read_text()
-    assert glyphh.__version__ == "3.16.0"
+    assert glyphh.__version__ == "4.0.0"
     for doc in ("sdk/python/README.md", "sdk/typescript/README.md", "plugins/glyphh/skills/ada/SKILL.md"):
         text = (ROOT / doc).read_text()
         assert "ada-1-0" in text and "upgrade" in text, doc

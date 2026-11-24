@@ -1,7 +1,7 @@
 # Banking77: routing a customer's message from its text alone
 
-> **Running these scripts.** `run.py` and the `tune_*.py`/`hybrid.py` scripts run against the Ada kernel inside
-> rrotor (Glyphh's runtime), which is not in this repository: `run.py` takes the kernel's directory as its first
+> **Running these scripts.** `run.py` and the `tune_*.py`/`hybrid.py` scripts run against the Ada kernel, which is
+> not in this repository: `run.py` takes the kernel's directory as its first
 > argument. What can be checked from here is what is published: the 200-message sample and its labels, every
 > judge's answers (`results/clean/`), Ada's guesses and the judges' brief (`judge_prompt.md`). To rerun the LLM side:
 > `./fetch.sh` for `train.csv`, give a fresh Claude agent `judge_prompt.md` with `train.csv` and
@@ -147,7 +147,7 @@ once.
   calibration alike, the similarity bar and receipts untouched. Chosen inside the training set
   (`tune_evidence.py`: 0 → 83.4%, 0.5 → 85.7%, 1 → 87.5%, 2 → 88.0%, 3 → 87.8%), run once on the hold-out:
   83.3% to 88.2%, still deterministic and with receipts. The evidence
-  lives with the store, so it is what `learn()` on the runtime gives and what a spec written by hand cannot.
+  lives with the store, so it is what `learn()` on a model gives and what a spec written by hand cannot.
 - **The seeds and the pairs are levers, not wins, here.** Kernel 3.8.0 ships Ada's two seeds (WordNet 3.0's
   77,817 words with their synonyms and near words, the Moby list's 192,960 forms with their parts of speech), and
   every text role reads its words through them, so "arrive" and "come" correlate. On this data that is worth half

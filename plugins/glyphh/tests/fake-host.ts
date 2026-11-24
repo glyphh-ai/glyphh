@@ -1,6 +1,6 @@
 // A Host in memory: files, a clock that moves when told, the browser pane's
 // tool, and the fake server for HTTP. What the account code sees of the world.
-import type { FsEntry, McpToolResult, RenderSurface } from 'claude-code'
+import type { McpToolResult, RenderSurface } from 'claude-code'
 
 import type { Host, Value } from '../hooks/glyphh/host'
 import { fakeServer } from './fake-server'
@@ -46,18 +46,7 @@ function fakeFiles() {
       if (t === undefined) throw new Error(`ENOENT ${p}`)
       return t
     },
-    // A binary file is kept as its bytes' characters; the engine's `{ as: 'bytes' }` read answers base64.
-    readBytes: async p => {
-      const t = files.get(p)
-      if (t === undefined) throw new Error(`ENOENT ${p}`)
-      return btoa(t)
-    },
     write: async (p, t) => void files.set(p, t),
-    exists: async p => files.has(p) || [...files.keys()].some(k => k.startsWith(`${p}/`)),
-    list: async (dir): Promise<FsEntry[]> =>
-      [...files.keys()]
-        .filter(p => p.startsWith(`${dir}/`) && !p.slice(dir.length + 1).includes('/'))
-        .map(p => ({ name: p.slice(dir.length + 1), kind: 'file' as const, size: 1, mtimeMs: 0, isLink: false })),
   }
   return { files, modes, argvs, fs, run }
 }
@@ -93,15 +82,13 @@ const freshState = (): Host['state'] => ({
   lists: value({}),
   note: value(null),
   inviteLink: value(null),
-  apps: value({ q: '', page: 1, state: 'approved', type: '', total: 0, rejecting: null }),
 })
 
-export function fakeHost(opts: { surface?: RenderSurface; server?: string; rrotor?: boolean } = {}) {
+export function fakeHost(opts: { surface?: RenderSurface; server?: string } = {}) {
   const asked: string[] = []
   const server = fakeServer()
   const disk = fakeFiles()
   const time = fakeClock()
-  const store = new Map<string, unknown>()
   const opened: string[] = []
   const copied: string[] = []
   const pane = async (_s: string, _t: string, args?: Record<string, unknown>): Promise<McpToolResult> => {
@@ -109,13 +96,11 @@ export function fakeHost(opts: { surface?: RenderSurface; server?: string; rroto
     return { content: [{ type: 'text', text: '{"tabId":"t1"}' }], isError: false } as McpToolResult
   }
   const gh: Host = {
-    // rrotor's parts shown unless a test switches them off (GLYPHH_RROTOR=0, hooks/glyphh/shelved.ts).
-    env: { home: async () => HOME, server: async () => opts.server, rrotor: async () => (opts.rrotor === false ? '0' : undefined) },
+    env: { home: async () => HOME, server: async () => opts.server },
     http: { fetch: (url, init) => server.fetch(url, init) },
     fs: disk.fs,
     process: { run: disk.run },
     clock: time.clock,
-    store: { get: async k => store.get(k), set: async (k, v) => void store.set(k, v) },
     mcp: { call: pane },
     surface: async () => opts.surface ?? 'desktop',
     copy: async text => (copied.push(text), true),
@@ -129,5 +114,5 @@ export function fakeHost(opts: { surface?: RenderSurface; server?: string; rroto
     state: freshState(),
   }
   const note = async () => (await gh.state.note.get())?.text ?? ''
-  return { gh, server, s: server.s, ...disk, store, opened, copied, advance: time.advance, note, asked }
+  return { gh, server, s: server.s, ...disk, opened, copied, advance: time.advance, note, asked }
 }

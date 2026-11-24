@@ -5,10 +5,8 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, RenderSurface } from 'claude-code'
 
-import type { AppsView, AuthState, GlyphhNote, GlyphhSection, Json } from '../../types'
-import { FIRST_VIEW } from './apps'
+import type { AuthState, GlyphhNote, GlyphhSection, Json } from '../../types'
 import { glyphhCommand, startGlyphh } from './command'
-import { rrotorShown } from './shelved'
 import type { Host } from './host'
 import { InlineSignIn } from './inline'
 import { Panel } from './panel'
@@ -22,7 +20,6 @@ const me = atom({ plugin: 'glyphh', key: 'me' } as const, null as Json | null)
 const lists = atom({ plugin: 'glyphh', key: 'lists' } as const, {} as Record<string, Json[]>)
 const note = atom({ plugin: 'glyphh', key: 'note' } as const, null as GlyphhNote | null)
 const inviteLink = atom({ plugin: 'glyphh', key: 'inviteLink' } as const, null as string | null)
-const apps = atom({ plugin: 'glyphh', key: 'apps' } as const, FIRST_VIEW as AppsView)
 
 function hostState($: EngineInterface): Host['state'] {
   return {
@@ -32,24 +29,19 @@ function hostState($: EngineInterface): Host['state'] {
     lists: { get: () => read($, lists), set: async fn => void (await update($, lists, fn)) },
     note: { get: () => read($, note), set: async fn => void (await update($, note, fn)) },
     inviteLink: { get: () => read($, inviteLink), set: async fn => void (await update($, inviteLink, fn)) },
-    apps: { get: () => read($, apps), set: async fn => void (await update($, apps, fn)) },
   }
 }
 
 function host($: EngineInterface): Host {
   return {
-    env: { home: () => $.env.get('HOME'), server: () => $.env.get('GLYPHH_SERVER_URL'), rrotor: () => $.env.get('GLYPHH_RROTOR') },
+    env: { home: () => $.env.get('HOME'), server: () => $.env.get('GLYPHH_SERVER_URL') },
     http: { fetch: (url, init) => $.http.fetch(url, init) },
     fs: {
       read: async path => String(await $.fs.read(path)),
-      readBytes: async path => (await $.fs.read(path, { as: 'bytes' })).base64,
       write: (path, text) => $.fs.write(path, text),
-      exists: path => $.fs.exists(path),
-      list: path => $.fs.list(path),
     },
     process: { run: (argv, init) => $.process.run(argv, init) },
     clock: { now: () => $.clock.now(), after: (ms, fn) => $.clock.after(ms, fn) },
-    store: { get: key => $.store.get(key), set: (key, value) => $.store.set(key, value as never) },
     mcp: { call: (server, tool, args) => $.mcp.call(server, tool, args) },
     // Which surfaces this session draws on (session.surface is deprecated): the
     // desktop app's first; with none attached yet, no terminal program in the
@@ -79,10 +71,8 @@ function host($: EngineInterface): Host {
 
 async function start($: EngineInterface) {
   await startGlyphh(host($))
-  // Apps and publish only while rrotor is shown (./shelved; it is unless GLYPHH_RROTOR=0).
-  const shown = await rrotorShown(host($))
-  const description = shown ? 'Glyphh: sign in, account, org, plan, billing, apps, publish' : 'Glyphh: sign in, account, org, plan, billing'
-  const argumentHint = shown ? '[section | signin | signout | publish <file>]' : '[section | signin | signout]'
+  const description = 'Glyphh: sign in, account, org, plan, billing'
+  const argumentHint = '[section | signin | signout]'
   await $.command
     .register({ name: 'glyphh', description, argumentHint })
     .catch(() => $.command.register({ name: 'glyphh-account', description }))
@@ -140,7 +130,7 @@ export function registerGlyphh(on: On) {
     }
     const ui: Ui = $.ui.resolve(e as typeof e & { surface: 'desktop' })
     const gh = host($)
-    const ctx = { gh, ui, surface: e.surface, me: await read($, me), lists: await read($, lists), apps: await read($, apps), rrotor: await rrotorShown(gh) }
+    const ctx = { gh, ui, surface: e.surface, me: await read($, me), lists: await read($, lists) }
     return Panel(ctx, await read($, auth), await read($, section), await read($, note))
   })
 }
