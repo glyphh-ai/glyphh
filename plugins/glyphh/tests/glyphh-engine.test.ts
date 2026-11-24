@@ -8,14 +8,11 @@ import { fakeServer } from './fake-server'
 
 const SURFACES = ['terminal', 'desktop'] as const
 
-// rrotor's parts of the panel shown, as the plugin ships, unless a test switches them off (GLYPHH_RROTOR=0).
-function world(on: On, surface: 'terminal' | 'desktop', rrotor = true) {
+function world(on: On, surface: 'terminal' | 'desktop') {
   const server = fakeServer()
   const files = new Map<string, string>()
   const opened: string[] = []
-  const shown: Record<string, string> = rrotor ? {} : { GLYPHH_RROTOR: '0' }
-  mock.env(on, surface === 'terminal' ? { HOME, TERM_PROGRAM: 'ghostty', ...shown } : { HOME, ...shown })
-  mock.store(on)
+  mock.env(on, surface === 'terminal' ? { HOME, TERM_PROGRAM: 'ghostty' } : { HOME })
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
   on('command.register', (_$, e) => ({ value: { command: e.name } }))
   on('tool.register', (_$, e) => ({ value: { tool: `mcp__glyphh__${e.name}` } }))
@@ -28,23 +25,10 @@ function world(on: On, surface: 'terminal' | 'desktop', rrotor = true) {
     return { value: t }
   })
   on('fs.write', (_$, e) => (files.set(e.path, e.text), { value: undefined }))
-  on('fs.exists', (_$, e) => ({ value: [...files.keys()].some(k => k === e.path || k.startsWith(`${e.path}/`)) }))
-  on('fs.list', (_$, e) => ({
-    value: [...files.keys()]
-      .filter(k => k.startsWith(`${e.path}/`))
-      .map(k => ({ name: k.slice(String(e.path).length + 1), kind: 'file' as const, size: 1, mtimeMs: 0, isLink: false })),
-  }))
   const ran: string[][] = []
   on('process.run', (_$, e) => {
     ran.push([...e.argv])
     if (e.argv[0] === '/bin/sh') files.set(String(e.argv[5]), String(e.init?.stdin))
-    if (String(e.argv[1]).endsWith('/skills/rrotor/scripts/rrotor.sh') && e.argv[2] === 'update') {
-      // The rrotor skill's script: the pinned release pulled and run, the link kept.
-      const from = server.s.rrotor.version
-      server.s.rrotor.version = '0.5.0'
-      const out = JSON.stringify({ ok: true, from, to: '0.5.0', link: server.s.rrotor.link })
-      return { value: { exitCode: 0, stdout: `${out}\n`, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
-    }
     return { value: { exitCode: 0, stdout: 'testmac', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
   })
   on('session.surface', () => ({ value: surface }))
@@ -108,28 +92,30 @@ test('/glyphh signin prints the code and link; signed in, the panel shows the ac
   expect(w.server.s.name).toBe('Christopher')
 })
 
-// rrotor switched off (hooks/glyphh/shelved.ts): with GLYPHH_RROTOR=0 the panel is the account's and Ada's alone, and
-// /glyphh publish, link and apps are not commands.
+// Glyphh is Ada alone: the panel is the account's four sections, the only host called is the Glyphh server, and only
+// for sign-in, /v1/me, /v1/installs, /v1/org, /v1/plans and /v1/billing.
+const KEPT = /^\/v1\/(device\/(code|token)|me(\/identities(\/[^/]+)?)?|installs(\/[^/]+)?|sign-out|org(\/(members|invites)(\/[^/]+)?)?|plans|billing\/(checkout|portal|plan))$/
 for (const surface of SURFACES) {
-  test(`${surface}: rrotor switched off: no Apps tab, no rrotor row, and publish, link and apps answer the usage`, async ($, on) => {
-    const w = world(on, surface, false)
+  test(`${surface}: the panel is Account, Org, Plan and Billing; anything else answers the usage; only kept endpoints are called`, async ($, on) => {
+    const w = world(on, surface)
     w.files.set(`${HOME}/.glyphh/install.json`, JSON.stringify({ install_id: 'i1', token: w.server.TOKEN }))
-    w.files.set(`${HOME}/.glyphh/rrotor/token`, 'rt-local-1\n')
     await $.session.start({ cwd: '/proj', surface, isInteractive: true })
     const ui = await $.ui.mount(pane(surface))
+    for (const id of ['account', 'org', 'plan', 'billing']) {
+      expect(await ui.find({ key: `sec-${id}` })).toBeDefined()
+      await ui.press({ key: `sec-${id}` })
+    }
     await ui.press({ key: 'sec-account' })
     expect(await ui.find({ type: 'Input', key: 'me-name' })).toBeDefined()
-    expect(await ui.find({ key: 'sec-plan' })).toBeDefined()
     expect(await ui.find({ key: 'sec-apps' })).toBeUndefined()
-    expect(await ui.find({ type: 'Button', key: 'rrotor-link' })).toBeUndefined()
-    expect(await ui.find({ type: 'Text', text: /rrotor/ })).toBeUndefined()
     const run = async (args: string) =>
       (await $.command.run({ command: 'glyphh', args } as unknown as CommandRunInput)) as { text: string }
     for (const args of ['publish page.html', 'link', 'apps']) {
       expect((await run(args)).text).toBe('Usage: /glyphh [login | logout | account | org | plan | billing]')
     }
-    expect(w.server.s.tokens).toEqual([])
-    expect(w.server.s.calls.some(c => c.path.startsWith('/v1/apps') || c.path === '/v1/runtime/local')).toBe(false)
+    expect(w.server.s.calls.length).toBeGreaterThan(0)
+    expect(w.server.s.calls.filter(c => !KEPT.test(c.path)).map(c => c.path)).toEqual([])
+    expect(w.ran.every(argv => ['hostname', '/usr/sbin/ioreg', '/bin/sh', '/bin/rm', 'osascript', 'reg', 'wmic', 'getmac'].includes(String(argv[0])))).toBe(true)
   })
 }
 
@@ -143,94 +129,6 @@ test('/glyphh after another session signed in (install.json written mid-session)
 })
 
 for (const surface of SURFACES) {
-  test(`${surface}: Apps lists the published ones as cards with a type chip and Open; the type filter cycles; a reviewer sees the drafts and acts; search narrows`, async ($, on) => {
-    const w = world(on, surface)
-    w.files.set(`${HOME}/.glyphh/install.json`, JSON.stringify({ install_id: 'i1', token: w.server.TOKEN }))
-    await $.session.start({ cwd: '/proj', surface, isInteractive: true })
-    const ui = await $.ui.mount(pane(surface))
-    await ui.press({ key: 'sec-apps' })
-    expect(await ui.find({ type: 'Text', text: 'App 1' })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: 'Page' })).toBeDefined() // the type chip
-    expect(await ui.find({ type: 'Text', text: 'Dashboard' })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: /acme-prod · v1/ })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: /Everyone · Published by Chris · 2026-11-01/ })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: /sre · Published by Chris/ })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: '1–3 of 3' })).toBeDefined()
-    expect(await ui.find({ type: 'Button', key: 'app-next' })).toBeUndefined()
-    await ui.press({ key: 'app-open-a1' })
-    expect(w.opened).toEqual(surface === 'desktop' ? ['https://rrotor.acme.test/apps/app-1/'] : [])
-    expect(await ui.find({ type: 'Button', key: 'app-retire-a1' })).toBeDefined()
-    expect(await ui.find({ type: 'Button', key: 'app-approve-a1' })).toBeUndefined()
-
-    // The type filter: one button, cycling.
-    expect((await ui.find({ type: 'Button', key: 'app-type' }))?.props.label).toBe('All types')
-    await ui.press({ key: 'app-type' })
-    expect((await ui.find({ type: 'Button', key: 'app-type' }))?.props.label).toBe('Pages')
-    expect(await ui.find({ type: 'Text', text: 'App 1' })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: 'App 2' })).toBeUndefined()
-    for (const label of ['Dashboards', 'Docs', 'Diagrams', 'Decks', 'Designs']) {
-      await ui.press({ key: 'app-type' })
-      expect((await ui.find({ type: 'Button', key: 'app-type' }))?.props.label).toBe(label)
-    }
-    expect(await ui.find({ type: 'Text', text: 'No designs here.' })).toBeDefined()
-    await ui.press({ key: 'app-type' })
-    expect((await ui.find({ type: 'Button', key: 'app-type' }))?.props.label).toBe('All types')
-    expect(await ui.find({ type: 'Text', text: 'App 2' })).toBeDefined()
-
-    await ui.press({ key: 'app-view-draft' })
-    expect(await ui.find({ type: 'Text', text: 'App 4' })).toBeDefined()
-    await ui.press({ key: 'app-reject-a4' })
-    expect(await ui.find({ type: 'Input', key: 'app-reason-a4' })).toBeDefined()
-    await ui.input({ key: 'app-reason-a4', text: 'Numbers are wrong.' })
-    expect(w.server.s.apps.find(a => a.id === 'a4')?.reason).toBe('Numbers are wrong.')
-    expect(await ui.find({ type: 'Text', text: 'Rejected, with the reason.' })).toBeDefined()
-    await ui.press({ key: 'app-view-rejected' })
-    expect(await ui.find({ type: 'Text', text: /Rejected: Numbers are wrong\./ })).toBeDefined()
-    await ui.press({ key: 'app-approve-a5' })
-    expect(w.server.s.apps.find(a => a.id === 'a5')?.state).toBe('approved')
-
-    await ui.press({ key: 'app-view-approved' })
-    await ui.input({ key: 'app-search', text: 'app-5' })
-    expect(await ui.find({ type: 'Text', text: 'App 5' })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: 'App 1' })).toBeUndefined()
-    await ui.input({ key: 'app-search', text: 'zzz' })
-    expect(await ui.find({ type: 'Text', text: 'Nothing matches "zzz".' })).toBeDefined()
-
-    w.server.s.reviewer = false
-    await ui.press({ key: 'sec-apps' })
-    expect(await ui.find({ type: 'Button', key: 'app-view-draft' })).toBeUndefined()
-    expect(await ui.find({ type: 'Button', key: 'app-retire-a2' })).toBeUndefined()
-  })
-
-  test(`${surface}: Account shows this machine's rrotor and links it to Glyphh`, async ($, on) => {
-    const w = world(on, surface)
-    w.files.set(`${HOME}/.glyphh/install.json`, JSON.stringify({ install_id: 'i1', token: w.server.TOKEN }))
-    await $.session.start({ cwd: '/proj', surface, isInteractive: true })
-    const ui = await $.ui.mount(pane(surface))
-    await ui.press({ key: 'sec-account' })
-    expect(await ui.find({ type: 'Text', text: 'No rrotor on this machine: ask Claude to "install rrotor".' })).toBeDefined()
-    expect(await ui.find({ type: 'Button', key: 'rrotor-link' })).toBeUndefined()
-
-    w.files.set(`${HOME}/.glyphh/rrotor/token`, 'rt-local-1\n')
-    await ui.press({ key: 'sec-account' })
-    expect(await ui.find({ type: 'Text', text: 'Not linked (rrotor 0.2.0)' })).toBeDefined()
-    expect((await ui.find({ type: 'Button', key: 'rrotor-link' }))?.props.label).toBe('link')
-    await ui.press({ key: 'rrotor-link' })
-    expect(await ui.find({ type: 'Text', text: /Linked to Glyphh as rt-local-1/ })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: 'Linked as rt-local-1 (rrotor 0.2.0)' })).toBeDefined()
-    expect((await ui.find({ type: 'Button', key: 'rrotor-link' }))?.props.label).toBe('link again')
-    expect(w.server.s.tokens).toEqual([{ runtime_id: 'rt-local-1', token: 'rtok-1' }])
-
-    // 0.2.0 is behind the release this plugin pins: the row says so and offers update, which runs the skill's script.
-    expect(await ui.find({ type: 'Text', text: 'Update to 0.5.0' })).toBeDefined()
-    expect((await ui.find({ type: 'Button', key: 'rrotor-update' }))?.props.label).toBe('update')
-    await ui.press({ key: 'rrotor-update' })
-    expect(w.ran.some(argv => argv[0] === 'sh' && String(argv[1]).endsWith('/skills/rrotor/scripts/rrotor.sh') && argv[2] === 'update')).toBe(true)
-    expect(await ui.find({ type: 'Text', text: 'rrotor updated from 0.2.0 to 0.5.0. Claude Code loads its tools again at /mcp or its next start.' })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: 'Linked as rt-local-1 (rrotor 0.5.0)' })).toBeDefined()
-    expect(await ui.find({ type: 'Button', key: 'rrotor-update' })).toBeUndefined()
-  })
-
   test(`${surface}: Plan shows the cloud use and the plans' caps; Billing offers checkout, Talk to us and no seats`, async ($, on) => {
     const w = world(on, surface)
     w.files.set(`${HOME}/.glyphh/install.json`, JSON.stringify({ install_id: 'i1', token: w.server.TOKEN }))

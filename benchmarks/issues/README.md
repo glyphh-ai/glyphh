@@ -1,7 +1,6 @@
 # Benchmark: GitHub issue triage — free text, Ada's weakest fit
 
-> **Running this script.** `holdout.py` runs against the Ada kernel inside rrotor (Glyphh's runtime), which is not in
-> this repository; the issues themselves are public GitHub data and are not kept here. The table is what is
+> **Running this script.** `holdout.py` runs against the Ada kernel, which is not in this repository; the issues themselves are public GitHub data and are not kept here. The table is what is
 > published.
 
 The first thing tried, kept for the record: closed issues from two public repositories, the outcome a label humans

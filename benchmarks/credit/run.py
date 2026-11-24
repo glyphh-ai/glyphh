@@ -9,9 +9,9 @@ import sys
 import time
 from pathlib import Path
 
-RROTOR = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(RROTOR / "tests" / "kernel"))
-sys.path.insert(0, str(RROTOR / "src"))
+KERNEL_REPO = Path(__file__).resolve().parents[2]  # where the Ada kernel is checked out; it is not in this repository
+sys.path.insert(0, str(KERNEL_REPO / "tests" / "kernel"))
+sys.path.insert(0, str(KERNEL_REPO / "src"))
 import glyphh_spec  # noqa: E402
 
 HERE = Path(__file__).parent

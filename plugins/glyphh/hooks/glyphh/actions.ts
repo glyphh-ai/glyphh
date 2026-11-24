@@ -5,24 +5,14 @@ import type { RenderSurface } from 'claude-code'
 import type { GlyphhSection, Json } from '../../types'
 import { api, listOf } from './api'
 import { act, forget, loadMe } from './account'
-import { loadApps } from './apps'
-import { linkRrotor, rrotorHealth } from './link'
-import { rrotorShown } from './shelved'
 import { openUrl } from './open'
 import { say, setList } from './state'
 import type { Host } from './host'
 
 const enc = encodeURIComponent
 
-/** This machine's rrotor, as the Account section shows it (one entry: its health). */
-const loadRrotor = async (gh: Host) => setList(gh, 'rrotor', [await rrotorHealth(gh).catch((err: unknown): Json => ({ status: 'down', error: String(err) }))])
-
 const LOADERS: Record<GlyphhSection, (gh: Host) => Promise<unknown>> = {
-  account: async gh => {
-    await api(gh, 'GET', '/v1/installs').then(b => setList(gh, 'installs', listOf(b, 'installs')))
-    // The local rrotor is not asked after while it is switched off (./shelved).
-    if (await rrotorShown(gh)) await loadRrotor(gh)
-  },
+  account: gh => api(gh, 'GET', '/v1/installs').then(b => setList(gh, 'installs', listOf(b, 'installs'))),
   org: async gh => {
     await api(gh, 'GET', '/v1/org').then(b => setList(gh, 'org', [b]))
     await api(gh, 'GET', '/v1/org/members').then(b => setList(gh, 'members', listOf(b, 'members')))
@@ -30,11 +20,12 @@ const LOADERS: Record<GlyphhSection, (gh: Host) => Promise<unknown>> = {
   },
   plan: gh => api(gh, 'GET', '/v1/plans', undefined, { auth: false }).then(b => setList(gh, 'plans', listOf(b, 'plans'))),
   billing: gh => api(gh, 'GET', '/v1/plans', undefined, { auth: false }).then(b => setList(gh, 'plans', listOf(b, 'plans'))),
-  apps: loadApps,
 }
 
 /** Opens a section and loads what it shows (signed out: nothing to load). */
-export async function openSection(gh: Host, id: GlyphhSection) {
+export async function openSection(gh: Host, asked: GlyphhSection) {
+  // A section an earlier version of the plugin left in this session's state opens the account.
+  const id: GlyphhSection = asked in LOADERS ? asked : 'account'
   await gh.state.section.set(() => id)
   if ((await gh.state.auth.get()).status !== 'in') return
   await act(gh, undefined, async () => {
@@ -57,42 +48,6 @@ export const revokeInstall = (gh: Host, id: string) =>
     const a = await gh.state.auth.get()
     if (a.status === 'in' && a.install_id === id) return forget(gh, 'This install was revoked.')
     await reload(gh)
-  })
-
-/** The Account section's Link: this machine's rrotor linked to Glyphh (again), then shown as it stands. */
-export const linkLocalRrotor = (gh: Host) =>
-  act(gh, undefined, async () => {
-    try {
-      await say(gh, await linkRrotor(gh))
-    } finally {
-      await loadRrotor(gh)
-    }
-  })
-
-const UPDATE_WAIT_MS = 10 * 60 * 1000 // a pull of the image over a slow line
-
-/** The Account section's update: the rrotor skill's script pulls the release this plugin pins and makes the
- *  container again on its volume, then links it; the script's one JSON line becomes the panel's word. */
-export const updateRrotor = (gh: Host) =>
-  act(gh, undefined, async () => {
-    try {
-      const script = `${gh.pluginRoot}/skills/rrotor/scripts/rrotor.sh`
-      const r = await gh.process.run(['sh', script, 'update'], { timeoutMs: UPDATE_WAIT_MS })
-      let out: Json = {}
-      try {
-        out = JSON.parse(r.stdout.trim().split('\n').pop() ?? '{}') as Json
-      } catch {
-        out = {}
-      }
-      if (r.exitCode !== 0 || out.ok !== true) {
-        await say(gh, `rrotor was not updated: ${String(out.error ?? r.stdout.trim() ?? '').slice(0, 300) || `the script exited ${r.exitCode}`}`, true)
-        return
-      }
-      const from = out.from ? ` from ${String(out.from)}` : ''
-      await say(gh, `rrotor updated${from} to ${String(out.to ?? '')}. Claude Code loads its tools again at /mcp or its next start.`)
-    } finally {
-      await loadRrotor(gh)
-    }
   })
 
 export const renameOrg = (gh: Host, name: string) =>
