@@ -5,16 +5,6 @@
 -- make what this file makes. The models in glyphh_server.models map these tables for queries, and
 -- tests/db/test_schema_sql.py fails when they disagree.
 
--- mods
-CREATE TABLE IF NOT EXISTS mods (
-    slug TEXT NOT NULL,
-    name TEXT NOT NULL,
-    description TEXT NOT NULL,
-    active BOOLEAN DEFAULT true NOT NULL,
-    sort INTEGER DEFAULT 0 NOT NULL,
-    PRIMARY KEY (slug)
-);
-
 -- oauth_clients
 CREATE TABLE IF NOT EXISTS oauth_clients (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
@@ -49,27 +39,18 @@ CREATE TABLE IF NOT EXISTS plan_versions (
     price_cents INTEGER,
     billing_interval TEXT,
     self_serve BOOLEAN DEFAULT true NOT NULL,
-    max_machines INTEGER,
-    precedents INTEGER,
-    sync BOOLEAN DEFAULT false NOT NULL,
-    ha BOOLEAN DEFAULT false NOT NULL,
-    offline BOOLEAN DEFAULT false NOT NULL,
     sso BOOLEAN DEFAULT false NOT NULL,
     cloud_precedents INTEGER,
     cloud_requests INTEGER,
     cloud_rps INTEGER,
     cloud_overage BOOLEAN DEFAULT false NOT NULL,
     llm_tokens BIGINT,
-    connections INTEGER,
-    connection_cents INTEGER,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     PRIMARY KEY (id),
     CONSTRAINT plan_versions_version UNIQUE (plan_id, version),
     CONSTRAINT plan_versions_llm CHECK (coalesce(llm_tokens, 0) >= 0),
-    CONSTRAINT plan_versions_connections CHECK (coalesce(connections, 0) >= 0 AND coalesce(connection_cents, 0) >= 0),
     CONSTRAINT plan_versions_price CHECK (coalesce(price_cents, 0) >= 0),
     CONSTRAINT plan_versions_interval CHECK (billing_interval IN ('month', 'year')),
-    CONSTRAINT plan_versions_limits CHECK (coalesce(max_machines, 0) >= 0 AND coalesce(precedents, 0) >= 0),
     CONSTRAINT plan_versions_cloud CHECK (coalesce(cloud_precedents, 0) >= 0 AND coalesce(cloud_requests, 0) >= 0 AND coalesce(cloud_rps, 1) > 0),
     FOREIGN KEY(plan_id) REFERENCES plans (id) ON DELETE RESTRICT,
     UNIQUE (stripe_price_id)
@@ -196,26 +177,6 @@ CREATE TABLE IF NOT EXISTS llm_usage_days (
     FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE
 );
 
--- licenses
-CREATE TABLE IF NOT EXISTS licenses (
-    id UUID NOT NULL,
-    org_id UUID NOT NULL,
-    tier TEXT NOT NULL,
-    max_nodes INTEGER,
-    max_precedents INTEGER,
-    cluster_sync_enabled BOOLEAN NOT NULL,
-    issued_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    customer_id TEXT NOT NULL,
-    revoked_at TIMESTAMP WITH TIME ZONE,
-    key TEXT NOT NULL,
-    PRIMARY KEY (id),
-    CONSTRAINT licenses_tier CHECK (tier IN ('free', 'pro', 'team', 'enterprise')),
-    CONSTRAINT licenses_limits CHECK (coalesce(max_nodes, 1) >= 1 AND coalesce(max_precedents, 0) >= 0),
-    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE
-);
-CREATE INDEX IF NOT EXISTS licenses_newest ON licenses (org_id, issued_at);
-
 -- users
 CREATE TABLE IF NOT EXISTS users (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
@@ -251,20 +212,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS connector_grants_user_client ON connector_gran
 CREATE INDEX IF NOT EXISTS ix_connector_grants_client_id ON connector_grants (client_id);
 CREATE INDEX IF NOT EXISTS ix_connector_grants_user_id ON connector_grants (user_id);
 
--- github_installations
-CREATE TABLE IF NOT EXISTS github_installations (
-    id UUID DEFAULT gen_random_uuid() NOT NULL,
-    user_id UUID NOT NULL,
-    installation_id BIGINT NOT NULL,
-    account_login TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    removed_at TIMESTAMP WITH TIME ZONE,
-    PRIMARY KEY (id),
-    UNIQUE (user_id),
-    FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE,
-    UNIQUE (installation_id)
-);
-
 -- identities
 CREATE TABLE IF NOT EXISTS identities (
     provider TEXT NOT NULL,
@@ -286,7 +233,6 @@ CREATE TABLE IF NOT EXISTS org_sso (
     enforced BOOLEAN DEFAULT false NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    reviewers TEXT[] DEFAULT '{}'::text[] NOT NULL,
     PRIMARY KEY (org_id),
     FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE
 );
@@ -378,512 +324,26 @@ CREATE TABLE IF NOT EXISTS oauth_codes (
 CREATE INDEX IF NOT EXISTS ix_oauth_codes_client_id ON oauth_codes (client_id);
 CREATE INDEX IF NOT EXISTS ix_oauth_codes_user_id ON oauth_codes (user_id);
 
--- rrotors
-CREATE TABLE IF NOT EXISTS rrotors (
-    id UUID DEFAULT gen_random_uuid() NOT NULL,
-    user_id UUID NOT NULL,
-    mode TEXT NOT NULL,
-    install_id UUID,
-    image_version TEXT,
-    state TEXT NOT NULL,
-    token_hash TEXT NOT NULL,
-    last_seen_at TIMESTAMP WITH TIME ZONE,
-    seq BIGINT DEFAULT 0 NOT NULL,
-    name TEXT,
-    public_url TEXT,
-    last_heartbeat_at TIMESTAMP WITH TIME ZONE,
-    machine_hash TEXT,
-    active_runs INTEGER,
-    precedents BIGINT,
-    precedents_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    PRIMARY KEY (id),
-    CONSTRAINT rrotors_mode CHECK (mode IN ('local', 'self')),
-    CONSTRAINT rrotors_local_install CHECK ((mode = 'local') = (install_id IS NOT NULL)),
-    CONSTRAINT rrotors_self_address CHECK ((mode = 'self') = (public_url IS NOT NULL AND name IS NOT NULL)),
-    FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE,
-    UNIQUE (install_id),
-    FOREIGN KEY(install_id) REFERENCES installs (id) ON DELETE CASCADE,
-    UNIQUE (token_hash)
-);
-CREATE INDEX IF NOT EXISTS ix_rrotors_user_id ON rrotors (user_id);
-
--- apps: the catalogue of apps on an org's rrotors (docs/specs/apps.md), one row per app per rrotor
-CREATE TABLE IF NOT EXISTS apps (
-    id UUID DEFAULT gen_random_uuid() NOT NULL,
-    org_id UUID NOT NULL,
-    runtime_id UUID NOT NULL,
-    name TEXT NOT NULL,
-    title TEXT NOT NULL,
-    description TEXT NOT NULL,
-    type TEXT DEFAULT 'page' NOT NULL,
-    version INTEGER NOT NULL,
-    commit_sha TEXT NOT NULL,
-    roles TEXT[] DEFAULT '{}'::text[] NOT NULL,
-    state TEXT DEFAULT 'draft' NOT NULL,
-    submitted_by UUID,
-    submitted_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    reviewed_by UUID,
-    reviewed_at TIMESTAMP WITH TIME ZONE,
-    reason TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    PRIMARY KEY (id),
-    CONSTRAINT apps_state CHECK (state IN ('draft', 'approved', 'rejected', 'retired')),
-    CONSTRAINT apps_type CHECK (type IN ('page', 'dashboard', 'doc', 'diagram', 'deck', 'design')),
-    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
-    FOREIGN KEY(runtime_id) REFERENCES rrotors (id) ON DELETE CASCADE,
-    FOREIGN KEY(submitted_by) REFERENCES users (id) ON DELETE SET NULL,
-    FOREIGN KEY(reviewed_by) REFERENCES users (id) ON DELETE SET NULL
-);
-CREATE UNIQUE INDEX IF NOT EXISTS apps_one_per_app ON apps (runtime_id, name);
-CREATE INDEX IF NOT EXISTS ix_apps_org_id ON apps (org_id);
-
--- templates: the template library Glyphh ships (docs/specs/templates.md), seeded at every start; not an org's
-CREATE TABLE IF NOT EXISTS templates (
-    slug TEXT NOT NULL,
-    name TEXT NOT NULL,
-    category TEXT NOT NULL,
-    summary TEXT NOT NULL,
-    version INTEGER NOT NULL,
-    body JSONB NOT NULL,
-    active BOOLEAN DEFAULT true NOT NULL,
-    sort INTEGER DEFAULT 0 NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    PRIMARY KEY (slug)
-);
-
--- template_installs: each person's installed templates, one per template
-CREATE TABLE IF NOT EXISTS template_installs (
-    id UUID DEFAULT gen_random_uuid() NOT NULL,
-    org_id UUID NOT NULL,
-    user_id UUID NOT NULL,
-    slug TEXT NOT NULL,
-    version INTEGER NOT NULL,
-    made TEXT[] DEFAULT '{}'::text[] NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    PRIMARY KEY (id),
-    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
-    FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE,
-    FOREIGN KEY(slug) REFERENCES templates (slug) ON DELETE CASCADE
-);
-CREATE UNIQUE INDEX IF NOT EXISTS template_installs_one_per_person ON template_installs (user_id, slug);
-CREATE INDEX IF NOT EXISTS ix_template_installs_org_id ON template_installs (org_id);
-
--- connections, bots, bot_runs, bot_keys: hosted bots (docs/specs/bots.md): an org's accounts at other services
--- (Pipedream's), its bots (the SDK's bot package: its loop, gates and limits, its agent's prompt and skills, its look
--- or its own drawn mascot, and per connection the tools it may use; the runner's state; its Ada key, sealed; its
--- schedule and next run; the org's rrotor it runs on, none for Glyphh cloud), their runs, and the org's own
--- Anthropic API key (sealed) its bots' agent steps run on
-CREATE TABLE IF NOT EXISTS connections (
-    id UUID DEFAULT gen_random_uuid() NOT NULL,
-    org_id UUID NOT NULL,
-    app TEXT NOT NULL,
-    app_name TEXT NOT NULL,
-    app_icon TEXT DEFAULT '' NOT NULL,
-    account_id TEXT NOT NULL,
-    label TEXT DEFAULT '' NOT NULL,
-    permissions JSONB DEFAULT '{}'::jsonb NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    PRIMARY KEY (id),
-    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE
-);
-CREATE UNIQUE INDEX IF NOT EXISTS connections_one_account ON connections (org_id, account_id);
-
-CREATE TABLE IF NOT EXISTS bots (
-    id UUID DEFAULT gen_random_uuid() NOT NULL,
-    org_id UUID NOT NULL,
-    created_by UUID,
-    slug TEXT NOT NULL,
-    name TEXT NOT NULL,
-    summary TEXT DEFAULT '' NOT NULL,
-    look JSONB DEFAULT '{}'::jsonb NOT NULL,
-    mascot TEXT DEFAULT '' NOT NULL,
-    permission_mode TEXT DEFAULT 'ask' NOT NULL,
-    voice TEXT DEFAULT '' NOT NULL,
-    instructions TEXT DEFAULT '' NOT NULL,
-    model TEXT NOT NULL,
-    scopes JSONB DEFAULT '[]'::jsonb NOT NULL,
-    spec JSONB DEFAULT '{}'::jsonb NOT NULL,
-    skills JSONB DEFAULT '{}'::jsonb NOT NULL,
-    state BYTEA,
-    ada_key TEXT DEFAULT '' NOT NULL,
-    schedule JSONB DEFAULT '{}'::jsonb NOT NULL,
-    next_run_at TIMESTAMP WITH TIME ZONE,
-    runs_on UUID,
-    connector_tools JSONB DEFAULT '[]'::jsonb NOT NULL,
-    folders JSONB DEFAULT '[]'::jsonb NOT NULL,
-    effort TEXT DEFAULT 'medium' NOT NULL,
-    role TEXT DEFAULT 'bot' NOT NULL,
-    task TEXT DEFAULT '' NOT NULL,
-    examples JSONB DEFAULT '[]'::jsonb NOT NULL,
-    old_spec JSONB,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    PRIMARY KEY (id),
-    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
-    FOREIGN KEY(created_by) REFERENCES users (id) ON DELETE SET NULL,
-    FOREIGN KEY(runs_on) REFERENCES rrotors (id) ON DELETE SET NULL,
-    CONSTRAINT bots_permission_mode CHECK (permission_mode IN ('ask', 'connection', 'auto')),
-    CONSTRAINT bots_effort CHECK (effort IN ('low', 'medium', 'high', 'xhigh', 'max')),
-    CONSTRAINT bots_role CHECK (role IN ('bot', 'orchestrator'))
-);
-CREATE UNIQUE INDEX IF NOT EXISTS bots_one_slug ON bots (org_id, slug);
-CREATE UNIQUE INDEX IF NOT EXISTS bots_one_orchestrator ON bots (org_id) WHERE role = 'orchestrator';
-CREATE INDEX IF NOT EXISTS bots_due ON bots (next_run_at) WHERE next_run_at IS NOT NULL;
-
-CREATE TABLE IF NOT EXISTS bot_runs (
-    id UUID DEFAULT gen_random_uuid() NOT NULL,
-    org_id UUID NOT NULL,
-    bot_id UUID NOT NULL,
-    user_id UUID,
-    status TEXT DEFAULT 'queued' NOT NULL,
-    input TEXT DEFAULT '' NOT NULL,
-    output TEXT DEFAULT '' NOT NULL,
-    error TEXT DEFAULT '' NOT NULL,
-    log JSONB DEFAULT '[]'::jsonb NOT NULL,
-    data JSONB DEFAULT '{}'::jsonb NOT NULL,
-    question JSONB DEFAULT '{}'::jsonb NOT NULL,
-    loop_run TEXT DEFAULT '' NOT NULL,
-    input_tokens BIGINT DEFAULT 0 NOT NULL,
-    output_tokens BIGINT DEFAULT 0 NOT NULL,
-    cost_micros BIGINT DEFAULT 0 NOT NULL,
-    own_key BOOLEAN DEFAULT false NOT NULL,
-    machine TEXT DEFAULT '' NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    started_at TIMESTAMP WITH TIME ZONE,
-    finished_at TIMESTAMP WITH TIME ZONE,
-    rrotor_id UUID,
-    remote_seq BIGINT DEFAULT 0 NOT NULL,
-    remote JSONB DEFAULT '{}'::jsonb NOT NULL,
-    approvals JSONB DEFAULT '{}'::jsonb NOT NULL,
-    session_id TEXT DEFAULT '' NOT NULL,
-    PRIMARY KEY (id),
-    CONSTRAINT bot_runs_status
-        CHECK (status IN ('queued', 'running', 'dispatched', 'needs_input', 'done', 'failed', 'skipped')),
-    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
-    FOREIGN KEY(bot_id) REFERENCES bots (id) ON DELETE CASCADE,
-    FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE SET NULL,
-    FOREIGN KEY(rrotor_id) REFERENCES rrotors (id) ON DELETE SET NULL
-);
-CREATE INDEX IF NOT EXISTS bot_runs_newest ON bot_runs (bot_id, created_at);
-CREATE UNIQUE INDEX IF NOT EXISTS bot_runs_one_live ON bot_runs (bot_id)
-    WHERE status IN ('queued', 'running', 'dispatched', 'needs_input');
-
--- bot_plugins, bot_sessions (docs/specs/bot-agent-loop.md): a bot's plugins, each a Claude plugin package (a
--- template's, kept at the version installed: its files by path), and a live run's Agent SDK session, mirrored line by
--- line so an answer carries the same conversation on after a restart; a session goes when its run ends
-CREATE TABLE IF NOT EXISTS bot_plugins (
-    id UUID DEFAULT gen_random_uuid() NOT NULL,
-    org_id UUID NOT NULL,
-    bot_id UUID NOT NULL,
-    name TEXT NOT NULL,
-    version TEXT NOT NULL,
-    source TEXT NOT NULL,
-    files JSONB DEFAULT '{}'::jsonb NOT NULL,
-    installed_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    PRIMARY KEY (id),
-    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
-    FOREIGN KEY(bot_id) REFERENCES bots (id) ON DELETE CASCADE
-);
-CREATE UNIQUE INDEX IF NOT EXISTS bot_plugins_one ON bot_plugins (bot_id, name);
-
-CREATE TABLE IF NOT EXISTS bot_sessions (
-    id BIGINT GENERATED BY DEFAULT AS IDENTITY NOT NULL,
-    org_id UUID NOT NULL,
-    run_id UUID NOT NULL,
-    session_id TEXT NOT NULL,
-    subpath TEXT DEFAULT '' NOT NULL,
-    entry JSONB NOT NULL,
-    PRIMARY KEY (id),
-    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
-    FOREIGN KEY(run_id) REFERENCES bot_runs (id) ON DELETE CASCADE
-);
-CREATE INDEX IF NOT EXISTS bot_sessions_of_run ON bot_sessions (run_id, session_id, subpath, id);
-
--- programs, program_runs, program_events (docs/specs/programs.md): an org's deterministic workflows, each one
--- program.py (its steps the FLOW literal in it) that one bot or several follow, scheduled like a bot; each program's
--- runs; and every run's audit trail, append only
-CREATE TABLE IF NOT EXISTS programs (
-    id UUID DEFAULT gen_random_uuid() NOT NULL,
-    org_id UUID NOT NULL,
-    created_by UUID,
-    slug TEXT NOT NULL,
-    name TEXT NOT NULL,
-    summary TEXT DEFAULT '' NOT NULL,
-    bot_id UUID,
-    source TEXT NOT NULL,
-    template TEXT DEFAULT '' NOT NULL,
-    runs_on UUID,
-    schedule JSONB DEFAULT '{}'::jsonb NOT NULL,
-    next_run_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    PRIMARY KEY (id),
-    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
-    FOREIGN KEY(created_by) REFERENCES users (id) ON DELETE SET NULL,
-    FOREIGN KEY(bot_id) REFERENCES bots (id) ON DELETE SET NULL,
-    FOREIGN KEY(runs_on) REFERENCES rrotors (id) ON DELETE SET NULL
-);
-CREATE UNIQUE INDEX IF NOT EXISTS programs_one_slug ON programs (org_id, slug);
-CREATE INDEX IF NOT EXISTS programs_due ON programs (next_run_at) WHERE next_run_at IS NOT NULL;
-
-CREATE TABLE IF NOT EXISTS program_runs (
-    id UUID DEFAULT gen_random_uuid() NOT NULL,
-    org_id UUID NOT NULL,
-    program_id UUID NOT NULL,
-    user_id UUID,
-    trigger TEXT DEFAULT 'person' NOT NULL,
-    status TEXT DEFAULT 'queued' NOT NULL,
-    input TEXT DEFAULT '' NOT NULL,
-    at TEXT DEFAULT '' NOT NULL,
-    outputs JSONB DEFAULT '{}'::jsonb NOT NULL,
-    question JSONB DEFAULT '{}'::jsonb NOT NULL,
-    error TEXT DEFAULT '' NOT NULL,
-    approvals JSONB DEFAULT '{}'::jsonb NOT NULL,
-    machine TEXT DEFAULT '' NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    started_at TIMESTAMP WITH TIME ZONE,
-    finished_at TIMESTAMP WITH TIME ZONE,
-    PRIMARY KEY (id),
-    CONSTRAINT program_runs_status CHECK (status IN ('queued', 'running', 'dispatched', 'needs_input', 'done', 'failed', 'skipped')),
-    CONSTRAINT program_runs_trigger CHECK (trigger IN ('person', 'schedule', 'connector')),
-    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
-    FOREIGN KEY(program_id) REFERENCES programs (id) ON DELETE CASCADE,
-    FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE SET NULL
-);
-CREATE INDEX IF NOT EXISTS program_runs_newest ON program_runs (program_id, created_at);
-CREATE UNIQUE INDEX IF NOT EXISTS program_runs_one_live ON program_runs (program_id)
-    WHERE status IN ('queued', 'running', 'dispatched', 'needs_input');
-
-CREATE TABLE IF NOT EXISTS program_events (
-    id BIGINT GENERATED BY DEFAULT AS IDENTITY NOT NULL,
-    org_id UUID NOT NULL,
-    run_id UUID NOT NULL,
-    at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    kind TEXT NOT NULL,
-    step TEXT DEFAULT '' NOT NULL,
-    title TEXT DEFAULT '' NOT NULL,
-    bot_id UUID,
-    user_id UUID,
-    ok BOOLEAN DEFAULT true NOT NULL,
-    detail TEXT DEFAULT '' NOT NULL,
-    PRIMARY KEY (id),
-    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
-    FOREIGN KEY(run_id) REFERENCES program_runs (id) ON DELETE CASCADE,
-    FOREIGN KEY(bot_id) REFERENCES bots (id) ON DELETE SET NULL,
-    FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE SET NULL
-);
-CREATE INDEX IF NOT EXISTS program_events_of_run ON program_events (run_id, id);
-
-CREATE TABLE IF NOT EXISTS bot_keys (
-    org_id UUID NOT NULL,
-    anthropic_key TEXT NOT NULL,
-    hint TEXT NOT NULL,
-    set_by UUID,
-    set_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    PRIMARY KEY (org_id),
-    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
-    FOREIGN KEY(set_by) REFERENCES users (id) ON DELETE SET NULL
-);
-
--- bot_decisions: each gate's decision on each item of each run, copied from the runner's runs.sqlite after each go
--- and made readable (label, fields), searched (body), relabelled and confirmed (docs/specs/bots.md, 12)
-CREATE TABLE IF NOT EXISTS bot_decisions (
-    id UUID DEFAULT gen_random_uuid() NOT NULL,
-    org_id UUID NOT NULL,
-    bot_id UUID NOT NULL,
-    loop_run TEXT DEFAULT '' NOT NULL,
-    gate TEXT NOT NULL,
-    step TEXT DEFAULT '' NOT NULL,
-    n INTEGER DEFAULT 0 NOT NULL,
-    key TEXT DEFAULT '' NOT NULL,
-    kind TEXT DEFAULT 'gate' NOT NULL,
-    label TEXT DEFAULT '' NOT NULL,
-    fields JSONB DEFAULT '{}'::jsonb NOT NULL,
-    "case" JSONB DEFAULT '{}'::jsonb NOT NULL,
-    outcome TEXT,
-    who TEXT DEFAULT 'ada' NOT NULL,
-    mode TEXT DEFAULT '' NOT NULL,
-    p DOUBLE PRECISION,
-    guess TEXT,
-    recorded BOOLEAN DEFAULT false NOT NULL,
-    corrected TEXT,
-    confirmed BOOLEAN DEFAULT false NOT NULL,
-    precedent TEXT DEFAULT '' NOT NULL,
-    body TEXT DEFAULT '' NOT NULL,
-    search TSVECTOR GENERATED ALWAYS AS (to_tsvector('simple'::regconfig, body)) STORED,
-    at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    PRIMARY KEY (id),
-    CONSTRAINT bot_decisions_who CHECK (who IN ('ada', 'you', 'default')),
-    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
-    FOREIGN KEY(bot_id) REFERENCES bots (id) ON DELETE CASCADE
-);
-CREATE UNIQUE INDEX IF NOT EXISTS bot_decisions_one ON bot_decisions (bot_id, loop_run, gate, step, n, key);
-CREATE INDEX IF NOT EXISTS bot_decisions_newest ON bot_decisions (bot_id, at);
-CREATE INDEX IF NOT EXISTS bot_decisions_search ON bot_decisions USING gin (search);
-
--- projects, project_runs, project_turns, run_marks: a crew of the org's bots, in no order, on one GitHub repo and a
--- set of instructions, taking turns one at a time on Glyphh cloud or one of its rrotors, each turn a pull request
--- (docs/specs/bots.md, 10); a person's pinned and archived runs in their recents. They were swarms, swarm_runs,
--- swarm_turns (0023_projects.sql); github_keys, the org's pasted GitHub token, is dropped there.
-CREATE TABLE IF NOT EXISTS projects (
-    id UUID DEFAULT gen_random_uuid() NOT NULL,
-    org_id UUID NOT NULL,
-    created_by UUID,
-    slug TEXT NOT NULL,
-    name TEXT NOT NULL,
-    repo_url TEXT NOT NULL,
-    base_branch TEXT DEFAULT 'main' NOT NULL,
-    members JSONB DEFAULT '[]'::jsonb NOT NULL,
-    review TEXT DEFAULT 'each_turn' NOT NULL,
-    runs_on UUID,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    instructions TEXT DEFAULT '' NOT NULL,
-    instructions_path TEXT DEFAULT 'PROJECT.md' NOT NULL,
-    turn_mode TEXT DEFAULT 'wait' NOT NULL,
-    orchestrator UUID,
-    max_turns INTEGER DEFAULT 30 NOT NULL,
-    max_spend_cents INTEGER,
-    narrate BOOLEAN DEFAULT false NOT NULL,
-    github_installation_id BIGINT,
-    PRIMARY KEY (id),
-    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
-    FOREIGN KEY(created_by) REFERENCES users (id) ON DELETE SET NULL,
-    FOREIGN KEY(runs_on) REFERENCES rrotors (id) ON DELETE SET NULL,
-    FOREIGN KEY(orchestrator) REFERENCES bots (id) ON DELETE SET NULL,
-    CONSTRAINT projects_review CHECK (review IN ('each_turn', 'end')),
-    CONSTRAINT projects_turn_mode CHECK (turn_mode IN ('wait', 'orchestrator'))
-);
-CREATE UNIQUE INDEX IF NOT EXISTS projects_one_slug ON projects (org_id, slug);
-
-CREATE TABLE IF NOT EXISTS project_runs (
-    id UUID DEFAULT gen_random_uuid() NOT NULL,
-    org_id UUID NOT NULL,
-    project_id UUID NOT NULL,
-    user_id UUID,
-    task TEXT NOT NULL,
-    status TEXT DEFAULT 'running' NOT NULL,
-    members JSONB DEFAULT '[]'::jsonb NOT NULL,
-    review TEXT NOT NULL,
-    rrotor_id UUID,
-    stamp TEXT NOT NULL,
-    done JSONB DEFAULT '[]'::jsonb NOT NULL,
-    error TEXT DEFAULT '' NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    finished_at TIMESTAMP WITH TIME ZONE,
-    turn_mode TEXT DEFAULT 'wait' NOT NULL,
-    max_turns INTEGER DEFAULT 30 NOT NULL,
-    max_spend_cents INTEGER,
-    ended TEXT DEFAULT '' NOT NULL,
-    work_branch TEXT,
-    pr_url TEXT,
-    number INTEGER,
-    on_cloud BOOLEAN DEFAULT false NOT NULL,
-    machine TEXT,
-    model TEXT,
-    effort TEXT,
-    PRIMARY KEY (id),
-    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
-    FOREIGN KEY(project_id) REFERENCES projects (id) ON DELETE CASCADE,
-    FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE SET NULL,
-    FOREIGN KEY(rrotor_id) REFERENCES rrotors (id) ON DELETE SET NULL,
-    CONSTRAINT project_runs_status CHECK (status IN ('running', 'needs_input', 'done', 'failed'))
-);
-CREATE INDEX IF NOT EXISTS project_runs_newest ON project_runs (project_id, created_at);
-CREATE UNIQUE INDEX IF NOT EXISTS project_runs_one_live ON project_runs (project_id)
-    WHERE status IN ('running', 'needs_input');
-
-CREATE TABLE IF NOT EXISTS project_turns (
-    id UUID DEFAULT gen_random_uuid() NOT NULL,
-    org_id UUID NOT NULL,
-    run_id UUID NOT NULL,
-    n INTEGER NOT NULL,
-    bot_id UUID,
-    bot_slug TEXT NOT NULL,
-    bot_name TEXT NOT NULL,
-    branch TEXT NOT NULL,
-    status TEXT DEFAULT 'running' NOT NULL,
-    said TEXT DEFAULT '' NOT NULL,
-    title TEXT DEFAULT '' NOT NULL,
-    pr_url TEXT,
-    number INTEGER,
-    head_sha TEXT,
-    files JSONB DEFAULT '[]'::jsonb NOT NULL,
-    done BOOLEAN DEFAULT false NOT NULL,
-    error TEXT DEFAULT '' NOT NULL,
-    call_id UUID NOT NULL,
-    remote_seq BIGINT DEFAULT 0 NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    finished_at TIMESTAMP WITH TIME ZONE,
-    picked_by TEXT DEFAULT 'wait' NOT NULL,
-    why TEXT DEFAULT '' NOT NULL,
-    input_tokens BIGINT DEFAULT 0 NOT NULL,
-    output_tokens BIGINT DEFAULT 0 NOT NULL,
-    cost_micros BIGINT DEFAULT 0 NOT NULL,
-    PRIMARY KEY (id),
-    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE,
-    FOREIGN KEY(run_id) REFERENCES project_runs (id) ON DELETE CASCADE,
-    FOREIGN KEY(bot_id) REFERENCES bots (id) ON DELETE SET NULL,
-    CONSTRAINT project_turns_status CHECK (status IN ('picking', 'running', 'open', 'unchanged', 'merging', 'merged',
-        'conflict', 'rejecting', 'rejected', 'failed', 'cancelled'))
-);
-CREATE UNIQUE INDEX IF NOT EXISTS project_turns_of_run ON project_turns (run_id, n);
-CREATE INDEX IF NOT EXISTS project_turns_call ON project_turns (call_id);
-CREATE UNIQUE INDEX IF NOT EXISTS project_turns_one_out ON project_turns (run_id)
-    WHERE status IN ('picking', 'running', 'merging', 'rejecting');
-
-CREATE TABLE IF NOT EXISTS run_marks (
-    user_id UUID NOT NULL,
-    run_id UUID NOT NULL,
-    org_id UUID NOT NULL,
-    pinned BOOLEAN DEFAULT false NOT NULL,
-    archived BOOLEAN DEFAULT false NOT NULL,
-    PRIMARY KEY (user_id, run_id),
-    FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE,
-    FOREIGN KEY(org_id) REFERENCES orgs (id) ON DELETE CASCADE
-);
-
--- nodes
-CREATE TABLE IF NOT EXISTS nodes (
-    rrotor_id UUID NOT NULL,
-    node_id TEXT NOT NULL,
-    cluster_id UUID,
-    role TEXT,
-    precedents BIGINT,
-    version TEXT,
-    seen_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
-    PRIMARY KEY (rrotor_id, node_id),
-    CONSTRAINT nodes_role CHECK (role IN ('standalone', 'head', 'follower')),
-    FOREIGN KEY(rrotor_id) REFERENCES rrotors (id) ON DELETE CASCADE
-);
-
--- runtime_keys
+-- runtime_keys: Ada Cloud's API keys (glyphh_ak_, glyphh_ada/keys.py), each kept as its SHA-256, acting in its
+-- maker's org with its clearance (0 to 1). The name is from when it also held the keys of self-hosted runtimes;
+-- `cloud` is the only scope left (0028_one_thing.sql).
 CREATE TABLE IF NOT EXISTS runtime_keys (
     id UUID DEFAULT gen_random_uuid() NOT NULL,
-    rrotor_id UUID,
     user_id UUID NOT NULL,
     name TEXT NOT NULL,
     key_hash TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     expires_at TIMESTAMP WITH TIME ZONE,
     revoked_at TIMESTAMP WITH TIME ZONE,
-    calls BIGINT DEFAULT 0 NOT NULL,
-    last_used_at TIMESTAMP WITH TIME ZONE,
-    scope TEXT DEFAULT 'runtime' NOT NULL,
+    scope TEXT DEFAULT 'cloud' NOT NULL,
     clearance NUMERIC(4, 3) DEFAULT 1 NOT NULL,
     PRIMARY KEY (id),
-    FOREIGN KEY(rrotor_id) REFERENCES rrotors (id) ON DELETE CASCADE,
     FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE,
     UNIQUE (key_hash),
-    CONSTRAINT runtime_keys_scope CHECK (scope IN ('runtime', 'cloud')),
+    CONSTRAINT runtime_keys_scope CHECK (scope = 'cloud'),
     CONSTRAINT runtime_keys_clearance CHECK (clearance >= 0 AND clearance <= 1)
 );
-CREATE INDEX IF NOT EXISTS ix_runtime_keys_rrotor_id ON runtime_keys (rrotor_id);
 CREATE INDEX IF NOT EXISTS ix_runtime_keys_user_id ON runtime_keys (user_id);
-CREATE UNIQUE INDEX IF NOT EXISTS rrotors_self_url ON rrotors (user_id, public_url) WHERE mode = 'self';
-CREATE INDEX IF NOT EXISTS rrotors_self_host ON rrotors (public_url) WHERE mode = 'self';
 
 -- tokens
 CREATE TABLE IF NOT EXISTS tokens (
@@ -1070,74 +530,6 @@ ALTER TABLE tokens ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tokens FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON tokens;
 CREATE POLICY tenant ON tokens USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR install_id IN (SELECT id FROM installs));
-ALTER TABLE rrotors ENABLE ROW LEVEL SECURITY;
-ALTER TABLE rrotors FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON rrotors;
-CREATE POLICY tenant ON rrotors USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR user_id IN (SELECT id FROM users));
-ALTER TABLE apps ENABLE ROW LEVEL SECURITY;
-ALTER TABLE apps FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON apps;
-CREATE POLICY tenant ON apps USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
-ALTER TABLE template_installs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE template_installs FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON template_installs;
-CREATE POLICY tenant ON template_installs USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
-ALTER TABLE connections ENABLE ROW LEVEL SECURITY;
-ALTER TABLE connections FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON connections;
-CREATE POLICY tenant ON connections USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
-ALTER TABLE bots ENABLE ROW LEVEL SECURITY;
-ALTER TABLE bots FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON bots;
-CREATE POLICY tenant ON bots USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
-ALTER TABLE bot_runs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE bot_runs FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON bot_runs;
-CREATE POLICY tenant ON bot_runs USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
-ALTER TABLE bot_plugins ENABLE ROW LEVEL SECURITY;
-ALTER TABLE bot_plugins FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON bot_plugins;
-CREATE POLICY tenant ON bot_plugins USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
-ALTER TABLE programs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE programs FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON programs;
-CREATE POLICY tenant ON programs USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
-ALTER TABLE program_runs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE program_runs FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON program_runs;
-CREATE POLICY tenant ON program_runs USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
-ALTER TABLE program_events ENABLE ROW LEVEL SECURITY;
-ALTER TABLE program_events FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON program_events;
-CREATE POLICY tenant ON program_events USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
-ALTER TABLE bot_sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE bot_sessions FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON bot_sessions;
-CREATE POLICY tenant ON bot_sessions USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
-ALTER TABLE bot_keys ENABLE ROW LEVEL SECURITY;
-ALTER TABLE bot_keys FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON bot_keys;
-CREATE POLICY tenant ON bot_keys USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
-ALTER TABLE bot_decisions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE bot_decisions FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON bot_decisions;
-CREATE POLICY tenant ON bot_decisions USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
-ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
-ALTER TABLE projects FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON projects;
-CREATE POLICY tenant ON projects USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
-ALTER TABLE project_runs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE project_runs FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON project_runs;
-CREATE POLICY tenant ON project_runs USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
-ALTER TABLE project_turns ENABLE ROW LEVEL SECURITY;
-ALTER TABLE project_turns FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON project_turns;
-CREATE POLICY tenant ON project_turns USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
-ALTER TABLE run_marks ENABLE ROW LEVEL SECURITY;
-ALTER TABLE run_marks FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON run_marks;
-CREATE POLICY tenant ON run_marks USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
 ALTER TABLE connector_grants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE connector_grants FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON connector_grants;
@@ -1150,22 +542,10 @@ ALTER TABLE oauth_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE oauth_codes FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON oauth_codes;
 CREATE POLICY tenant ON oauth_codes USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR user_id IN (SELECT id FROM users));
-ALTER TABLE github_installations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE github_installations FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON github_installations;
-CREATE POLICY tenant ON github_installations USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR user_id IN (SELECT id FROM users));
 ALTER TABLE runtime_keys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE runtime_keys FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant ON runtime_keys;
 CREATE POLICY tenant ON runtime_keys USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR user_id IN (SELECT id FROM users));
-ALTER TABLE licenses ENABLE ROW LEVEL SECURITY;
-ALTER TABLE licenses FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON licenses;
-CREATE POLICY tenant ON licenses USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR org_id = nullif(current_setting('glyphh.org_id', true), '')::uuid);
-ALTER TABLE nodes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE nodes FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant ON nodes;
-CREATE POLICY tenant ON nodes USING (nullif(current_setting('glyphh.org_id', true), '') IS NULL OR rrotor_id IN (SELECT id FROM rrotors));
 -- Staff only: a session acting for an org sees no row of these.
 ALTER TABLE admin_audit ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_audit FORCE ROW LEVEL SECURITY;

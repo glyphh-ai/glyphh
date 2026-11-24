@@ -143,12 +143,12 @@ async def test_a_new_allowance_alone_is_a_new_version_that_takes_the_price_and_t
     async with engine.begin() as conn:
         plan_id = (await conn.execute(insert(Plan).values(name="Carry tokens", sort=9).returning(Plan.id))).scalar_one()
         values = {"plan_id": plan_id, "version": 1, "price_cents": 4_900, "billing_interval": "month"}
-        made = insert(PlanVersion).values(**values, stripe_price_id="price_test_tokens", max_machines=2)
+        made = insert(PlanVersion).values(**values, stripe_price_id="price_test_tokens")
         old = (await conn.execute(made.returning(PlanVersion.id))).scalar_one()
     who = await person(engine)
     async with engine.begin() as conn:
         await conn.execute(update(Org).where(Org.id == who.org_id).values(plan_version_id=old))
-        carry = seed.PlanSeed("Carry tokens", 4_900, "month", True, 2, None, seed.Features(), llm_tokens=7_000)
+        carry = seed.PlanSeed("Carry tokens", 4_900, "month", True, llm_tokens=7_000)
         await seed._seed_version(conn, carry, None)
         new = await newest_version(conn, "Carry tokens")
         assert (new.version, new.llm_tokens, new.stripe_price_id, new.price_cents) == (

@@ -40,12 +40,10 @@ async def test_a_plan_seeded_without_a_price_gets_one_as_a_new_version(engine: A
 
     async with engine.begin() as conn:
         plan_id = (await conn.execute(insert(Plan).values(name="Trial", sort=9).returning(Plan.id))).scalar_one()
-        await conn.execute(
-            insert(PlanVersion).values(plan_id=plan_id, version=1, price_cents=0, max_machines=0, precedents=0)
-        )
+        await conn.execute(insert(PlanVersion).values(plan_id=plan_id, version=1, price_cents=0))
     from glyphh_server.db import seed
 
-    trial = seed.PlanSeed("Trial", 0, "month", True, 0, 0, seed.Features())
+    trial = seed.PlanSeed("Trial", 0, "month", True)
     async with engine.begin() as conn:
         await seed._seed_version(conn, trial, "price_test_trial")
     assert await _versions(engine, "Trial") == [(1, None), (2, "price_test_trial")]
@@ -65,13 +63,13 @@ async def test_new_cloud_limits_are_a_new_version_that_takes_the_price_and_the_o
     async with engine.begin() as conn:
         plan_id = (await conn.execute(insert(Plan).values(name="Carry", sort=9).returning(Plan.id))).scalar_one()
         values = {"plan_id": plan_id, "version": 1, "price_cents": 4_900, "billing_interval": "month"}
-        made = insert(PlanVersion).values(**values, stripe_price_id="price_test_carry", max_machines=2, sync=True)
+        made = insert(PlanVersion).values(**values, stripe_price_id="price_test_carry", self_serve=False, sso=True)
         old = (await conn.execute(made.returning(PlanVersion.id))).scalar_one()
     who = await person(engine)
     async with engine.begin() as conn:
         await conn.execute(update(Org).where(Org.id == who.org_id).values(plan_version_id=old))
     cloud = seed.Cloud(1_000, 2_000, 3, True)
-    carry = seed.PlanSeed("Carry", 4_900, "month", True, 2, None, seed.Features(sync=True), cloud)
+    carry = seed.PlanSeed("Carry", 4_900, "month", True, cloud)
     for _ in range(2):  # again: nothing more
         async with engine.begin() as conn:
             await seed._seed_version(conn, carry, None)
@@ -79,9 +77,9 @@ async def test_new_cloud_limits_are_a_new_version_that_takes_the_price_and_the_o
     async with engine.begin() as conn:
         new = await newest_version(conn, "Carry")
         assert (new.cloud_precedents, new.cloud_requests, new.cloud_rps, new.cloud_overage) == (1_000, 2_000, 3, True)
-        kept = select(PlanVersion.price_cents, PlanVersion.max_machines, PlanVersion.sync)
+        kept = select(PlanVersion.price_cents, PlanVersion.self_serve, PlanVersion.sso)
         deal = (await conn.execute(kept.where(PlanVersion.id == new.id))).one()
-        assert tuple(deal) == (4_900, 2, True)  # the deal as it was, its unread columns too
+        assert tuple(deal) == (4_900, False, True)  # the deal as it was, not as the seed has it
         pinned = (await conn.execute(select(Org.plan_version_id).where(Org.id == who.org_id))).scalar_one()
         assert pinned == new.id
         free = (await newest_version(conn, "Free")).id
@@ -105,17 +103,17 @@ async def test_the_schema_step_runs_as_a_module(engine: AsyncEngine) -> None:
 
 
 async def test_the_plans_carry_their_price_limits_and_features(engine: AsyncEngine) -> None:
-    columns = (PlanVersion.price_cents, PlanVersion.max_machines, PlanVersion.precedents, PlanVersion.offline)
+    columns = (PlanVersion.price_cents, PlanVersion.billing_interval, PlanVersion.self_serve, PlanVersion.sso)
     async with engine.connect() as conn:
         rows = await conn.execute(
             select(Plan.name, *columns).join(Plan).where(PlanVersion.version == 1, Plan.active).order_by(Plan.sort)
         )
         assert [tuple(r) for r in rows] == [
-            ("Free", 0, 1, 5_000, False),
-            ("Basic", 2_000, 1, 5_000, False),
-            ("Pro", 9_900, 3, 50_000, False),
-            ("Team", 29_900, 10, 500_000, False),
-            ("Enterprise", None, None, None, True),
+            ("Free", 0, None, True, False),
+            ("Basic", 2_000, "month", True, False),
+            ("Pro", 9_900, "month", True, False),
+            ("Team", 29_900, "month", True, False),
+            ("Enterprise", None, "year", False, True),  # single sign-on is Enterprise's alone
         ]
 
 

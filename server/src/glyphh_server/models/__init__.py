@@ -1,32 +1,21 @@
 """The schema, a module per table. docs/architecture.md (Data model) draws it."""
 
 from glyphh_server.models.ada_usage import AdaMeterEvent, AdaModelDay, AdaUsage
-from glyphh_server.models.app import STATES, TYPES, App
 from glyphh_server.models.base import Base
-from glyphh_server.models.bot import RUN_STATUSES, Bot, BotKey, BotPlugin, BotRun, BotSession, Connection
-from glyphh_server.models.bot_decision import BotDecision
 from glyphh_server.models.connector_grant import ConnectorGrant
 from glyphh_server.models.connector_token import TOKEN_KINDS, ConnectorToken
 from glyphh_server.models.device_code import DeviceCode
-from glyphh_server.models.github_installation import GitHubInstallation
 from glyphh_server.models.identity import PROVIDERS, Identity
 from glyphh_server.models.install import MACHINE_ID, SURFACES, Install
 from glyphh_server.models.invite import Invite
-from glyphh_server.models.license import TIERS, LicenseRecord
 from glyphh_server.models.llm import LEDGER_KINDS, LlmBalance, LlmLedger, LlmUsageDay
-from glyphh_server.models.mod import Mod
-from glyphh_server.models.node import ROLES_IN_CLUSTER, Node
 from glyphh_server.models.oauth_client import AUTH_METHODS, OAuthClient
 from glyphh_server.models.oauth_code import OAuthCode
 from glyphh_server.models.org import BILLING_STATUSES, Org
 from glyphh_server.models.org_sso import OrgSso, SsoDomain
 from glyphh_server.models.plan import Plan, PlanVersion
-from glyphh_server.models.program import Program, ProgramEvent, ProgramRun
-from glyphh_server.models.project import Project, ProjectRun, ProjectTurn, RunMark
-from glyphh_server.models.rrotor import MODES, Rrotor
 from glyphh_server.models.runtime_key import RuntimeKey
 from glyphh_server.models.staff import SEVERITIES, AdminAudit, OpsEvent
-from glyphh_server.models.template import Template, TemplateInstall
 from glyphh_server.models.token import Token
 from glyphh_server.models.traffic import (
     GitHubTrafficDay,
@@ -43,46 +32,28 @@ __all__ = [
     "BILLING_STATUSES",
     "LEDGER_KINDS",
     "MACHINE_ID",
-    "MODES",
     "PROVIDERS",
     "ROLES",
-    "ROLES_IN_CLUSTER",
-    "RUN_STATUSES",
     "SEVERITIES",
-    "STATES",
     "SURFACES",
-    "TIERS",
     "TOKEN_KINDS",
-    "TYPES",
     "AdaMeterEvent",
     "AdaModelDay",
     "AdaUsage",
     "AdminAudit",
-    "App",
     "Base",
-    "Bot",
-    "BotDecision",
-    "BotKey",
-    "BotPlugin",
-    "BotRun",
-    "BotSession",
-    "Connection",
     "ConnectorGrant",
     "ConnectorToken",
     "DeviceCode",
-    "GitHubInstallation",
     "GitHubTrafficDay",
     "GitHubTrafficRepo",
     "GitHubTrafficTop",
     "Identity",
     "Install",
     "Invite",
-    "LicenseRecord",
     "LlmBalance",
     "LlmLedger",
     "LlmUsageDay",
-    "Mod",
-    "Node",
     "OAuthClient",
     "OAuthCode",
     "OpsEvent",
@@ -90,18 +61,8 @@ __all__ = [
     "OrgSso",
     "Plan",
     "PlanVersion",
-    "Program",
-    "ProgramEvent",
-    "ProgramRun",
-    "Project",
-    "ProjectRun",
-    "ProjectTurn",
-    "Rrotor",
-    "RunMark",
     "RuntimeKey",
     "SsoDomain",
-    "Template",
-    "TemplateInstall",
     "Token",
     "TrafficDay",
     "TrafficTop",

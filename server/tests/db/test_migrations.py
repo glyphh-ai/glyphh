@@ -106,17 +106,17 @@ async def test_a_new_database_records_every_migration_without_running_it(own: As
 
 async def test_a_kept_database_runs_each_migration_once_in_order(baseline: AsyncEngine, folder: Path) -> None:
     async with baseline.begin() as conn:
-        await conn.execute(text("INSERT INTO mods (slug, name, description) VALUES ('kept', 'Kept', 'Kept data')"))
-    (folder / _next(1, "mods_note")).write_text("ALTER TABLE mods ADD COLUMN note TEXT;")
+        await conn.execute(text("INSERT INTO plans (name) VALUES ('Kept')"))
+    (folder / _next(1, "plans_note")).write_text("ALTER TABLE plans ADD COLUMN note TEXT;")
     await apply_schema(baseline, SETTINGS_HERE)
     await apply_schema(baseline, SETTINGS_HERE)  # run again, the ALTER would fail
-    (folder / _next(2, "mods_note_set")).write_text("UPDATE mods SET note = 'noted' WHERE slug = 'kept';")
+    (folder / _next(2, "plans_note_set")).write_text("UPDATE plans SET note = 'noted' WHERE name = 'Kept';")
     await apply_schema(baseline, SETTINGS_HERE)
     real = [(n, p.stem) for n, p in REAL]
-    mine = [(len(REAL) + 1, _next(1, "mods_note")[:-4]), (len(REAL) + 2, _next(2, "mods_note_set")[:-4])]
+    mine = [(len(REAL) + 1, _next(1, "plans_note")[:-4]), (len(REAL) + 2, _next(2, "plans_note_set")[:-4])]
     assert await _recorded(baseline) == [(0, "baseline"), *real, *mine]
     async with baseline.connect() as conn:
-        assert (await conn.execute(text("SELECT note FROM mods WHERE slug = 'kept'"))).scalar() == "noted"
+        assert (await conn.execute(text("SELECT note FROM plans WHERE name = 'Kept'"))).scalar() == "noted"
 
 
 def test_migrations_are_named_and_numbered_from_0001_without_a_gap(tmp_path: Path) -> None:
