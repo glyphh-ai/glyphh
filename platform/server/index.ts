@@ -7,6 +7,7 @@ import { createBot, isBotPath, serveBotRedirect } from './bot.js';
 import { createDemo, hostOf, readDemoConfig, serveDemoPage, type HistoryRow } from './demo.js';
 import { createGames, readGamesHost } from './games.js';
 import { readGames } from './gamesAdmin.js';
+import { createScreener, isScreenerPath, serveScreenerRedirect } from './screener.js';
 import { createVoice, isVoicePath, serveVoiceRedirect } from './voice.js';
 
 /** Production: the route handlers, the built pages, and index.html for every other path; the demo and the games on their own hosts. */
@@ -37,13 +38,21 @@ const onDemo = (req: Request) => {
   const path = new URL(req.url).pathname;
   return isVoicePath(path) ? voice.fetch(req) : isBotPath(path) ? bot.fetch(req) : demo.fetch(req);
 };
+// demo.glyphh.ai/screener: the Resume Screener plugin's own code on a pasted application; its page is served with the others'.
+const screenerDaily = Number(process.env.DEMO_SCREENER_DAILY);
+const screener = serveScreenerRedirect(
+  createScreener({
+    config: { ...demoConfig, screenerDaily: Number.isInteger(screenerDaily) && screenerDaily > 0 ? screenerDaily : 300, scripts: process.env.DEMO_SCREENER_SCRIPTS },
+  }),
+);
+const onDemoHost = (req: Request) => (isScreenerPath(new URL(req.url).pathname) ? screener.fetch(req) : onDemo(req));
 
 // games.glyphh.ai: the games Glyphh makes, plain pages and nothing else.
 const gamesHost = readGamesHost();
 const games = createGames();
 const onHost = (req: Request) => {
   const host = hostOf(req);
-  return host === demoConfig.host ? onDemo(req) : host === gamesHost ? games.fetch(req) : app.fetch(req);
+  return host === demoConfig.host ? onDemoHost(req) : host === gamesHost ? games.fetch(req) : app.fetch(req);
 };
 
 const port = Number(process.env.PORT ?? 3000);

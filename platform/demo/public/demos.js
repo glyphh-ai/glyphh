@@ -2,6 +2,13 @@
 // without a link until the demo is live.
 export const DEMOS = [
   {
+    href: '/screener/',
+    title: 'Resume Screener',
+    blurb: 'Paste a job application and see whether it looks like a real person’s, signal by signal, then how well it fits the role. The open-source Claude plugin, on a page.',
+    tags: ['hiring', 'screening', 'plugin'],
+    model: 'demo-screener-*',
+  },
+  {
     href: '/bot/',
     title: 'Teach a bot',
     blurb: 'Make up a rule and keep it to yourself. A bot asks you about 40 expenses, Ada learns your rule from the answers, and the bot starts deciding alone.',
