@@ -1,8 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import { adaFake, tickets } from '@/test/ada';
 import { renderApp } from '@/test/render';
-import { triage } from '@/test/bots';
-import { apiError, http, HttpResponse, llmHandlers, server, v1 } from '@/test/server';
+import { apiError, http, llmHandlers, server } from '@/test/server';
 
 function on(models = [tickets()]) {
   const fake = adaFake({ models });
@@ -11,21 +10,8 @@ function on(models = [tickets()]) {
 }
 
 describe('Ada Home', () => {
-  const marketplace = () =>
-    server.use(
-      http.get(v1('/templates'), () =>
-        HttpResponse.json({
-          templates: [
-            { slug: 'agentic-memory', name: 'Agentic memory', category: 'Memory', summary: 'Remembers you.', version: 1, models: [], tools: [], instructions: '', installed: true, installed_version: 1 },
-          ],
-        }),
-      ),
-      http.get(v1('/bot-templates'), () => HttpResponse.json({ templates: [triage()] })),
-    );
-
   it('greets the person, and shows the month against the plan without listing the models', async () => {
     on();
-    marketplace();
     server.use(...llmHandlers());
     renderApp('/');
     expect(await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening), Chris$/, level: 1 })).toBeInTheDocument();
@@ -42,9 +28,8 @@ describe('Ada Home', () => {
     expect(screen.queryByRole('list', { name: 'Models' })).not.toBeInTheDocument();
   });
 
-  it('charts the week, and shows what is new in Ada and the Marketplace, and where to go next', async () => {
+  it('charts the week, and shows what is new in Ada and where to go next', async () => {
     on();
-    marketplace();
     server.use(...llmHandlers());
     renderApp('/');
     const week = await screen.findByRole('table', { name: 'Token volume by day, last 7 days' });
@@ -55,10 +40,9 @@ describe('Ada Home', () => {
     const ada = await screen.findByRole('region', { name: 'New in Ada' });
     expect(await within(ada).findByRole('link', { name: 'ada-1-2-beta' })).toHaveAttribute('href', '/settings/releases#ada-1-2-beta');
     expect(within(ada).getByText('Pairs it never learned weigh nothing.')).toBeInTheDocument();
-    const models = screen.getByRole('region', { name: 'Marketplace models' });
-    expect(await within(models).findByRole('link', { name: 'Agentic memory' })).toHaveAttribute('href', '/marketplace/models/agentic-memory');
-    const bots = screen.getByRole('region', { name: 'Marketplace bots' });
-    expect(await within(bots).findByRole('link', { name: triage().name })).toHaveAttribute('href', `/marketplace/bots/${triage().slug}`);
+    // Home asks for nothing of the Marketplace's: its one card there is a link.
+    expect(screen.queryByRole('region', { name: /Marketplace/ })).not.toBeInTheDocument();
+    expect(within(screen.getByRole('main')).getByRole('link', { name: /Marketplace/ })).toHaveAttribute('href', '/marketplace');
 
     expect(screen.getByText('http://api.test/mcp')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Copy pip command' })).toBeInTheDocument();
@@ -67,7 +51,6 @@ describe('Ada Home', () => {
 
   it('shows the plan and Ada’s requests by day where hosted models are off, and starts a model', async () => {
     on([]);
-    marketplace();
     const { user, router } = renderApp('/');
     const plan = await screen.findByRole('region', { name: 'Plan' });
     expect(within(plan).getByText('Pro')).toBeInTheDocument();

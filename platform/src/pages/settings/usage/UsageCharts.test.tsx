@@ -11,21 +11,23 @@ const rowsOf = (name: string) =>
     .slice(1)
     .map((row) => row.textContent);
 
-const sonnet = { id: 'claude-sonnet-5-5', name: 'Claude Sonnet 5.5', kind: 'bot' as const, input_tokens: 1_000, output_tokens: 200, requests: 3, charged_cents: 2.5 };
-const sonnetDay = { day: '2026-11-09', model: 'claude-sonnet-5-5', input_tokens: 5_000, output_tokens: 1_000, requests: 4, charged_cents: 40 };
+// A second, smaller hosted model beside the fixtures' one.
+const small = { id: 'adal-8b-1-0', name: 'adaL 8B 1.0', input_tokens: 1_000, output_tokens: 200, requests: 3, charged_cents: 2.5 };
+const smallDay = { day: '2026-11-09', model: 'adal-8b-1-0', input_tokens: 5_000, output_tokens: 1_000, requests: 4, charged_cents: 40 };
 
-/** The days each request for the series and the tokens asked for. */
+/** Ada Cloud with hosted models on; the days each request for the tokens asked for. */
 function watchDays() {
   const asked: string[] = [];
+  server.use(...adaFake({ models: [tickets()] }).handlers);
   server.use(
-    http.get(v1('/billing'), () => HttpResponse.json({ ...llmBilling, tokens: { ...tokenUsage, models: [...tokenUsage.models, sonnet] } })),
+    http.get(v1('/billing'), () => HttpResponse.json({ ...llmBilling, tokens: { ...tokenUsage, models: [...tokenUsage.models, small] } })),
     http.get(v1('/llm/usage'), ({ request }) => {
       asked.push(`tokens ${new URL(request.url).searchParams.get('days')}`);
       return HttpResponse.json({
         days: [
           { day: '2026-11-07', model: 'adal-34b-1-0', input_tokens: 1_200_000, output_tokens: 400_000, requests: 300, charged_cents: 0 },
           { day: '2026-11-09', model: 'adal-34b-1-0', input_tokens: 2_000_000, output_tokens: 900_000, requests: 610, charged_cents: 1129.6 },
-          sonnetDay,
+          smallDay,
         ],
       });
     }),
@@ -35,7 +37,7 @@ function watchDays() {
 }
 
 describe('Usage over time', () => {
-  it('charts tokens, charges, bot runs and connections by day over the last 30 days', async () => {
+  it('charts tokens, charges and Ada’s requests by day over the last 30 days, and nothing Glyphh no longer has', async () => {
     watchDays();
     renderApp('/usage');
     const tokens = await screen.findByRole('region', { name: 'Tokens in and out' });
@@ -44,19 +46,16 @@ describe('Usage over time', () => {
     expect(rowsOf('Input and output tokens by day, last 30 days').at(-1)).toBe('9 Nov2,005,000901,000');
     expect(screen.getByRole('region', { name: 'Charged to the balance' })).toHaveTextContent('$11.70');
     expect(rowsOf('Charged to the balance by day, last 30 days').at(-1)).toBe('9 Nov$11.70');
-    expect(rowsOf('Bot runs by day, last 30 days').at(-1)).toBe('9 Nov2');
-    expect(screen.getByRole('region', { name: 'Connections held' })).toHaveTextContent('4 now');
-    expect(rowsOf('Connections held by day, last 30 days').slice(-5)).toEqual(['5 Nov3', '6 Nov3', '7 Nov3', '8 Nov3', '9 Nov4']);
-    // Ada Cloud is off here: no requests chart.
-    expect(screen.queryByRole('region', { name: 'Ada requests' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Ada requests' })).toHaveTextContent('55,800 requests');
+    expect(screen.queryByRole('region', { name: /Bot runs|Connections/ })).not.toBeInTheDocument();
   });
 
-  it('narrows the tokens and charges to one model, a bot’s among them', async () => {
+  it('narrows the tokens and charges to one model', async () => {
     watchDays();
     const { user } = renderApp('/usage');
     const picker = await screen.findByRole('combobox', { name: 'Model' });
-    expect(within(picker).getAllByRole('option').map((o) => o.textContent)).toEqual(['All models', 'adaL 34B 1.0', 'Claude Sonnet 5.5 (bots)']);
-    await user.selectOptions(picker, 'claude-sonnet-5-5');
+    expect(within(picker).getAllByRole('option').map((o) => o.textContent)).toEqual(['All models', 'adaL 34B 1.0', 'adaL 8B 1.0']);
+    await user.selectOptions(picker, 'adal-8b-1-0');
     // The picker is there with the billing; the series and the tokens' days are reads of their own.
     await waitFor(() => expect(screen.getByRole('region', { name: 'Tokens in and out' })).toHaveTextContent('6,000 tokens'));
     expect(rowsOf('Input and output tokens by day, last 30 days').at(-1)).toBe('9 Nov5,0001,000');
@@ -68,8 +67,8 @@ describe('Usage over time', () => {
     const { user } = renderApp('/usage');
     await screen.findByRole('region', { name: 'Tokens in and out' });
     await user.selectOptions(screen.getByRole('combobox', { name: 'Range' }), '7');
-    expect(await screen.findByRole('table', { name: 'Bot runs by day, last 7 days' })).toBeInTheDocument();
-    expect(rowsOf('Bot runs by day, last 7 days')).toHaveLength(7);
+    expect(await screen.findByRole('table', { name: 'Ada requests and decides by day, last 7 days' })).toBeInTheDocument();
+    expect(rowsOf('Ada requests and decides by day, last 7 days')).toHaveLength(7);
     await user.selectOptions(screen.getByRole('combobox', { name: 'Range' }), 'month');
     const today = new Date().getUTCDate();
     await waitFor(() => expect(asked).toContain(`tokens ${today}`));
@@ -88,6 +87,7 @@ describe('Usage over time', () => {
   });
 
   it('shows the refusal when the days cannot be read', async () => {
+    server.use(...adaFake({ models: [tickets()] }).handlers);
     server.use(http.get(v1('/billing/series'), () => apiError(503, 'E_UNAVAILABLE', 'Usage is down.')));
     renderApp('/usage');
     expect(await screen.findByText('Usage is down.')).toBeInTheDocument();

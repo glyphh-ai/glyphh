@@ -1,0 +1,106 @@
+/* Someone else's markdown, in the platform's type: running text at a readable measure, code and tables scroll. */
+.markdown {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  max-width: var(--measure);
+  font-size: var(--text-md);
+  line-height: 1.65;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.markdown :is(h3, h4) {
+  margin: var(--space-2) 0 0;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.markdown h3 {
+  font-size: var(--text-lg);
+}
+
+.markdown h4 {
+  font-size: var(--text-md);
+}
+
+.markdown :is(p, ul, ol, blockquote, pre) {
+  margin: 0;
+}
+
+.markdown :is(ul, ol) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: var(--space-5);
+}
+
+.markdown strong {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.markdown a {
+  color: var(--link);
+}
+
+.markdown a:hover {
+  color: var(--link-hover);
+}
+
+.markdown code {
+  padding: 1px 5px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--field);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--text);
+}
+
+.markdown pre {
+  padding: var(--space-3);
+  overflow-x: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--field);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--text);
+  overflow-wrap: normal;
+}
+
+.markdown blockquote {
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--line-strong);
+}
+
+.markdown hr {
+  width: 100%;
+  margin: var(--space-1) 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+.table {
+  overflow-x: auto;
+}
+
+.table table {
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.table :is(th, td) {
+  padding: 6px var(--space-3);
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  font-weight: 600;
+  color: var(--text);
+}

@@ -6,7 +6,6 @@ import { useSession } from '@/api/session';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { SettingsSection } from '@/layout/SettingsSection/SettingsSection';
-import { RROTOR_SHOWN } from '@/lib/shelved';
 import { Button, CopyField, LoadingCard, Switch, TextField, useToast } from '@/ui';
 import { AdminOnlyNote, SettingsTitle } from './SettingsTitle';
 import styles from './settings.module.css';
@@ -25,7 +24,6 @@ export function AuthPage() {
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
   const [domains, setDomains] = useState('');
-  const [reviewers, setReviewers] = useState('');
   const [enforced, setEnforced] = useState(false);
   const [removing, setRemoving] = useState(false);
 
@@ -39,7 +37,6 @@ export function AuthPage() {
     setIssuer(sso.data.issuer);
     setClientId(sso.data.client_id);
     setDomains(sso.data.domains.join(', '));
-    setReviewers((sso.data.reviewers ?? []).join(', '));
     setEnforced(sso.data.enforced);
   }, [sso.data]);
 
@@ -51,7 +48,7 @@ export function AuthPage() {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    const body = { issuer: issuer.trim(), client_id: clientId.trim(), domains: listed(domains), enforced, reviewers: listed(reviewers) };
+    const body = { issuer: issuer.trim(), client_id: clientId.trim(), domains: listed(domains), enforced };
     set.mutate(clientSecret ? { ...body, client_secret: clientSecret } : body, {
       onSuccess: () => {
         setClientSecret('');
@@ -106,16 +103,6 @@ export function AuthPage() {
               disabled={!canEdit}
               required
             />
-            {RROTOR_SHOWN ? (
-              <TextField
-                label="Reviewer groups"
-                value={reviewers}
-                onChange={(e) => setReviewers(e.target.value)}
-                placeholder="platform-leads, security"
-                hint="Groups from your identity provider whose members review the apps published to your rrotors, beside the admin."
-                disabled={!canEdit}
-              />
-            ) : null}
             <CopyField value={callbackUrl} label="Redirect URI" />
             <p className={styles.note}>Register this redirect URI with the client at your identity provider.</p>
             <label className={styles.switchRow}>
@@ -155,7 +142,6 @@ export function AuthPage() {
               setIssuer('');
               setClientId('');
               setDomains('');
-              setReviewers('');
               setEnforced(false);
               toast.show('Single sign-on is off.');
             },

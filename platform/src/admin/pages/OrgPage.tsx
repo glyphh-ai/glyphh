@@ -56,7 +56,7 @@ function Account({ org }: { org: OrgDetail }) {
         <Fact label="Enterprise until" value={a.plan_until ? date(a.plan_until) : 'Not on Enterprise'} />
         <Fact label="First paid" value={a.first_paid_at ? date(a.first_paid_at) : 'Never'} />
         <Fact label="Sign-up source" value={tags ?? 'Untagged'} />
-        <Fact label="API keys and licence keys" value={`${n(org.api_keys)} API keys, ${n(org.licences)} licence keys`} />
+        <Fact label="API keys" value={n(org.api_keys)} />
         {org.balance && <Fact label="Overage balance" value={dollars(micros(org.balance.cents, org.balance.micros))} />}
         {a.suspended_reason && <Fact label="Suspended because" value={a.suspended_reason} />}
       </dl>

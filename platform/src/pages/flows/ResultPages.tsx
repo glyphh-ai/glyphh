@@ -13,21 +13,6 @@ export function DeviceDonePage() {
   );
 }
 
-export function GitHubInstalledPage() {
-  const [params] = useSearchParams();
-  const login = params.get('installed');
-  return (
-    <AuthLayout title="GitHub App installed">
-      <p className={styles.text}>
-        Glyphh’s GitHub App is installed on <span className={styles.strong}>{login ?? 'your account'}</span>.
-      </p>
-      <Link to="/" className={styles.text}>
-        Go to Glyphh
-      </Link>
-    </AuthLayout>
-  );
-}
-
 /** Any refusal the server met in a browser step: its message, and the trace id to quote. */
 export function ErrorPage() {
   const [params] = useSearchParams();

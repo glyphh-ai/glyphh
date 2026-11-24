@@ -10,7 +10,7 @@ const DAYS = 7;
 const n = (value: number) => value.toLocaleString('en-GB');
 
 /**
- * The last 7 days at a glance, UTC: the tokens in and out (the bots' and the hosted models') when the plan has them,
+ * The last 7 days at a glance, UTC: the tokens in and out (the hosted models') when the plan has them,
  * else Ada's requests, as small bars by day, with the week's total.
  */
 export function ActivityCard({ tokens }: { tokens: boolean }) {

@@ -7,9 +7,9 @@ import { createQueryClient } from './App';
 describe('when the platform’s sign-in ends mid-visit', () => {
   it('a read sends the person to log in, and back to this page after', async () => {
     const location = stubLocation();
-    server.use(http.get(v1('/runtime/keys'), () => apiError(401, 'E_SIGNED_OUT', 'You are signed out. Log in again.')));
+    server.use(http.get(v1('/installs'), () => apiError(401, 'E_SIGNED_OUT', 'You are signed out. Log in again.')));
     try {
-      renderApp('/keys');
+      renderApp('/settings/installs');
       await vi.waitFor(() => expect(location.assign).toHaveBeenCalledWith(`/login?returnTo=${encodeURIComponent(window.location.pathname)}`));
     } finally {
       location.restore();
@@ -18,11 +18,13 @@ describe('when the platform’s sign-in ends mid-visit', () => {
 
   it('a write does the same', async () => {
     const location = stubLocation();
-    server.use(http.post(v1('/runtimes/self/:id/token'), () => apiError(401, 'E_SIGNED_OUT', 'You are signed out. Log in again.')));
+    server.use(http.patch(v1('/org'), () => apiError(401, 'E_SIGNED_OUT', 'You are signed out. Log in again.')));
     try {
-      const { user } = renderApp('/runtimes');
-      await user.click((await screen.findAllByRole('button', { name: 'Rotate token' }))[0]!);
-      await user.click(screen.getByRole('button', { name: 'Rotate' }));
+      const { user } = renderApp('/settings/general');
+      const field = await screen.findByLabelText('Name');
+      await vi.waitFor(() => expect(field).toHaveValue('Glyphh'));
+      await user.type(field, ' Labs');
+      await user.click(screen.getByRole('button', { name: 'Update' }));
       await vi.waitFor(() => expect(location.assign).toHaveBeenCalledTimes(1));
       expect(location.assign.mock.calls[0]![0]).toMatch(/^\/login\?returnTo=/);
     } finally {
@@ -32,9 +34,9 @@ describe('when the platform’s sign-in ends mid-visit', () => {
 
   it('any other refusal stays on the page', async () => {
     const location = stubLocation();
-    server.use(http.get(v1('/runtime/keys'), () => apiError(403, 'E_FORBIDDEN', 'Not yours.')));
+    server.use(http.get(v1('/installs'), () => apiError(403, 'E_FORBIDDEN', 'Not yours.')));
     try {
-      renderApp('/keys');
+      renderApp('/settings/installs');
       expect(await screen.findByText('Not yours.')).toBeInTheDocument();
       expect(location.assign).not.toHaveBeenCalled();
     } finally {

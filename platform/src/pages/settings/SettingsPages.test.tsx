@@ -3,9 +3,6 @@ import { me, org, plans, sso } from '@/test/fixtures';
 import { renderApp, stubLocation } from '@/test/render';
 import { apiError, http, HttpResponse, onFreeHandlers, server, v1 } from '@/test/server';
 
-// The Auth page's reviewer groups as they are when rrotor is shown (lib/shelved); Shelved.test.tsx covers it shelved.
-vi.mock('@/lib/shelved', () => ({ RROTOR_SHOWN: true }));
-
 describe('Settings', () => {
   it('opens on General, with the settings sidebar and breadcrumb', async () => {
     renderApp('/settings');
@@ -131,7 +128,7 @@ describe('Settings', () => {
       await user.type(screen.getByLabelText('Client ID'), '0oa1example');
       await user.type(screen.getByLabelText('Client secret'), 's3cret');
       await user.type(screen.getByLabelText('Email domains'), 'Acme.com, acme.co.uk');
-      await user.type(screen.getByLabelText('Reviewer groups'), 'Platform-Leads security');
+      expect(screen.queryByLabelText('Reviewer groups')).not.toBeInTheDocument();
       await user.click(screen.getByRole('switch', { name: 'Require single sign-on' }));
       await user.click(screen.getByRole('button', { name: 'Turn on' }));
       await vi.waitFor(() =>
@@ -141,7 +138,6 @@ describe('Settings', () => {
           client_secret: 's3cret',
           domains: ['acme.com', 'acme.co.uk'],
           enforced: true,
-          reviewers: ['platform-leads', 'security'],
         }),
       );
       expect(await screen.findByText('Single sign-on saved.')).toBeInTheDocument();
@@ -166,7 +162,6 @@ describe('Settings', () => {
       const issuer = await screen.findByLabelText('Issuer');
       await vi.waitFor(() => expect(issuer).toHaveValue('https://acme.okta.com'));
       expect(screen.getByLabelText('Email domains')).toHaveValue('acme.com');
-      expect(screen.getByLabelText('Reviewer groups')).toHaveValue('platform-leads');
       expect(screen.getByText('Set. Leave empty to keep it; it is never shown.')).toBeInTheDocument();
       await user.type(screen.getByLabelText('Email domains'), ', acme.de');
       await user.click(screen.getByRole('button', { name: 'Save' }));

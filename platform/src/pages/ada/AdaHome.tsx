@@ -13,9 +13,8 @@ import styles from '@/pages/home/home.module.css';
 import { Button, LoadingCard } from '@/ui';
 
 /**
- * Home, with Ada Cloud on: a dashboard, not a list of models (Models is for that). A greeting; the balance, the month's
- * tokens and Ada's requests against the plan; the week's volume; what is new at Glyphh (Ada's releases, the
- * Marketplace's models and bots); and where to go next.
+ * Home: a dashboard, not a list of models (Models is for that). A greeting; the balance, the month's tokens and Ada's
+ * requests against the plan; the week's volume; what is new at Glyphh (Ada's releases); and where to go next.
  */
 export function AdaHome() {
   const navigate = useNavigate();
@@ -44,7 +43,7 @@ export function AdaHome() {
         <ApiErrorNotice error={billing.error} />
         {billing.data && <HomeStats billing={billing.data} usage={usage.data} isAdmin={me.data?.role === 'admin'} />}
         {billing.data && <ActivityCard tokens={Boolean(billing.data.tokens)} />}
-        <WhatsNew ada />
+        <WhatsNew />
         <Resources connector={connector} />
       </div>
     </>

@@ -1,5 +1,5 @@
 import { screen, within } from '@testing-library/react';
-import { me, plans } from '@/test/fixtures';
+import { cloudLimits, me, plans } from '@/test/fixtures';
 import { renderApp, stubLocation } from '@/test/render';
 import { apiError, http, HttpResponse, llmHandlers, onFreeHandlers, server, v1 } from '@/test/server';
 import { dollarsToCents } from '../tokens/AddFundsDialog';
@@ -103,16 +103,18 @@ describe('The overage balance on Billing', () => {
   });
 });
 
-const free = { ...me, plan: plans[0]!, org: { ...me.org, billing_status: 'none', renews_at: null }, precedents: { used: 0, limit: 0 } };
+const free = { ...me, plan: { ...plans[0]!, cloud: cloudLimits.Free }, org: { ...me.org, billing_status: 'none', renews_at: null } };
 
 describe('Billing', () => {
   it('shows the plan: its flat price, renewal and what it includes', async () => {
+    server.use(http.get(v1('/me'), () => HttpResponse.json({ ...me, plan: { ...me.plan, cloud: cloudLimits.Pro } })));
     renderApp('/settings/billing');
     expect(await screen.findByText('$99 / month')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Pro' })).toBeInTheDocument();
     expect(screen.getByText('Renews 16 Nov 2026')).toBeInTheDocument();
-    expect(screen.getAllByText('3 runtime nodes')[0]).toBeInTheDocument();
-    expect(screen.getAllByText('50,000 precedents per node')[0]).toBeInTheDocument();
+    expect(screen.getByText('100,000 precedents')).toBeInTheDocument();
+    expect(screen.getByText('1,000,000 requests a month')).toBeInTheDocument();
+    expect(screen.queryByText(/runtime|per node|licence/i)).not.toBeInTheDocument();
     expect(screen.getByText(/Members and installs are unlimited on every plan/)).toBeInTheDocument();
     expect(screen.queryByText(/seat/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/add-on/i)).not.toBeInTheDocument();
@@ -133,11 +135,11 @@ describe('Billing', () => {
     expect(screen.queryByText('$299 / month')).not.toBeInTheDocument();
   });
 
-  it('on Free, shows the plan and its one runtime node', async () => {
+  it('on Free, shows the plan and what it includes', async () => {
     server.use(http.get(v1('/me'), () => HttpResponse.json(free)));
     renderApp('/settings/billing');
     expect(await screen.findByRole('heading', { name: 'Free' })).toBeInTheDocument();
-    expect(screen.getByText('1 runtime node')).toBeInTheDocument();
+    expect(screen.getByText('1,000 precedents')).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Pro' })).not.toBeInTheDocument();
   });
 

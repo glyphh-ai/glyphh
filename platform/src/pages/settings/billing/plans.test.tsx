@@ -1,75 +1,42 @@
-import { adaPlans, onFree, plans } from '@/test/fixtures';
-import { connectionFacts, factText, machinesText, planFacts, precedentsText, priceText } from './plans';
-
-describe('plan wording for connections', () => {
-  it('says unlimited while no cap is set, the cap, and the price past it only once priced', () => {
-    expect(connectionFacts(undefined)).toEqual([]);
-    expect(connectionFacts({ included: null, cents_a_month: null }).map(factText)).toEqual(['Unlimited connections']);
-    expect(connectionFacts({ included: 1, cents_a_month: null }).map(factText)).toEqual(['1 connection']);
-    expect(connectionFacts({ included: 5, cents_a_month: 500 }).map(factText)).toEqual(['5 connections', 'Then $5 a connection a month']);
-    const pro = plans[2]!;
-    expect(planFacts({ ...pro, connections: { included: null, cents_a_month: null } }).map(factText)).toContain('Unlimited connections');
-  });
-});
-
-describe('plan wording with Ada Cloud on', () => {
-  it('shows each plan’s cloud caps in place of runtime nodes and precedents per node, and the price past a metered month', () => {
-    const [free, basic, pro, , enterprise] = adaPlans;
-    expect(planFacts(free!, true).map(factText)).toEqual(['1,000 precedents', '5,000 requests a month', '5 requests a second']);
-    expect(planFacts(basic!, true).map(factText)).toEqual(['10,000 precedents', '50,000 requests a month', '10 requests a second', 'Then $1 per 10,000 requests']);
-    expect(planFacts(pro!, true).map(factText)).toEqual(['100,000 precedents', '1,000,000 requests a month', '50 requests a second', 'Then $1 per 10,000 requests']);
-    expect(planFacts(enterprise!, true).map(factText)).toEqual(['Unlimited precedents', 'Unlimited requests', 'Single sign-on', 'Roles', 'Audit logs']);
-  });
-
-  it('says nothing of the cloud with Ada Cloud off, or when an older server sends no cloud limits', () => {
-    expect(planFacts(adaPlans[2]!).map(factText)).toEqual(['3 runtime nodes', '50,000 precedents per node', 'Sync across runtimes']);
-    expect(planFacts(plans[0]!, true)).toEqual([]);
-  });
-});
+import type { Plan } from '@/api/types';
+import { adaPlans, llmPlans, onFree, plans } from '@/test/fixtures';
+import { factText, planFacts, priceText } from './plans';
 
 describe('plan wording', () => {
-  it.each([
-    [null, 'Unlimited runtime nodes'],
-    [0, 'No runtime nodes'],
-    [1, '1 runtime node'],
-    [3, '3 runtime nodes'],
-  ])('%s runtime nodes read %s', (machines, text) => expect(machinesText(machines)).toBe(text));
+  it('shows each plan’s Ada Cloud limits, and the price past a metered month', () => {
+    const [free, basic, pro, , enterprise] = adaPlans;
+    expect(planFacts(free!).map(factText)).toEqual(['1,000 precedents', '5,000 requests a month', '5 requests a second']);
+    expect(planFacts(basic!).map(factText)).toEqual(['10,000 precedents', '50,000 requests a month', '10 requests a second', 'Then $1 per 10,000 requests']);
+    expect(planFacts(pro!).map(factText)).toEqual(['100,000 precedents', '1,000,000 requests a month', '50 requests a second', 'Then $1 per 10,000 requests']);
+    expect(planFacts(enterprise!).map(factText)).toEqual(['Unlimited precedents', 'Unlimited requests', 'Single sign-on', 'Roles', 'Audit logs']);
+  });
 
-  it('names the precedents one node may hold, and none when the plan says 0', () => {
-    expect(precedentsText(0)).toBeNull();
-    expect(precedentsText(null)).toBe('Unlimited precedents per node');
-    expect(precedentsText(50_000)).toBe('50,000 precedents per node');
+  it('says nothing of the cloud when the server sends no cloud limits', () => {
+    expect(planFacts(plans[0]!)).toEqual([]);
+  });
+
+  it('adds a plan’s tokens a month when the server sends them', () => {
+    expect(planFacts(llmPlans.plans[2]!).map(factText)).toEqual(['25,000,000 tokens a month']);
+    expect(planFacts(llmPlans.plans[4]!).map(factText)).toContain('Tokens a month by contract');
   });
 
   it('prices each plan on one line', () => {
     expect(plans.map(priceText)).toEqual(['Free', '$20 / month', '$99 / month', '$299 / month', 'By contract']);
   });
 
-  it('says nothing of hosted machines on any plan', () => {
-    expect(plans.flatMap((plan) => planFacts(plan)).map(factText).join(' ')).not.toMatch(/host|machine/i);
-  });
-});
-
-describe('plan wording while sync is not built', () => {
-  const [free, , pro, , enterprise] = onFree.plans;
-
-  it('shows the runtime nodes and precedents per node, and marks sync as coming soon', () => {
-    expect(planFacts(free!).map(factText)).toEqual(['1 runtime node', '5,000 precedents per node']);
-    expect(planFacts(pro!).map(factText)).toEqual(['3 runtime nodes', '50,000 precedents per node', 'Coming soon: Sync across runtimes']);
-  });
-
   it('shows only what is built as included', () => {
-    const facts = planFacts(enterprise!);
-    expect(facts.filter((fact) => !fact.soon).map((fact) => fact.text)).toEqual([
-      'Unlimited runtime nodes',
-      'Unlimited precedents per node',
-      'Offline licences for air-gapped runtimes',
-      'Single sign-on',
-    ]);
-    expect(facts.filter((fact) => fact.soon).map((fact) => fact.text)).toEqual(['Sync across runtimes', 'High availability', 'Roles', 'Audit logs']);
+    const facts = planFacts(onFree.plans[4]!);
+    expect(facts.filter((fact) => !fact.soon).map((fact) => fact.text)).toEqual(['Single sign-on']);
+    expect(facts.filter((fact) => fact.soon).map((fact) => fact.text)).toEqual(['Roles', 'Audit logs']);
   });
 
-  it('names a feature it has no words for as the server does', () => {
-    expect(planFacts({ ...pro!, features: { ...pro!.features, sandbox: true } }).map(factText)).toContain('sandbox');
+  it('says nothing of what Glyphh no longer sells, whatever a server still sends: no runtimes, nodes, sync or connections', () => {
+    const old = {
+      ...adaPlans[2]!,
+      limits: { machines: 3, precedents: 50_000 },
+      features: { sync: true, ha: true, offline: true, sso: false, sandbox: true },
+      connections: { included: 3, cents_a_month: 500 },
+    } as Plan;
+    expect(planFacts(old).map(factText)).toEqual(['100,000 precedents', '1,000,000 requests a month', '50 requests a second', 'Then $1 per 10,000 requests']);
   });
 });

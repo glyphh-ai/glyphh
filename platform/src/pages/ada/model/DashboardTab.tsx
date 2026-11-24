@@ -5,7 +5,7 @@ import { ago, date, plural } from '@/lib/format';
 import { outputOf } from '@/lib/spec';
 import { useInk } from '@/lib/tokens';
 import { Card, Chip, LoadingCard, ProgressBar, Select, type ChipTone } from '@/ui';
-import usageStyles from '@/pages/settings/UsagePage.module.css';
+import usageStyles from '@/pages/settings/usage/meters.module.css';
 import { AdaErrorNotice } from '../AdaErrorNotice';
 import styles from '../ada.module.css';
 

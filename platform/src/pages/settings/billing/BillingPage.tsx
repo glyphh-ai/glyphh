@@ -30,7 +30,7 @@ export function BillingPage() {
   const done = params.get('done');
   useEffect(() => {
     if (!done) return;
-    for (const queryKey of [keys.me, keys.org, keys.licenceKeys, keys.billing, keys.payment]) void client.invalidateQueries({ queryKey });
+    for (const queryKey of [keys.me, keys.org, keys.billing, keys.payment]) void client.invalidateQueries({ queryKey });
     toast.show('Billing is up to date.');
     setParams({}, { replace: true });
   }, [done, client, setParams, toast]);
@@ -69,7 +69,7 @@ export function BillingPage() {
       {balance && me.data && (
         <SettingsSection
           title="Buy more usage"
-          description="Bots and Glyphh’s hosted models use your plan’s tokens a month first. Past them, each request is charged to this balance at the model’s rates. Top it up once, any time."
+          description="Glyphh’s hosted models use your plan’s tokens a month first. Past them, each request is charged to this balance at the model’s rates. Top it up once, any time."
         >
           <BalanceCard balance={balance} isAdmin={isAdmin} adding={adding} />
         </SettingsSection>

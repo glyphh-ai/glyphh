@@ -1,19 +1,18 @@
 # platform
 
-The Glyphh platform, https://platform.glyphh.ai: the one web app a person uses. They sign in, use Ada Cloud, see the
-licence their runtimes run on, register the runtimes they run themselves, make the keys that call them, pay and run their
-org. Every page shows the server's API; the platform stores nothing. Glyphh hosts no runtime: for rrotor the server only
-grants licences.
+The Glyphh platform, https://platform.glyphh.ai: the one web app a person uses. Glyphh is one thing, Ada. They sign in,
+use Ada Cloud (make a model, load it, tune it, try it, read what it decided), make the keys their code calls it with, see
+what they use, pay and run their org, and browse the Marketplace of plugins for Claude. Every page shows the server's
+API; the platform stores nothing.
 
 | Part | Repo | What |
 |---|---|---|
 | Platform | `glyphh-ai/platform` (this) | Every page a person sees |
-| Server | `glyphh-ai/server` | The API and the authorization server, https://api.glyphh.ai: accounts, billing, licences, Ada Cloud. Renders no page |
-| Runtimes | `glyphh-ai/rrotor` | rrotor, the runtime a person runs for their programs and CLIs: local on their own computer (installed from Claude with the `glyphh` plugin's `rrotor` skill, or `deploy/compose` in `glyphh-ai/glyphh`), or self-hosted at its own address, `https://<host>` (`RROTOR_PUBLIC_HOST`). It reads its licence key as `GLYPHH_LICENSE_KEY`. Claude and apps call it directly |
+| Server | `glyphh-ai/server` | The API and the authorization server, https://api.glyphh.ai: accounts, billing, Ada Cloud. Renders no page |
+| Plugins | `glyphh-ai/plugins` (public) | The plugins for Claude the Marketplace page shows. The platform only reads it |
 
 The contract is the server's `docs/architecture.md` (the API table and **The platform**); prices and plan rules are
-its `docs/pricing.md`. The Bots screen is built to one product spec, Chris's rulings in his own words:
-[docs/bots-screen.md](docs/bots-screen.md).
+its `docs/pricing.md`.
 
 ## Sign-in
 
@@ -22,11 +21,9 @@ its `docs/pricing.md`. The Bots screen is built to one product spec, Chris's rul
    `{server}/oauth/authorize`; the server sends the browser to `/authorize` here to pick Google or GitHub, and the
    tokens come back to `{PLATFORM_URL}/auth/callback`. They live in a sealed, HttpOnly cookie; the browser never holds
    a token.
-2. **Claude** reaches a local rrotor at `http://127.0.0.1:7777/mcp` (the `rrotor` skill adds it), and a self-hosted one
-   at `https://<host>/mcp`, whose OAuth runs against the same server and lands on `/authorize` here; already signed in,
-   it is one Allow.
-3. **Apps** call a self-hosted runtime with a runtime key (made on Runtime keys, or API Keys with Ada Cloud off; shown
-   once) as the bearer.
+2. **Claude** reaches Ada through the connector at `{server}/mcp`, whose OAuth runs against the same server and lands
+   on `/authorize` here; already signed in, it is one Allow.
+3. **Apps** call Ada Cloud with an API key (made on API Keys; shown once) as the bearer.
 
 ## Routes the server sends a browser to
 
@@ -42,87 +39,111 @@ server's `glyphh_signin` cookie (ten minutes, on the server's domain), so each a
 | `/allow?consent=` | the provider's callback | `GET {server}/auth/consent` → `{kind: "oauth", client, returns_to, resource, email}` | Link to `GET {server}/auth/oauth/allow?consent=&decision=allow` or `deny` |
 | `/account?linked=<provider>` | a provider link's callback | Redirects to `/settings/profile`, which confirms the link | — |
 | `/billing?done=1` | Stripe Checkout and the portal | Redirects to `/settings/billing`, read afresh | — |
-| `/github?installed=<login>` | the GitHub App's callback | "Glyphh's GitHub App is installed on <login>" | — |
 | `/error?code=&message=&trace=` | any refusal in a browser flow | The message and the trace id | — |
 
 A refusal from `GET {server}/auth/consent` is JSON, `{"error": {"code", "message", "trace_id"}}`, shown like `/error`.
 
-## Licences only, and features not built
+## What Glyphh no longer has
 
-- **Glyphh hosts no runtime.** For rrotor the server only grants licences: the licence key, the runtimes a person
-  registers to run at their own address and their tokens, offline licences, runtime keys and the nodes counted. It has
-  no hosted machines, rates, hosting cost or runtime telemetry, and the platform shows none. A plan's `limits.machines`
-  is its **runtime nodes**: every rrotor linked for the org, local or self-hosted (Free 1, Pro 3, Team 10, Enterprise
-  unlimited), shown as "runtime nodes"; its `limits.precedents` is per node (Free 5,000, Pro 50,000, Team 500,000),
-  shown as "precedents per node". The old `/machines`, `/logs` and `/settings/logs` go to Runtimes, `/getting-started`
-  to its Add a runtime.
+Glyphh is Ada alone (2026-11-24). The platform has no bots, hosted connections, programs, projects, crews, templates,
+runtimes (rrotor), runtime keys, licence keys, nodes, apps catalogue or GitHub App pages, and calls none of the
+server's endpoints for them (`/v1/bots*`, `/v1/connections*`, `/v1/programs*`, `/v1/projects*`, `/v1/recents`,
+`/v1/github*`, `/v1/templates*`, `/v1/apps*`, `/v1/runtimes*`, `/v1/runtime/*`, `/v1/license/*`). Their old addresses
+are moved on, each with everything under it and with a replace, so Back does not return to them (`src/routes/router.tsx`):
+`/bots`, `/approvals`, `/connections`, `/projects`, `/swarms`, `/programs`, `/templates`, `/marketplace/models` and
+`/marketplace/bots` go to `/marketplace`; `/runtimes`, `/runtime-keys`, `/licence`, `/apps`, `/artifacts`, `/github`,
+`/getting-started`, `/machines`, `/logs`, `/settings/claude-key`, `/settings/github-token`, `/settings/licence` and
+`/settings/logs` go to `/` (Home, which is the Marketplace while Ada Cloud is off). Of an answer it still reads (`/v1/me`, `/v1/plans`, `/v1/billing`,
+`/v1/billing/series`, `/v1/org/sso`, the staff API) it needs none of the fields that went with them: a plan's `limits`
+and its runtime features, `precedents` per node, `connections`, `bots`, `reviewers`, `licences`.
+
+## Plans and features not built
+
 - **A feature not built** is shown as "Coming soon", never as included. A plan's `features` is a boolean per feature
-  with a separate `built` map beside it (`{"features": {"sync": true, …}, "built": {"sync": false, "ha": false,
-  "offline": true, "sso": true}}`); `{"sync": {"included": true, "built": false}}` is read alike. Sync, HA, SSO, roles
-  and audit logs missing from `built` (or with no map) are not built; roles and audit logs are included where `sso`
-  is when the server does not name them, and built only when it says so. Plans are listed, priced and bought as before.
+  with a separate `built` map beside it (`{"features": {"sso": true}, "built": {"sso": true}}`);
+  `{"sso": {"included": true, "built": true}}` is read alike. The platform has words for single sign-on, roles and
+  audit logs: roles and audit logs are included where `sso` is when the server does not name them, and built only when
+  it says so. Any other feature a server names is not shown. Plans are listed, priced and bought as before.
 - **Single sign-on** (Enterprise) is set on Settings → Auth (`GET`/`PUT`/`DELETE /v1/org/sso`): the OpenID Connect
   issuer, client id and secret (never shown back), the email domains that route a sign-in to the org, the redirect URI
   to register at the identity provider, and whether it is required (then Google and GitHub are refused for the org's
   people). The sign-in pages offer "Continue with single sign-on" when `GET {server}/auth/providers` says `sso`: the
   person gives their work email and goes to `{server}/auth/sso/start?…&email=`; the platform's own log-in remembers
-  the email beside the provider so `/authorize` continues without asking again. Settings → Auth also takes the
-  **reviewer groups** (`reviewers`): the identity provider's groups whose members review the org's apps beside the
-  admin.
+  the email beside the provider so `/authorize` continues without asking again.
 
 ## Ada Cloud
 
-With the server's `GLYPHH_ADA_CLOUD` on, `GET /v1/me` answers `ada_cloud: true`: Home, Models, Ada, API Keys and Usage
-are Ada's (the sidebar's Ada), and **Runtimes & licences** sits beside them (Runtimes, Licence, Apps, Runtime keys; below,
-Pages). The old `?add=1` on Home opens Home. Off, or on an older server without the field, every page is as below. The browser calls
-`/api/ada/v1/*` here; the route handler adds the session's token and passes the call to Ada's host
-(`GLYPHH_ADA_URL`, `https://ada.glyphh.ai`), which takes a Glyphh sign-in as the account API does. An import's file goes
-`PUT /api/ada/v1/uploads/<link>`, streamed to the upload link without a token (the link is its own credential).
+`GET /v1/me` answers `ada_cloud: true` (the server's `GLYPHH_ADA_CLOUD`): Home, Models, API Keys and Usage are in the
+sidebar, with the Marketplace under them. Off, or missing, those four leave the sidebar and their addresses go to the
+Marketplace, the one page that needs none of Ada. The browser calls `/api/ada/v1/*` here; the route handler adds the
+session's token and passes the call to Ada's host (`GLYPHH_ADA_URL`, `https://ada.glyphh.ai`), which takes a Glyphh
+sign-in as the account API does. An import's file goes `PUT /api/ada/v1/uploads/<link>`, streamed to the upload link
+without a token (the link is its own credential).
 
 | Route | Page | Ada calls | Does |
 |---|---|---|---|
-| `/` | Home | `GET /v1/models`, `GET /v1/usage` | The models, the precedents and this month's requests against the plan (and what happens past the month), the connector URL (`{server}/mcp`) to add in Claude |
-| `/models` | Models | `GET /v1/models`, `GET /v1/ada` | Each model's live version, the Ada it runs (Beta labelled) and precedents |
-| `/ada` | Ada (after Models in the sidebar) | `GET /v1/ada`, `GET /v1/models` | Every Ada version, newest first: its status (Stable, Beta, Deprecated with its end, Retired), release date, whether it changes answers from the one before, its release notes as prose (the kernel's semver only in its details line), the org's models on it, each with a link to its Upgrade Ada flow. `/ada#<name>` lands on one |
+| `/` | Home | `GET /v1/usage`, `GET /v1/ada`; the account's `GET /v1/billing`, `/v1/billing/series` | A greeting; the balance and the month's tokens (with hosted models on) and Ada's requests against the plan; the week's volume; Ada's newest versions; the docs, the connector URL (`{server}/mcp`) to add in Claude, the SDK's install line and the way to the Marketplace |
+| `/models` | Models | `GET /v1/models`, `GET /v1/ada` | Each model's live version, the Ada it runs (Beta labelled) and precedents; searched and paged |
+| `/settings/releases` (the old `/ada`) | Releases, in Settings | `GET /v1/ada`, `GET /v1/models` | Every Ada version, newest first: its status (Stable, Beta, Deprecated with its end, Retired), release date, whether it changes answers from the one before, its release notes as prose (the kernel's semver only in its details line), the org's models on it, each with a link to its Upgrade Ada flow. `#<name>` lands on one |
 | `/models/new` | New model | `POST /v1/models {name, spec, ada}`, `GET /v1/ada` | A spec editor, checked as typed (the cloud's bounds), from an example or blank; its Ada, the latest stable first (betas labelled, deprecated and retired not offered); a refusal of the Ada chosen offers the latest stable |
 | `/models/:name` | A model, a tab each (`?tab=`), in this order; ← Models above its name | `GET /v1/models/{name}`, `…/stats`, `…/map`, `…/precedents/{id}`, `…/versions`, `…/settings`, `GET /v1/jobs/{id}` | **Dashboard** (first): its precedents against the org's plan, reads over the last 30 days, the share of decides that asked a person, the live version; charts (chart.js, in the theme's tokens) of reads a day (decides apart), precedents over time, the share that asked a day, how sure the decides were, outcomes by output; the latest jobs. Each says what will show while there is nothing yet. **3D view**: up to 2,000 of its precedents (`…/map`), each a cloud of its glyph's bits laid out by its nearest (three.js, loaded with the tab; after the old GlyphViewer), coloured by outcome, lines to the nearest of the same or a different outcome, layers on 0–9, E explode, F freeze, L labels, Esc clear, search by id; a picked point's case (`…/precedents/{id}`); laid out unseen and drawn still when the person asked for less motion. **Try it**: a form from the spec, `POST /v1/decide`: the answer, confidence, whether a person should decide, the precedents. **Import**: a CSV (each column mapped to a role, an outcome, ts, id or skipped) or JSON Lines (`POST …/imports`, then the file to its link), with progress. **Backtest**: candidates (settings changed, or another version) on the newest held-out cases (`POST …/backtest`), the results and Make live (with the backtest kept on the version). **Settings**: every lever, saved as a version (`PATCH …/settings`). **Export**: JSON Lines or SQLite (`POST …/export`), then its download link. **Spec** (last): the live spec, a new version (`PUT …/spec`), versions and Make live (`POST …/versions/{n}/activate`). **Versions**: each version with its Ada; **Upgrade Ada** (`?upgrade=<name>`, none for the latest stable): choose a version, backtest the live spec on it (`POST …/backtest {ada}`), see the score change, then `POST …/upgrade {ada, backtest}` and its re-encode job; rollback is the version before made live, on its own Ada. Under the name, the Ada it runs and `ada_notice`: a newer stable (its notes, Backtest and upgrade), a quieter line for a beta, a warning while deprecated (its end) or retired, word of a move Glyphh made. Delete after typing the name |
 | `/keys` | API Keys | `GET`, `POST /v1/keys`, `DELETE /v1/keys/{id}` | Cloud keys: name, expiry, clearance (0 to 1); shown once; revoke |
-| `/usage` | Usage | `GET /v1/usage`, `GET /v1/models`, `GET /v1/me` | `{plan, month, resets_at, models, precedents: {used, max}, requests: {used, max, over, overage}, requests_per_second}`: precedents and the month's requests against the plan's (the month, UTC, and when it starts again); past it, Pro and Team are billed ($1 per 10,000, the plan's `overage_cents_per_10k`), Free stops until it turns, with the way to upgrade; the calls a second; each model's precedents |
+| `/usage` | Usage | `GET /v1/usage`, `GET /v1/models`; the account's `GET /v1/me`, `/v1/billing`, `/v1/billing/series`, `/v1/llm/usage` | `{plan, month, resets_at, models, precedents: {used, max}, requests: {used, max, over, overage}, requests_per_second}`: precedents and the month's requests against the plan's (the month, UTC, and when it starts again); past it, Pro and Team are billed ($1 per 10,000, the plan's `overage_cents_per_10k`), Free stops until it turns, with the way to upgrade; the calls a second; Ada's requests by day; with hosted models on, their tokens and charges by day and by model; each model's precedents |
 
 Ada's plan refusals are shown on every Ada page in the server's words with the way on (`AdaErrorNotice`): 429 `E_RATE` (the
 plan's calls a second; Retry-After, passed back by the route handlers), 403 `E_LIMIT` `requests` (Upgrade to the plan the
-server names, or Talk to us) and `precedents` (the plans). With Ada Cloud on the plan cards show each plan's cloud caps
-(`cloud` on `GET /v1/plans`) in place of runtime nodes and precedents per node.
+server names, or Talk to us) and `precedents` (the plans). The plan cards show each plan's cloud caps (`cloud` on
+`GET /v1/plans`) and, with hosted models on, its tokens a month (`llm_tokens`).
 
-Billing, Plans, Members, Profile, Installs and General stay; the plan cards show the cloud caps, not a plan's runtime
-nodes, precedents per node or runtime features (sync, HA, offline licences).
+## Marketplace
+
+`/marketplace` shows what is in the public repository [github.com/glyphh-ai/plugins](https://github.com/glyphh-ai/plugins),
+laid out as Claude's own plugin browser lays plugins out. The platform only shows it: a plugin is installed in Claude.
+
+| Route | Page | Does |
+|---|---|---|
+| `/marketplace` | Marketplace | A search (`?q=`: a plugin's name, description, author, category, keywords, or the name of anything it holds) and a grid of cards, 24 a page (`?page=`). A card: the plugin's name, "by" its author, its description (three lines at most), a chip with a count for each kind it holds (Skills, Commands, Agents, Hooks, Connectors: its MCP servers) and its version. The whole card opens the plugin. While the repository is empty: "The marketplace is being stocked", a link to the repository and the line that adds it to Claude Code. When it cannot be loaded: a quiet "could not be loaded" with "Open it on GitHub" |
+| `/marketplace/:plugin` | A plugin | Its name, author, version, licence, category and keywords, and "View on GitHub" (its folder in the repository). **Install in Claude**, each line with Copy: `/plugin marketplace add glyphh-ai/plugins`, then `/plugin install <plugin>@<the marketplace's name>`; and the path in the Claude desktop app (Customize → Plugins → Add marketplace → `glyphh-ai/plugins`). Then **Skills** (each one's name and description from its `SKILL.md` front matter, opening to the file's body), **Commands**, **Agents**, **Connectors** (its MCP servers by name), each item with a link to its file, and **About** (its `README.md`). A plugin kept in another repository is shown from the marketplace's list alone, with a link to its own repository |
+
+The data is read by the route handlers, never by the browser (`server/marketplace.ts`), and served to signed-in pages
+as one answer, `GET /api/marketplace` → `{name, owner, description, version, repo, url, plugins[], fetched_at, stale}`:
+
+- One call lists every path, `GET https://api.github.com/repos/glyphh-ai/plugins/git/trees/HEAD?recursive=1` (409 or
+  404: the repository is empty, so the marketplace is too); each file is then read from
+  `https://raw.githubusercontent.com/glyphh-ai/plugins/HEAD/<path>`. No token is sent (the repository is public), only
+  a User-Agent; nothing of the person's goes to GitHub.
+- `.claude-plugin/marketplace.json` names the marketplace (`name`, default `plugins`; `owner.name`;
+  `metadata.description`, `.version`, `.pluginRoot`) and lists the plugins (`name`, `source`, `description`, `version`,
+  `author.name`, `category`, `keywords`). With no list, every folder holding a `.claude-plugin/plugin.json` is a plugin.
+- For a plugin whose `source` is a path in the repository (`./plugins/x`): its `.claude-plugin/plugin.json` (fills in
+  what the list leaves out: `version`, `description`, `author`, `homepage`, `license`, `keywords`; `mcpServers`),
+  `README.md`, `skills/*/SKILL.md`, `commands/*.md`, `agents/*.md`, `hooks/hooks.json` and `.mcp.json`. A file that is
+  missing or broken is left out and the plugin is still shown. Any other `source` (another repository) is not followed.
+- The answer is kept in memory ten minutes. When GitHub cannot be read, the last answer is served marked `stale`, and
+  GitHub is left alone for a minute; with nothing kept, the route answers 502 `E_MARKETPLACE`.
+- Markdown from the repository (a README, a skill's body) is drawn as React elements, never as HTML
+  (`src/components/Markdown.tsx`): a tag in it shows as text, a link goes to http(s) only, an image is its words.
 
 ## Pages
 
 The browser calls `/api/v1/*` here; the route handler adds the session's token and passes the call to `{server}/v1/*`.
-Runtimes & licences (Runtimes, Licence, Apps, and Runtime keys with Ada Cloud on or API Keys and Usage with it off) is in the
-sidebar either way; with Ada Cloud off, `/` goes to `/runtimes`. Models, API Keys, Runtime keys and Apps are searchable
-and paged alike (`src/components/SearchPaged.tsx`): a search field whose text reaches the URL as `?q=` once typing pauses, 24
-a page with Previous/Next as `?page=` and "25–30 of 30"; Apps sends both to the server, the others filter and page the
-whole list the server answered.
+Models, API Keys and the Marketplace are searchable and paged alike (`src/components/SearchPaged.tsx`): a search field
+whose text reaches the URL as `?q=` once typing pauses, 24 a page with Previous/Next as `?page=` and "25–30 of 30".
 
 | Route | Page | Server calls | Does |
 |---|---|---|---|
-| `/runtimes` | Runtimes | `GET /v1/runtimes/self`, `GET /v1/me` | **Install rrotor** on your own computer: from Claude Code, the `glyphh` plugin (`/plugin marketplace add glyphh-ai/glyphh`, `/plugin install glyphh@glyphh`), then "install rrotor" (its `rrotor` skill); or by hand, `glyphh-ai/glyphh`'s `deploy/compose/docker-compose.local.yml` (fetch it, make a local token, `docker compose … up -d`, `claude mcp add` at `http://127.0.0.1:7777/mcp`), with a link to the Docker Compose guide; the key reaches rrotor on its own, or as `GLYPHH_LICENSE_KEY`; none is Community. The runtimes run at their own address: state, version, last heartbeat; rotate the token (`POST /v1/runtimes/self/{id}/token`), delete (`DELETE /v1/runtimes/self/{id}`), offline licence on Enterprise (`POST /v1/runtimes/{id}/offline-licence {days}`). **Add a runtime** (a dialog; `/runtimes?add=1` opens it on load, and the old `/?add=1` and `/getting-started` go there): for a rrotor at its own public address only (one on the person's own computer comes from the `rrotor` skill, above): Docker, Helm or Terraform, each with what it needs (register with a DNS name, `POST /v1/runtimes/self {name, public_url}`, token shown once; the command filled from the answer's `env`, nothing to clone, pasteable in zsh and bash with no `#` lines, ending with a `curl …/healthz` check: Docker is `deploy/compose` as its README has it, `docker-compose.yml` and the `Caddyfile` fetched into a folder, `.env` written with the runtime id, token and public host (and `RROTOR_CPUS`/`RROTOR_MEMORY` for Medium and Large, the Helm chart's presets), `docker compose up -d`; or the image alone with `docker run` behind HTTPS already in front; Helm installs the released chart; Terraform's module is `git::https://github.com/glyphh-ai/glyphh.git//deploy/terraform/<cloud>?ref=main`; on a paid plan, how to set the licence key, as text beside the block, for an air-gapped node only). Then the connector URL `https://<host>/mcp` and the SDK and plugin install commands. Closing it reads the runtimes again |
-| `/apps` | Apps | `GET /v1/apps?q=&page=&per_page=24&state=&type=`, `GET /v1/me`, `POST /v1/apps/{id}/approve\|reject\|retire` | What Claude made (a page, a dashboard, a doc, a diagram, a deck, a design) and published to the org's rrotors, from the server's catalogue (`glyphh-ai/server`, `docs/specs/apps.md`): cards with the title, a type chip, the description (three lines at most), the runtime and version, the roles that may open it (or Everyone), who published it and when, and **Open** (the app at the rrotor, `{runtime_url}/apps/{name}/`, a new tab). A search field (`?q=`, sent once typing pauses), a type filter (All types, Pages, Dashboards, Docs, Diagrams, Decks, Designs; `?type=`, absent for all) and 24 a page (`?page=`, Previous/Next, "25–30 of 30"). The old `/artifacts` goes here with its query string. A reviewer (`me.reviewer`: the admin, or a member in a reviewer group) has the tabs Published, Awaiting review (`?state=draft`: Approve, Reject with a reason) and Rejected (`?state=rejected`: the reason), and Retire on a published one; a member asking for a review tab in the URL sees Published |
-| `/licence` | Licence | `GET /v1/me`, `GET /v1/license/keys`, `GET /v1/license/nodes` | The key the org's runtimes are sent now (`license_key`), masked with Reveal and Copy: its tier, runtime nodes, precedents per node, sync and expiry. How it reaches rrotor: on its own at the link and the daily heartbeat, renewed at each payment; an air-gapped node takes it as `GLYPHH_LICENSE_KEY` or `/etc/rrotor/license.key`. The runtime nodes "N of M" and each node, local or self-hosted (runtime, node id, role, version, precedents, last seen), over the plan shown, never blocking. Older keys with their state (live, expired, revoked). Free has none: Community, 1 node, 5,000 precedents, no sync. `/settings/licence` goes here |
-| `/runtime-keys` (Ada Cloud on), `/keys` (off) | Runtime keys, API Keys | `GET /v1/runtime/keys`, `GET /v1/runtimes/self` | Make one for a self-hosted runtime (`POST /v1/runtime/keys {name, runtime_id, expires_in_days?}`: the runtime, the first until another is chosen; 7, 30, 60, 90 or 365 days, or never; shown once; with no runtime registered, the way to Runtimes), revoke (`DELETE /v1/runtime/keys/{id}`), delete a revoked or expired one (`DELETE /v1/runtime/keys/{id}/record`). With Ada Cloud off, `/runtime-keys` goes to `/keys` |
-| `/usage` (Ada Cloud off) | Usage | `GET /v1/me`, `GET /v1/runtime/keys`, `GET /v1/license/nodes` | The fullest node's precedents against the plan's per node; the runtime nodes and each node, as on Licence; each API key's calls. `/settings/usage` goes here |
-| `/models`, `/models/*` (Ada Cloud off) | — | — | Models are Ada Cloud's: with it off the account API serves none, so they are not in the sidebar and go to `/runtimes` |
 | `/settings/general` | General | `GET /v1/org`, `GET /v1/me` | Rename the org (`PATCH /v1/org`) |
-| `/settings/billing` | Billing | `GET /v1/me`, `GET /v1/plans` | The plan, its renewal and what it includes. Invoices and payment (`POST /v1/billing/portal`) |
-| `/settings/plans` | Plans (full window) | `GET /v1/me`, `GET /v1/plans` | Choose a plan: Stripe Checkout without a subscription (`POST /v1/billing/checkout {plan}`), else a prorated change (`POST /v1/billing/plan {plan}`). Enterprise is Talk to us (`mailto:sales@glyphh.ai`) |
+| `/settings/billing` | Billing | `GET /v1/me`, `GET /v1/plans`, `GET /v1/billing`, `GET /v1/billing/payment`, `GET /v1/billing/ledger` | The plan, its renewal and what it includes. With hosted models on, the overage balance, Add funds (`POST /v1/billing/topup`) and its history. What happens past each limit. The card on file (`POST /v1/billing/card`) and the invoices (`POST /v1/billing/portal`) |
+| `/settings/plans` | Plans (full window) | `GET /v1/me`, `GET /v1/plans` | Choose a plan: Stripe Checkout without a subscription (`POST /v1/billing/checkout {plan}`), else a prorated change (`POST /v1/billing/plan {plan}`). Enterprise is Talk to us (`mailto:sales@glyphh.ai`). With hosted models on, their rates |
 | `/settings/members` | Members | `GET /v1/org`, `GET /v1/org/members`, `GET /v1/org/invites`, `GET /v1/me` | Invite (`POST /v1/org/invites {email}`, valid seven days), cancel an invite (`DELETE /v1/org/invites/{id}`), remove a member (`DELETE /v1/org/members/{id}`) |
+| `/settings/auth` | Auth | `GET /v1/org/sso`, `GET /v1/me` | Single sign-on, above |
 | `/settings/profile` | Profile | `GET /v1/me` | Rename (`PATCH /v1/me`), link a provider (`POST /v1/me/identities` → its link), unlink (`DELETE /v1/me/identities/{provider}`) |
 | `/settings/installs` | Installs | `GET /v1/installs` | Sign out an install (`DELETE /v1/installs/{id}`) |
+| `/admin`, `/admin/*` | The staff view (Glyphh's staff only) | `/v1/admin/*` | Dashboard, infrastructure, log alerts, organisations and people, plans, traffic, marketing links, Ada versions, the audit log; and the games' admin (`/api/games*`, `server/gamesAdmin.ts`) |
 
 The platform's own routes: `/login`, `/auth/login`, `/auth/callback`, `/auth/logout` (POST), `/auth/session`,
-`/auth/providers` (the server's, passed through) and `/api/v1/*`. Writes must come from this origin.
+`/auth/providers` (the server's, passed through), `/api/v1/*`, `/api/ada/v1/*`, `/api/marketplace` and `/api/games*`.
+Writes must come from this origin.
 
 ## Settings
 
@@ -141,6 +162,9 @@ The platform's own routes: `/login`, `/auth/login`, `/auth/callback`, `/auth/log
 | `DEMO_VOICE_DAILY_CALLS` | The voice demo's (demo.glyphh.ai/voice) Ada calls a day, all visitors together (default 300) |
 | `DEMO_BOT_DAILY_CALLS` | The bot demo's (demo.glyphh.ai/bot) Ada calls a day, all visitors together (default 6000, about 55 takes) |
 | `GAMES_HOST` | The host the games answer on (default `games.glyphh.ai`) |
+| `GAME_ADMIN_KEY_FRANK`, `_CRABBY`, `_MAHJ`, `_CAROL` | Each game's own admin key, for the staff view's games admin; a game without one shows as not connected. `GAME_URL_<GAME>` points at another address of a game |
+
+The Marketplace needs no setting: the repository it reads is public.
 
 ## demo.glyphh.ai
 
@@ -199,7 +223,8 @@ bright, again after each take Ada keeps. It is built for the plain page on its o
 
 ### demo.glyphh.ai/bot
 
-Teach a bot: the visitor makes up a rule for approving expenses and keeps it to themselves. A bot that knows nothing
+A demo of Ada, kept: it is not the bots product, which is gone. Teach a bot: the visitor makes up a rule for approving
+expenses and keeps it to themselves. A bot that knows nothing
 works through 40 expenses: it asks the visitor where Ada is under 75% sure (and about the first five whatever she
 thinks), and where she is sure but has little to stand on (the bot's own gate: the two closest answers must each be
 50% alike or more and both say what she says); otherwise it decides alone. The visitor answers, and says whether each decision made alone was
@@ -284,25 +309,28 @@ Node 22 or later.
 ```bash
 npm ci
 cp .env.example .env        # then set PLATFORM_CLIENT_ID, PLATFORM_CLIENT_SECRET and SESSION_SECRET
-npm run fake-server         # a stand-in server with sample data on FAKE_SERVER_PORT (default 8080): licences only,
-                            # as the server is, the org on Free; FAKE_ADA=on for Ada Cloud (its API at /ada/v1);
-                            # FAKE_LLM=on for hosted models' tokens, the overage balance and top-ups
+npm run fake-server         # a stand-in server with sample data on FAKE_SERVER_PORT (default 8080): the org on Free,
+                            # Ada Cloud on (its API at /ada/v1; FAKE_ADA=off for a server without it);
+                            # FAKE_LLM=on for hosted models' tokens, the overage balance and top-ups;
+                            # FAKE_STAFF=on to sign in as Glyphh's staff
 npm run dev                 # the platform on PLATFORM_URL (default http://localhost:3000), hot reload
-npm test                    # route handlers, API calls and every page, against fake servers
+npm test                    # route handlers, API calls and every page, against fake servers; never the network
 npm run typecheck
 npm run build && npm start  # production build
 ```
 
 With the fake server, any client id and secret will do; `SESSION_SECRET` from `openssl rand -base64 32`. Logging in
-runs the whole OAuth round trip and lands on Home.
+runs the whole OAuth round trip and lands on Home. The Marketplace is read from GitHub by the platform itself, in
+development too.
 
 ## Layout
 
 | Path | What |
 |---|---|
-| `server/` | The route handlers (Hono on Node): `app.ts` the routes, `oauth.ts` the calls to the token endpoint, `seal.ts` the cookie (AES-256-GCM), `config.ts` the settings |
+| `server/` | The route handlers (Hono on Node): `app.ts` the routes, `oauth.ts` the calls to the token endpoint, `seal.ts` the cookie (AES-256-GCM), `config.ts` the settings, `marketplace.ts` the Marketplace's reader, `gamesAdmin.ts` the games' admin; `demo.ts`, `voice.ts`, `bot.ts` and `games.ts` the other hosts |
 | `src/api/` | The server's types, the `/api/v1` client, one TanStack Query hook per read and write |
-| `src/pages/` | One folder per page; sign-in and consent in `pages/flows/`, Settings in `pages/settings/` |
+| `src/pages/` | One folder per page; sign-in and consent in `pages/flows/`, Settings in `pages/settings/`, Ada in `pages/ada/`, the Marketplace in `pages/marketplace/` |
+| `src/admin/`, `src/games/` | The staff view and its games admin |
 | `src/routes/` | The route table and the two layouts with their sidebars |
 | `src/layout/` | The app shell, sidebar, top bar, account menu, page headers, settings sections, the sign-in card |
 | `src/ui/` | The component library, a folder each with its CSS Module; nothing in it knows the API |

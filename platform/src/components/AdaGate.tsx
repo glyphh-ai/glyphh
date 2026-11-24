@@ -4,8 +4,8 @@ import { useAdaCloud } from '@/api/ada';
 import { LoadingCard } from '@/ui';
 
 /**
- * Ada Cloud on or off, as the server says (`ada_cloud` on /v1/me). On, Home, Models, API Keys and Usage are Ada's, with
- * Runtimes & licences beside them. Off, the runtimes' own pages.
+ * Ada Cloud on or off, as the server says (`ada_cloud` on /v1/me). On, Home, Models, API Keys and Usage are Ada's.
+ * Off, only the pages that need none of it: the Marketplace and Settings.
  */
 export function AdaOr({ ada, off }: { ada: ReactNode; off: ReactNode }) {
   const on = useAdaCloud();

@@ -49,29 +49,6 @@
   display: none;
 }
 
-/* A bare page (Bots) is an app of its own: it fills the screen beside the sidebar, which folds to its icons. */
-.shell[data-bare] .main {
-  height: 100vh;
-  height: 100dvh;
-  min-height: 0;
-}
-
-.bare {
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-}
-
-@media (min-width: 861px) {
-  .shell[data-bare] .sidebar {
-    width: 56px;
-  }
-
-  .shell[data-bare] .logo {
-    display: none;
-  }
-}
-
 @media (max-width: 860px) {
   .sidebar {
     position: fixed;

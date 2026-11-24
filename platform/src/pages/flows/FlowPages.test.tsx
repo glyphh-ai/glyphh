@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { renderApp, stubLocation } from '@/test/render';
 import { http, HttpResponse, server, serverUrl, sessionHandler } from '@/test/server';
 import { forgetLogin, pendingLogin, rememberLogin } from './pendingLogin';
@@ -316,17 +316,6 @@ describe('Server pages', () => {
     renderApp('/error?code=E_LIMIT&message=Your%20plan%20allows%201%20install.&trace=tr-77');
     expect(await screen.findByText('Your plan allows 1 install.')).toBeInTheDocument();
     expect(screen.getByText('tr-77')).toBeInTheDocument();
-  });
-
-  it('/github says where the app is installed', async () => {
-    renderApp('/github?installed=chris-t');
-    const card = await screen.findByRole('heading', { name: 'GitHub App installed' });
-    expect(within(card.parentElement!).getByText('chris-t')).toBeInTheDocument();
-  });
-
-  it('/github without a name says it is on the person’s account', async () => {
-    renderApp('/github');
-    expect(await screen.findByText('your account')).toBeInTheDocument();
   });
 
   it('/error without a message says something went wrong', async () => {

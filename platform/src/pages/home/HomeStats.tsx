@@ -27,7 +27,7 @@ function Stat({ icon, label, children }: { icon: IconName; label: string; childr
   );
 }
 
-/** The overage balance, with Add funds for the admin: what bots and hosted models draw on past the plan's tokens. */
+/** The overage balance, with Add funds for the admin: what hosted models draw on past the plan's tokens. */
 function BalanceStat({ balance, isAdmin }: { balance: Balance; isAdmin: boolean }) {
   const [open, setOpen] = useState(false);
   const amount = balanceMicros(balance);
@@ -37,7 +37,7 @@ function BalanceStat({ balance, isAdmin }: { balance: Balance; isAdmin: boolean 
         <span className={cx(styles.big, amount < 0 && styles.negative)}>{dollars(amount)}</span>
         {amount <= 0 ? <Chip tone="red">Empty</Chip> : balance.low && <Chip tone="amber">Running low</Chip>}
       </div>
-      <p className={styles.meta}>For bots and hosted models past your plan’s tokens.</p>
+      <p className={styles.meta}>For hosted models past your plan’s tokens.</p>
       <div className={styles.foot}>
         <Link to="/settings/billing" className={styles.link}>
           Billing

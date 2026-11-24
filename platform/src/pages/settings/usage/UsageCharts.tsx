@@ -24,12 +24,11 @@ function ChartCard({ title, total, children }: { title: string; total: string; c
 }
 
 /**
- * Usage over time, a range at a time (the last 7 or 30 days, or this month): tokens in and out, one model's or every
- * model's (the bots' Claude models among them); what went on the balance; with Ada Cloud on, its requests; bot runs;
- * and the connections held. Days are UTC. Precedents have no history on the server, so they are only this month's
- * meter above.
+ * Usage over time, a range at a time (the last 7 or 30 days, or this month): Ada's requests, and with hosted models on
+ * their tokens in and out (one model's or every model's) and what went on the balance. Days are UTC. Precedents have
+ * no history on the server, so they are only this month's meter above.
  */
-export function UsageCharts({ ada }: { ada: boolean }) {
+export function UsageCharts() {
   const [range, setRange] = useState<Range>('30');
   const [model, setModel] = useState('all');
   const days = rangeDays(range);
@@ -41,7 +40,7 @@ export function UsageCharts({ ada }: { ada: boolean }) {
   const axis = useMemo(() => axisDays(series.data, days), [series.data, days]);
   const labels = useMemo(() => axis.map(dayText), [axis]);
   const models = useMemo(() => {
-    const named = new Map((tokens?.models ?? []).map((m) => [m.id, m.kind === 'bot' ? `${m.name} (bots)` : m.name]));
+    const named = new Map((tokens?.models ?? []).map((m) => [m.id, m.name]));
     for (const row of tokenDays.data ?? []) if (!named.has(row.model)) named.set(row.model, row.model);
     return [{ value: 'all', label: 'All models' }, ...[...named].map(([value, label]) => ({ value, label }))];
   }, [tokens, tokenDays.data]);
@@ -49,8 +48,6 @@ export function UsageCharts({ ada }: { ada: boolean }) {
   const charts = useMemo(() => {
     const reads = field(axis, series.data, 'reads');
     const decides = field(axis, series.data, 'decides');
-    const runs = field(axis, series.data, 'bot_runs');
-    const held = field(axis, series.data, 'connections');
     return {
       tokens: [
         { label: 'Input', data: used.input },
@@ -61,9 +58,7 @@ export function UsageCharts({ ada }: { ada: boolean }) {
         { label: 'Requests', data: reads },
         { label: 'Decides', data: decides },
       ] as Series[],
-      runs: [{ label: 'Bot runs', data: runs }] as Series[],
-      held: [{ label: 'Connections', data: held }] as Series[],
-      totals: { reads: sum(reads), runs: sum(runs), held: held.at(-1) ?? 0 },
+      totals: { reads: sum(reads) },
     };
   }, [axis, series.data, used]);
 
@@ -90,16 +85,8 @@ export function UsageCharts({ ada }: { ada: boolean }) {
               <Chart kind="bar" cents label={`Charged to the balance by day, ${rangeName}`} labels={labels} series={charts.charged} />
             </ChartCard>
           )}
-          {ada && (
-            <ChartCard title="Ada requests" total={`${n(charts.totals.reads)} requests`}>
-              <Chart kind="line" label={`Ada requests and decides by day, ${rangeName}`} labels={labels} series={charts.requests} />
-            </ChartCard>
-          )}
-          <ChartCard title="Bot runs" total={`${n(charts.totals.runs)} runs`}>
-            <Chart kind="bar" label={`Bot runs by day, ${rangeName}`} labels={labels} series={charts.runs} />
-          </ChartCard>
-          <ChartCard title="Connections held" total={`${n(charts.totals.held)} now`}>
-            <Chart kind="line" label={`Connections held by day, ${rangeName}`} labels={labels} series={charts.held} />
+          <ChartCard title="Ada requests" total={`${n(charts.totals.reads)} requests`}>
+            <Chart kind="line" label={`Ada requests and decides by day, ${rangeName}`} labels={labels} series={charts.requests} />
           </ChartCard>
         </div>
       )}

@@ -1,5 +1,5 @@
 import { fireEvent, screen, within } from '@testing-library/react';
-import { llmModels, llmPlans, me, plans } from '@/test/fixtures';
+import { adaPlans, llmModels, llmPlans, me, plans } from '@/test/fixtures';
 import { renderApp, stubLocation } from '@/test/render';
 import { apiError, http, HttpResponse, llmHandlers, onFreeHandlers, server, v1 } from '@/test/server';
 
@@ -40,56 +40,52 @@ describe('Plans with Glyphh’s hosted models', () => {
 
 describe('Choosing a plan', () => {
   it('covers the window with no sidebar: the person, the X, and every plan with what it includes', async () => {
+    server.use(http.get(v1('/plans'), () => HttpResponse.json(adaPlans)));
     renderApp('/settings/plans');
     expect(await screen.findByRole('heading', { name: 'Choose a plan' })).toBeInTheDocument();
     expect(screen.queryByRole('complementary', { name: 'Main' })).not.toBeInTheDocument();
     expect(await screen.findByText('chris@example.com')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
-    expect(screen.getByText(/unlimited members, installs and self-hosted runtimes, with Ada included\. Never priced per seat\./)).toBeInTheDocument();
+    expect(screen.getByText('Every plan has unlimited members, installs, models and keys. Never priced per seat.')).toBeInTheDocument();
 
     const pro = await screen.findByRole('region', { name: 'Pro' });
     expect(within(pro).getByText('Current plan', { selector: 'span' })).toBeInTheDocument();
     expect(within(pro).getByRole('button', { name: 'Current plan' })).toBeDisabled();
     expect(within(pro).getByText('$99')).toBeInTheDocument();
     expect(within(pro).getByText('per month')).toBeInTheDocument();
-    expect(within(pro).getByText('3 runtime nodes')).toBeInTheDocument();
-    expect(within(pro).getByText('50,000 precedents per node')).toBeInTheDocument();
-    expect(within(pro).getByText('Sync across runtimes')).toBeInTheDocument();
+    expect(within(pro).getByText('100,000 precedents')).toBeInTheDocument();
+    expect(within(pro).getByText('1,000,000 requests a month')).toBeInTheDocument();
 
     const free = card('Free');
     expect(within(free).getByText('$0')).toBeInTheDocument();
-    expect(within(free).getByText('1 runtime node')).toBeInTheDocument();
-    expect(within(free).getByText('5,000 precedents per node')).toBeInTheDocument();
+    expect(within(free).getByText('1,000 precedents')).toBeInTheDocument();
     expect(within(free).getByRole('button', { name: 'Switch to Free' })).toBeInTheDocument();
 
-    // Basic, between Free and Pro: one node as on Free.
     const basic = card('Basic');
     expect(within(basic).getByText('$20')).toBeInTheDocument();
     expect(within(basic).getByText('per month')).toBeInTheDocument();
-    expect(within(basic).getByText('1 runtime node')).toBeInTheDocument();
     expect(within(basic).getByRole('button', { name: 'Switch to Basic' })).toBeInTheDocument();
 
     const team = card('Team');
     expect(within(team).getByText('Recommended')).toBeInTheDocument();
     expect(within(team).getByText('$299')).toBeInTheDocument();
-    expect(within(team).getByText('500,000 precedents per node')).toBeInTheDocument();
+    expect(within(team).getByText('1,000,000 precedents')).toBeInTheDocument();
     expect(within(team).getByRole('button', { name: 'Upgrade to Team' })).toBeInTheDocument();
 
     const enterprise = card('Enterprise');
     expect(within(enterprise).getByText('By contract')).toBeInTheDocument();
     expect(within(enterprise).queryByText(/^per /)).not.toBeInTheDocument();
-    expect(within(enterprise).getByText('Unlimited runtime nodes')).toBeInTheDocument();
-    expect(within(enterprise).getByText('Unlimited precedents per node')).toBeInTheDocument();
-    expect(within(enterprise).getByText('High availability')).toBeInTheDocument();
+    expect(within(enterprise).getByText('Unlimited precedents')).toBeInTheDocument();
+    expect(within(enterprise).getByText('Single sign-on')).toBeInTheDocument();
     expect(within(enterprise).getByRole('link', { name: 'Talk to us' })).toHaveAttribute('href', 'mailto:sales@glyphh.ai');
     expect(within(enterprise).queryByRole('button')).not.toBeInTheDocument();
   });
 
-  it('says nothing of hosted machines and shows no rates: Glyphh hosts no runtime', async () => {
+  it('says nothing of runtimes, nodes or hosting, and shows no rates', async () => {
     renderApp('/settings/plans');
     await screen.findByRole('region', { name: 'Enterprise' });
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(screen.queryByText(/hosted machine|hosting/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/hosted machine|hosting|runtime|per node|licence/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
@@ -231,10 +227,9 @@ describe('Choosing a plan while some features are not built', () => {
     const pro = await screen.findByRole('region', { name: 'Pro' });
     expect(within(pro).getByText('$99')).toBeInTheDocument();
     expect(within(pro).getByRole('button', { name: 'Upgrade to Pro' })).toBeInTheDocument();
-    expect(within(pro).getByText('Sync across runtimes').closest('li')).toHaveTextContent('Sync across runtimesComing soon');
     const enterprise = card('Enterprise');
     expect(within(enterprise).getByRole('link', { name: 'Talk to us' })).toHaveAttribute('href', 'mailto:sales@glyphh.ai');
-    expect(within(enterprise).getByText('Offline licences for air-gapped runtimes').closest('li')).not.toHaveTextContent('Coming soon');
-    expect(within(enterprise).getByText('Audit logs').closest('li')).toHaveTextContent('Coming soon');
+    expect(within(enterprise).getByText('Single sign-on').closest('li')).not.toHaveTextContent('Coming soon');
+    expect(within(enterprise).getByText('Audit logs').closest('li')).toHaveTextContent('Audit logsComing soon');
   });
 });

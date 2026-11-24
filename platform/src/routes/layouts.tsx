@@ -5,139 +5,60 @@ import { AppShell } from '@/layout/AppShell/AppShell';
 import { NavGroup, NavItem, Sidebar, SidebarBack } from '@/layout/Sidebar/Sidebar';
 import type { Crumb } from '@/layout/TopBar/TopBar';
 import { UserMenu } from '@/layout/UserMenu/UserMenu';
-import { RROTOR_SHOWN } from '@/lib/shelved';
 
-/**
- * Each route names its own crumbs in `handle.crumbs`, and in `adaCrumbs` where they differ with Ada Cloud on; the
- * deepest one wins. A crumb `:name` is the route's own `name`.
- */
-export type RouteHandle = { crumbs: Crumb[]; adaCrumbs?: Crumb[]; /** The page fills the screen as an app of its own (Bots). */ bare?: boolean };
-
-/** Whether the deepest route is a bare page. */
-function useBare(): boolean {
-  const matches = useMatches();
-  return Boolean((matches.at(-1)?.handle as RouteHandle | undefined)?.bare);
-}
+/** Each route names its own crumbs in `handle.crumbs`; the deepest one wins. A crumb `:name` is the route's own `name`. */
+export type RouteHandle = { crumbs: Crumb[] };
 
 function useCrumbs(): Crumb[] {
   const matches = useMatches();
   const params = useParams();
-  const ada = useAdaCloud();
   for (let i = matches.length - 1; i >= 0; i--) {
     const handle = matches[i]?.handle as RouteHandle | undefined;
     if (handle?.crumbs) {
-      const crumbs = (ada && handle.adaCrumbs) || handle.crumbs;
-      return crumbs.map((crumb) => (crumb.label === ':name' ? { ...crumb, label: params.name ?? '' } : crumb));
+      return handle.crumbs.map((crumb) => (crumb.label.startsWith(':') ? { ...crumb, label: params[crumb.label.slice(1)] ?? '' } : crumb));
     }
   }
   return [];
 }
 
 export function MainLayout() {
-  // Ada Cloud on or off, as the server says: nothing until it is read, so neither flashes for the other.
+  // Ada Cloud on or off, as the server says: Ada's pages wait until it is read, so they never flash and go.
   const ada = useAdaCloud();
   return (
     <AppShell
       crumbs={useCrumbs()}
-      bare={useBare()}
       sidebar={
         <Sidebar footer={<UserMenu />}>
-          {ada === undefined ? null : ada ? <AdaNav /> : <RuntimeNav />}
-          {ada === undefined ? null : <BotsNav />}
+          {ada === undefined ? null : (
+            <NavGroup label="Ada">
+              {ada && (
+                <>
+                  <NavItem to="/" end icon="home">
+                    Home
+                  </NavItem>
+                  <NavItem to="/models" icon="model">
+                    Models
+                  </NavItem>
+                  <NavItem to="/keys" icon="key">
+                    API Keys
+                  </NavItem>
+                  <NavItem to="/usage" icon="monitor">
+                    Usage
+                  </NavItem>
+                </>
+              )}
+              {/* The plugins in github.com/glyphh-ai/plugins; Ada's versions are Settings' Releases. */}
+              <NavItem to="/marketplace" icon="layers">
+                Marketplace
+              </NavItem>
+            </NavGroup>
+          )}
           <StaffNav />
         </Sidebar>
       }
     >
       <Outlet />
     </AppShell>
-  );
-}
-
-/** With Ada Cloud on: Ada's pages, then Runtimes & licences. */
-function AdaNav() {
-  return (
-    <>
-      <NavGroup label="Ada">
-        <NavItem to="/" end icon="home">
-          Home
-        </NavItem>
-        <NavItem to="/models" icon="model">
-          Models
-        </NavItem>
-        {/* Models and bots to add, where Templates was (2026-11-21); Ada's versions are Settings' Releases now. */}
-        <NavItem to="/marketplace" icon="layers">
-          Marketplace
-        </NavItem>
-        <NavItem to="/keys" icon="key">
-          API Keys
-        </NavItem>
-        <NavItem to="/usage" icon="monitor">
-          Usage
-        </NavItem>
-      </NavGroup>
-      {/* The rrotors the org runs itself and the licence key they run on, beside Ada Cloud (2026-10-31); hidden
-          while rrotor is switched off, see lib/shelved. */}
-      {RROTOR_SHOWN ? (
-        <NavGroup label="Runtimes & licences">
-          <NavItem to="/runtimes" icon="chip">
-            Runtimes
-          </NavItem>
-          <NavItem to="/licence" icon="card">
-            Licence
-          </NavItem>
-          <NavItem to="/apps" icon="layers">
-            Apps
-          </NavItem>
-          <NavItem to="/runtime-keys" icon="key">
-            Runtime keys
-          </NavItem>
-        </NavGroup>
-      ) : null}
-    </>
-  );
-}
-
-/**
- * Bots, Ada Cloud on or off: one entry. What waits on a person, the crew and the connections are all inside the Bots
- * area itself, so none has an entry of its own here.
- */
-function BotsNav() {
-  const ada = useAdaCloud();
-  return (
-    <NavGroup label="Bots">
-      <NavItem to="/bots" icon="user">
-        Bots
-      </NavItem>
-      {/* With Ada Cloud on the Marketplace sits in Ada's group; off, it holds bots only. */}
-      {ada === false && (
-        <NavItem to="/marketplace" icon="layers">
-          Marketplace
-        </NavItem>
-      )}
-    </NavGroup>
-  );
-}
-
-/** With Ada Cloud off: Runtimes & licences, with the runtimes' keys and usage. No models: they are Ada Cloud's. */
-function RuntimeNav() {
-  return (
-    <NavGroup label="Runtimes & licences">
-      <NavItem to="/runtimes" icon="chip">
-        Runtimes
-      </NavItem>
-      <NavItem to="/licence" icon="card">
-        Licence
-      </NavItem>
-      <NavItem to="/apps" icon="layers">
-        Apps
-      </NavItem>
-      <NavItem to="/keys" icon="key">
-        API Keys
-      </NavItem>
-      <NavItem to="/usage" icon="monitor">
-        Usage
-      </NavItem>
-    </NavGroup>
   );
 }
 
@@ -168,9 +89,6 @@ export function SettingsLayout() {
                 Releases
               </NavItem>
             )}
-            <NavItem to="/settings/claude-key" icon="key">
-              Claude key
-            </NavItem>
           </NavGroup>
           <NavGroup label="Personal">
             <NavItem to="/settings/profile" icon="user">

@@ -49,7 +49,7 @@ export function tokensOn(days: string[], rows: TokenDay[], model = 'all'): Token
 }
 
 /** One series field on the axis' days; a day the series lacks is 0. */
-export function field(days: string[], series: SeriesDay[] | undefined, key: 'reads' | 'decides' | 'bot_runs' | 'connections'): number[] {
+export function field(days: string[], series: SeriesDay[] | undefined, key: 'reads' | 'decides'): number[] {
   const by = new Map((series ?? []).map((d) => [d.day, d[key]]));
   return days.map((day) => by.get(day) ?? 0);
 }

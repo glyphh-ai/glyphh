@@ -28,7 +28,7 @@ export function Resources({ connector }: { connector: string | null }) {
         <Card>
           <a href={docsUrl} className={styles.resource}>
             <Resource icon="external" name="Docs">
-              <span className={styles.meta}>Specs, precedents, bots and the API, step by step.</span>
+              <span className={styles.meta}>Specs, precedents and the API, step by step.</span>
             </Resource>
           </a>
         </Card>
@@ -51,7 +51,7 @@ export function Resources({ connector }: { connector: string | null }) {
         <Card>
           <Link to="/marketplace" className={styles.resource}>
             <Resource icon="model" name="Marketplace">
-              <span className={styles.meta}>Model templates and bots, ready to add to your org.</span>
+              <span className={styles.meta}>Plugins for Claude, with their skills and connectors.</span>
             </Resource>
           </Link>
         </Card>

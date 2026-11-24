@@ -92,8 +92,9 @@ describe('Buying more usage and the overages on Billing', () => {
     // The first handler that matches answers.
     server.use(
       http.get(v1('/me'), () => HttpResponse.json({ ...me, ada_cloud: true, plan: { ...me.plan, cloud: cloudLimits.Pro } })),
+      // A server that still sends connections and each bot's month: neither is read.
       http.get(v1('/billing'), () =>
-        HttpResponse.json({ ...llmBilling, connections: { used: 3, included: 2, over: 1, cents_a_month: 500, due_cents: 500 } }),
+        HttpResponse.json({ ...llmBilling, connections: { used: 3, included: 2, over: 1, cents_a_month: 500, due_cents: 500 }, bots: [{ slug: 'triage', name: 'Triage', runs: 4 }] }),
       ),
       ...llmHandlers(),
     );
@@ -101,23 +102,20 @@ describe('Buying more usage and the overages on Billing', () => {
     expect(await screen.findByRole('heading', { name: 'Buy more usage' })).toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Overage balance' })).getByRole('button', { name: 'Add funds' })).toBeInTheDocument();
     const overages = await screen.findByRole('region', { name: 'Overages' });
-    expect(overages).toHaveTextContent('Your plan has 25,000,000 tokens a month for bots and hosted models.');
+    expect(overages).toHaveTextContent('Your plan has 25,000,000 tokens a month for hosted models.');
     expect(overages).toHaveTextContent('Past 1,000,000 a month, requests go on at $1 per 10,000, on your next invoice.');
-    expect(overages).toHaveTextContent('2 included, then $5 a connection a month.');
+    expect(overages).not.toHaveTextContent(/connection/i);
     expect(within(overages).getByRole('link', { name: 'Change plan' })).toHaveAttribute('href', '/settings/plans');
   });
 
-  it('says Free’s requests stop, a cap not priced is not charged, and leaves out what the server does not send', async () => {
+  it('says Free’s requests stop, and leaves out what the server does not send', async () => {
     server.use(
       http.get(v1('/me'), () => HttpResponse.json({ ...me, ada_cloud: true, plan: { ...me.plan, cloud: cloudLimits.Free } })),
-      http.get(v1('/billing'), () =>
-        HttpResponse.json({ ...llmBilling, tokens: null, balance: null, connections: { used: 1, included: 3, over: 0, cents_a_month: null, due_cents: null } }),
-      ),
+      http.get(v1('/billing'), () => HttpResponse.json({ ...llmBilling, tokens: null, balance: null })),
     );
     renderApp('/settings/billing');
     const overages = await screen.findByRole('region', { name: 'Overages' });
     expect(overages).toHaveTextContent('Past 5,000 a month, requests stop until the month turns.');
-    expect(overages).toHaveTextContent('3 included. Past them, connections are not charged yet.');
     expect(overages).not.toHaveTextContent('tokens');
     expect(screen.queryByRole('heading', { name: 'Buy more usage' })).not.toBeInTheDocument();
   });

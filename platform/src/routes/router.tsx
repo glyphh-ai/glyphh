@@ -1,6 +1,4 @@
-import type { ReactNode } from 'react';
-import { createBrowserRouter, Navigate, useLocation, useParams, type RouteObject } from 'react-router';
-import { RROTOR_SHOWN } from '@/lib/shelved';
+import { createBrowserRouter, Navigate, useLocation, type RouteObject } from 'react-router';
 import { adminRoutes } from '@/admin/routes';
 import { StaffHome } from '@/admin/StaffGate';
 import { AdaOnly, AdaOr } from '@/components/AdaGate';
@@ -8,38 +6,33 @@ import { RequireSession } from '@/components/RequireSession';
 import { AdaHome } from '@/pages/ada/AdaHome';
 import { AdaKeysPage } from '@/pages/ada/AdaKeysPage';
 import { AdaModelsPage } from '@/pages/ada/AdaModelsPage';
-import { AppsPage } from '@/pages/apps/AppsPage';
-import { BotsShell } from '@/pages/bots/shell/BotsShell';
 import { AdaReleasesPage } from '@/pages/ada/AdaReleasesPage';
 import { AdaUsagePage } from '@/pages/ada/AdaUsagePage';
 import { ModelPage } from '@/pages/ada/model/ModelPage';
 import { NewModelPage } from '@/pages/ada/NewModelPage';
-import { BotTemplatePage } from '@/pages/templates/BotTemplatePage';
-import { MarketplacePage } from '@/pages/templates/MarketplacePage';
-import { TemplatePage } from '@/pages/templates/TemplatePage';
-import { KeysPage } from '@/pages/keys/KeysPage';
-import { RuntimesPage } from '@/pages/runtimes/RuntimesPage';
+import { MarketplacePage } from '@/pages/marketplace/MarketplacePage';
+import { PluginPage } from '@/pages/marketplace/PluginPage';
 import { PlansPage } from '@/pages/plans/PlansPage';
 import { AllowPage } from '@/pages/flows/AllowPage';
 import { AuthorizePage } from '@/pages/flows/AuthorizePage';
 import { DeviceApprovePage } from '@/pages/flows/DeviceApprovePage';
 import { DevicePage } from '@/pages/flows/DevicePage';
 import { LoginPage } from '@/pages/flows/LoginPage';
-import { DeviceDonePage, ErrorPage, GitHubInstalledPage, NotFoundPage } from '@/pages/flows/ResultPages';
+import { DeviceDonePage, ErrorPage, NotFoundPage } from '@/pages/flows/ResultPages';
 import { AuthPage } from '@/pages/settings/AuthPage';
-import { ClaudeKeyPage } from '@/pages/settings/ClaudeKeyPage';
 import { BillingPage } from '@/pages/settings/billing/BillingPage';
 import { GeneralPage } from '@/pages/settings/GeneralPage';
 import { InstallsPage } from '@/pages/settings/InstallsPage';
-import { LicencePage } from '@/pages/settings/licence/LicencePage';
 import { MembersPage } from '@/pages/settings/MembersPage';
 import { ProfilePage } from '@/pages/settings/ProfilePage';
-import { UsagePage } from '@/pages/settings/UsagePage';
 import { MainLayout, SettingsLayout, type RouteHandle } from './layouts';
 
 const crumbs = (...labels: string[]): RouteHandle => ({
   crumbs: labels.map((label, i) => ({ label, to: i === 0 && labels.length > 1 ? '/settings/general' : undefined })),
 });
+
+/** The crumbs of one of Ada's pages. */
+const adaCrumbs = (...rest: RouteHandle['crumbs']): RouteHandle => ({ crumbs: [{ label: 'Ada' }, ...rest] });
 
 /** Paths that moved (some the server sends a browser to); the query string comes along. */
 function Moved({ to }: { to: string }) {
@@ -53,43 +46,25 @@ function MovedWithHash({ to }: { to: string }) {
   return <Navigate to={`${to}${search}${hash}`} replace />;
 }
 
-/**
- * An old page of one crew (a swarm's, then a project's), at the crew's chat in the Bots area with that workspace
- * open; `?run=` comes along.
- */
-function CrewChat() {
-  const { name = '' } = useParams();
-  const params = new URLSearchParams(useLocation().search);
-  params.set('crew', name);
-  return <Navigate to={`/bots?${params}`} replace />;
-}
-
-/** An old page of one app's connection, at the rail's CONNECTIONS, the one place connections are. */
-function ConnectionsRail() {
-  const params = new URLSearchParams(useLocation().search);
-  const catalog = params.get('tab') === 'catalog';
-  return <Navigate to={`/bots?rail=connections${catalog ? '&add=1' : ''}`} replace />;
-}
-
-/** A template's old page, at its place in the Marketplace. */
-function MovedTemplate() {
-  const { name = '' } = useParams();
-  return <Navigate to={`/marketplace/models/${encodeURIComponent(name)}`} replace />;
-}
-
-/** The crumbs of a page in Runtimes & licences. */
-const runtimeCrumbs = (label: string): RouteHandle => ({ crumbs: [{ label: 'Runtimes & licences' }, { label }] });
+/** Where a page of Ada's goes while Ada Cloud is off: the one page that needs none of it. */
+const WITHOUT_ADA = '/marketplace';
 
 /**
- * A page of rrotor's. With rrotor switched off (lib/shelved) and Ada Cloud on it lands on Home; with Ada Cloud off
- * the runtimes' pages are all there is, so they stay.
+ * Addresses of what Glyphh no longer has (2026-11-24), each with everything under it, so an old link or bookmark
+ * lands somewhere. The old Marketplace, the template and bot libraries and the Bots area go to the Marketplace; a
+ * plugin can therefore not be opened at /marketplace/models or /marketplace/bots.
  */
-function Shelved({ page }: { page: ReactNode }) {
-  return RROTOR_SHOWN ? <>{page}</> : <AdaOr ada={<Navigate to="/" replace />} off={page} />;
-}
+export const GONE_TO_MARKETPLACE = ['bots', 'approvals', 'connections', 'projects', 'swarms', 'programs', 'templates', 'marketplace/models', 'marketplace/bots'];
+/** rrotor's pages and the GitHub App's go Home (which is the Marketplace while Ada Cloud is off). */
+export const GONE_TO_HOME = ['runtimes', 'runtime-keys', 'licence', 'apps', 'artifacts', 'github', 'getting-started', 'machines', 'logs'];
+/** Settings pages that are gone, to Home too. */
+export const GONE_SETTINGS = ['claude-key', 'github-token', 'licence', 'logs'];
+
+const gone = (paths: string[], to: string): RouteObject[] => paths.map((path) => ({ path: `${path}/*`, element: <Navigate to={to} replace /> }));
 
 export const routes: RouteObject[] = [
-  // Signed-in pages.
+  // Signed-in pages. Glyphh is Ada (2026-11-24): Home, Models, API Keys and Usage are Ada Cloud's, and the Marketplace
+  // shows the plugins in github.com/glyphh-ai/plugins.
   {
     element: (
       <RequireSession>
@@ -97,113 +72,68 @@ export const routes: RouteObject[] = [
       </RequireSession>
     ),
     children: [
-      // With Ada Cloud on (the server's ada_cloud), Home, Models, API Keys and Usage are Ada's. Runtimes & licences sits
-      // beside it in both: the rrotors a person runs themselves and the licence key they run on. Glyphh hosts no
-      // runtime (2026-10-31): the old Machines and Logs pages go to Runtimes, and Getting started to its Add a runtime.
-      { path: 'runtimes', element: <Shelved page={<RuntimesPage />} />, handle: runtimeCrumbs('Runtimes') },
-      { path: 'licence', element: <Shelved page={<LicencePage />} />, handle: runtimeCrumbs('Licence') },
-      { path: 'apps', element: <Shelved page={<AppsPage />} />, handle: runtimeCrumbs('Apps') },
-      // The first cut's path (2026-11-01); the search (q, type, state, page) comes along.
-      { path: 'artifacts', element: <Moved to="/apps" /> },
-      {
-        path: 'runtime-keys',
-        element: <AdaOr ada={RROTOR_SHOWN ? <KeysPage /> : <Navigate to="/" replace />} off={<Moved to="/keys" />} />,
-        handle: runtimeCrumbs('Runtime keys'),
-      },
-      { path: 'getting-started', element: <Navigate to="/runtimes?add=1" replace /> },
-      { path: 'machines', element: <Navigate to="/runtimes" replace /> },
-      { path: 'logs', element: <Navigate to="/runtimes" replace /> },
       {
         index: true,
         element: (
           <StaffHome>
-            <AdaOr ada={<AdaHome />} off={<Moved to="/runtimes" />} />
+            <AdaOr ada={<AdaHome />} off={<Navigate to={WITHOUT_ADA} replace />} />
           </StaffHome>
         ),
-        handle: { crumbs: [{ label: 'Runtimes & licences' }, { label: 'Runtimes' }], adaCrumbs: [{ label: 'Ada' }, { label: 'Home' }] },
+        handle: adaCrumbs({ label: 'Home' }),
       },
-      {
-        path: 'keys',
-        element: <AdaOr ada={<AdaKeysPage />} off={<KeysPage />} />,
-        handle: { crumbs: [{ label: 'Runtimes & licences' }, { label: 'API Keys' }], adaCrumbs:[{ label: 'Ada' }, { label: 'API Keys' }] },
-      },
-      // Models are Ada Cloud's only: with it off the server serves none, so they go to Runtimes (2026-10-31).
       {
         path: 'models',
         element: (
-          <AdaOnly otherwise="/runtimes">
+          <AdaOnly otherwise={WITHOUT_ADA}>
             <AdaModelsPage />
           </AdaOnly>
         ),
-        handle: { crumbs: [{ label: 'Ada' }, { label: 'Models' }] },
+        handle: adaCrumbs({ label: 'Models' }),
       },
       {
         path: 'models/new',
         element: (
-          <AdaOnly otherwise="/runtimes">
+          <AdaOnly otherwise={WITHOUT_ADA}>
             <NewModelPage />
           </AdaOnly>
         ),
-        handle: { crumbs: [{ label: 'Ada' }, { label: 'Models', to: '/models' }, { label: 'New model' }] },
+        handle: adaCrumbs({ label: 'Models', to: '/models' }, { label: 'New model' }),
       },
       {
         path: 'models/:name',
         element: (
-          <AdaOnly otherwise="/runtimes">
+          <AdaOnly otherwise={WITHOUT_ADA}>
             <ModelPage />
           </AdaOnly>
         ),
-        handle: { crumbs: [{ label: 'Ada' }, { label: 'Models', to: '/models' }, { label: ':name' }] },
+        handle: adaCrumbs({ label: 'Models', to: '/models' }, { label: ':name' }),
+      },
+      {
+        path: 'keys',
+        element: (
+          <AdaOnly otherwise={WITHOUT_ADA}>
+            <AdaKeysPage />
+          </AdaOnly>
+        ),
+        handle: adaCrumbs({ label: 'API Keys' }),
+      },
+      {
+        path: 'usage',
+        element: (
+          <AdaOnly otherwise={WITHOUT_ADA}>
+            <AdaUsagePage />
+          </AdaOnly>
+        ),
+        handle: adaCrumbs({ label: 'Usage' }),
       },
       // Ada's versions moved to Settings as Releases (2026-11-21); the hash (a version's notes) comes along.
       { path: 'ada', element: <MovedWithHash to="/settings/releases" /> },
-      // The Marketplace (2026-11-21, was Templates): Models (Ada model templates) and Bots (bot templates).
-      { path: 'marketplace', element: <AdaOr ada={<Navigate to="models" replace />} off={<Navigate to="bots" replace />} /> },
+      // The Marketplace: the plugins in github.com/glyphh-ai/plugins, shown; a plugin is installed in Claude, not here.
+      { path: 'marketplace', element: <MarketplacePage />, handle: { crumbs: [{ label: 'Marketplace' }] } },
       {
-        path: 'marketplace/models',
-        element: (
-          <AdaOnly otherwise="/marketplace/bots">
-            <MarketplacePage kind="models" />
-          </AdaOnly>
-        ),
-        handle: { crumbs: [{ label: 'Marketplace' }, { label: 'Models' }] },
-      },
-      {
-        path: 'marketplace/models/:name',
-        element: (
-          <AdaOnly otherwise="/marketplace/bots">
-            <TemplatePage />
-          </AdaOnly>
-        ),
-        handle: { crumbs: [{ label: 'Marketplace', to: '/marketplace/models' }, { label: ':name' }] },
-      },
-      { path: 'marketplace/bots', element: <MarketplacePage kind="bots" />, handle: { crumbs: [{ label: 'Marketplace' }, { label: 'Bots' }] } },
-      {
-        path: 'marketplace/bots/:name',
-        element: <BotTemplatePage />,
-        handle: { crumbs: [{ label: 'Marketplace', to: '/marketplace/bots' }, { label: ':name' }] },
-      },
-      { path: 'templates', element: <Moved to="/marketplace/models" /> },
-      { path: 'templates/:name', element: <MovedTemplate /> },
-      // Bots and the connections they use: every signed-in person's, Ada Cloud on or off (2026-11-21).
-      // The Bots area is the Glyphh Bot app's interface (2026-11-22): one shell that fills the screen, a bot or the
-      // crew picked in its rail. Everything about bots is in it: what waits on a person (the top bar's "Needs you"),
-      // the crew (its card in the rail) and connections (the rail's tab). Their old pages land there.
-      { path: 'bots', element: <BotsShell />, handle: { crumbs: [{ label: 'Bots' }], bare: true } },
-      { path: 'bots/:name', element: <BotsShell />, handle: { crumbs: [{ label: 'Bots', to: '/bots' }, { label: ':name' }], bare: true } },
-      { path: 'approvals', element: <Navigate to="/bots" replace /> },
-      { path: 'projects', element: <Navigate to="/bots" replace /> },
-      { path: 'projects/new', element: <Navigate to="/bots" replace /> },
-      { path: 'projects/:name', element: <CrewChat /> },
-      { path: 'swarms', element: <Navigate to="/bots" replace /> },
-      { path: 'swarms/new', element: <Navigate to="/bots" replace /> },
-      { path: 'swarms/:name', element: <CrewChat /> },
-      { path: 'connections', element: <ConnectionsRail /> },
-      { path: 'connections/:name', element: <ConnectionsRail /> },
-      {
-        path: 'usage',
-        element: <AdaOr ada={<AdaUsagePage />} off={<UsagePage />} />,
-        handle: { crumbs: [{ label: 'Runtimes & licences' }, { label: 'Usage' }], adaCrumbs:[{ label: 'Ada' }, { label: 'Usage' }] },
+        path: 'marketplace/:plugin',
+        element: <PluginPage />,
+        handle: { crumbs: [{ label: 'Marketplace', to: '/marketplace' }, { label: ':plugin' }] },
       },
     ],
   },
@@ -218,18 +148,13 @@ export const routes: RouteObject[] = [
       { index: true, element: <Navigate to="general" replace /> },
       { path: 'general', element: <GeneralPage />, handle: crumbs('Settings', 'General') },
       { path: 'billing', element: <BillingPage />, handle: crumbs('Settings', 'Billing') },
-      // Licence and usage moved to the main sidebar (2026-10-20); rrotor's logs are no more (2026-10-31).
-      { path: 'licence', element: <Moved to="/licence" /> },
+      // Usage moved to the main sidebar (2026-10-20).
       { path: 'usage', element: <Moved to="/usage" /> },
-      { path: 'logs', element: <Navigate to="/runtimes" replace /> },
       { path: 'members', element: <MembersPage />, handle: crumbs('Settings', 'Members') },
       { path: 'auth', element: <AuthPage />, handle: crumbs('Settings', 'Auth') },
-      { path: 'claude-key', element: <ClaudeKeyPage />, handle: crumbs('Settings', 'Claude key') },
-      // The org's pasted GitHub token is gone (2026-11-22): GitHub is connected from the Bots area's workspace pill,
-      // through the Glyphh GitHub App.
-      { path: 'github-token', element: <Navigate to="/bots" replace /> },
       { path: 'profile', element: <ProfilePage />, handle: crumbs('Settings', 'Profile') },
       { path: 'installs', element: <InstallsPage />, handle: crumbs('Settings', 'Installs') },
+      ...gone(GONE_SETTINGS, '/'),
       // Ada's versions (2026-11-21, was the Ada page in the main sidebar).
       {
         path: 'releases',
@@ -255,6 +180,8 @@ export const routes: RouteObject[] = [
   adminRoutes,
   { path: 'account', element: <Moved to="/settings/profile" /> },
   { path: 'billing', element: <Moved to="/settings/billing" /> },
+  ...gone(GONE_TO_MARKETPLACE, '/marketplace'),
+  ...gone(GONE_TO_HOME, '/'),
 
   // Sign-in and consent: the routes the server sends a browser to.
   { path: 'login', element: <LoginPage /> },
@@ -263,7 +190,6 @@ export const routes: RouteObject[] = [
   { path: 'device/done', element: <DeviceDonePage /> },
   { path: 'authorize', element: <AuthorizePage /> },
   { path: 'allow', element: <AllowPage /> },
-  { path: 'github', element: <GitHubInstalledPage /> },
   { path: 'error', element: <ErrorPage /> },
   { path: '*', element: <NotFoundPage /> },
 ];

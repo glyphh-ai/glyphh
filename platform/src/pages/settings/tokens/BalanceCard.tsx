@@ -3,7 +3,7 @@ import type { Balance } from '@/api/types';
 import { cx } from '@/lib/cx';
 import { dollars, micros } from '@/lib/format';
 import { Button, Card, Chip, Icon } from '@/ui';
-import usageStyles from '../UsagePage.module.css';
+import usageStyles from '../usage/meters.module.css';
 import { AddFundsDialog } from './AddFundsDialog';
 import styles from './tokens.module.css';
 
@@ -29,8 +29,8 @@ export function BalanceCard({ balance, isAdmin, adding = false }: { balance: Bal
       </div>
       <p className={styles.meta}>
         {amount <= 0
-          ? 'Past your plan’s tokens a month, bots and hosted models stop until you add funds.'
-          : 'Past your plan’s tokens a month, bots and hosted models are charged here in dollars.'}
+          ? 'Past your plan’s tokens a month, hosted models stop until you add funds.'
+          : 'Past your plan’s tokens a month, hosted models are charged here in dollars.'}
       </p>
       {isAdmin ? (
         <div className={styles.actions}>

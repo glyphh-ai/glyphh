@@ -2,18 +2,16 @@ import { useBilling, useMe } from '@/api/queries';
 import type { TokenUsage } from '@/api/types';
 import { SettingsSection } from '@/layout/SettingsSection/SettingsSection';
 import { date, dollars, micros } from '@/lib/format';
-import { Card, Chip, Icon, ProgressBar } from '@/ui';
-import usageStyles from '../UsagePage.module.css';
-import { BotsSection } from '../usage/BotsSection';
+import { Card, Icon, ProgressBar } from '@/ui';
+import usageStyles from '../usage/meters.module.css';
 import { BalanceCard } from './BalanceCard';
 import styles from './tokens.module.css';
 
 const n = (value: number) => value.toLocaleString('en-GB');
 
 /**
- * Tokens on Usage, the bots' and Glyphh's hosted models' (one meter): the month's against the plan's allowance, the
- * overage balance, each bot's month and each model's month (the days are Usage's charts, usage/UsageCharts). Nothing
- * from a server that leaves `tokens` out. */
+ * Tokens on Usage, Glyphh's hosted models': the month's against the plan's allowance, the overage balance and each
+ * model's month (the days are Usage's charts, usage/UsageCharts). Nothing from a server that leaves `tokens` out. */
 export function TokensSection() {
   const billing = useBilling();
   const me = useMe();
@@ -27,15 +25,13 @@ export function TokensSection() {
     <>
       <SettingsSection
         title="Tokens"
-        description={`Your bots’ and Glyphh’s hosted models’, input and output together. Counted by calendar month in UTC: the allowance starts again on ${date(tokens.resets_at)}.`}
+        description={`Glyphh’s hosted models’, input and output together. Counted by calendar month in UTC: the allowance starts again on ${date(tokens.resets_at)}.`}
       >
         <div className={usageStyles.meters}>
           <Allowance tokens={tokens} />
           {balance && <BalanceCard balance={balance} isAdmin={me.data?.role === 'admin'} />}
         </div>
       </SettingsSection>
-
-      {billing.data?.bots && <BotsSection bots={billing.data.bots} />}
 
       <SettingsSection title="Tokens by model" description="This month. Charged is what went on the balance, past the allowance.">
         <ModelTable tokens={tokens} />
@@ -85,9 +81,7 @@ function ModelTable({ tokens }: { tokens: TokenUsage }) {
           <tbody>
             {tokens.models.map((model) => (
               <tr key={model.id}>
-                <td>
-                  {model.name} {model.kind === 'bot' && <Chip>Bots</Chip>}
-                </td>
+                <td>{model.name}</td>
                 <td className={styles.num}>{n(model.input_tokens)}</td>
                 <td className={styles.num}>{n(model.output_tokens)}</td>
                 <td className={styles.num}>{n(model.requests)}</td>

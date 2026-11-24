@@ -40,7 +40,6 @@ export function PlansPage() {
                   <th className={styles.num}>Reads a month</th>
                   <th className={styles.num}>Calls a second</th>
                   <th>Past the month</th>
-                  <th className={styles.num}>Runtime nodes</th>
                   <th className={styles.num}>Orgs</th>
                   <th>Made</th>
                 </tr>
@@ -57,7 +56,6 @@ export function PlansPage() {
                     <td className={styles.num}>{limit(v.cloud_requests)}</td>
                     <td className={styles.num}>{limit(v.cloud_rps)}</td>
                     <td>{v.cloud_overage ? 'Metered' : 'Refused'}</td>
-                    <td className={styles.num}>{limit(v.max_machines)}</td>
                     <td className={styles.num}>{n(v.orgs)}</td>
                     <td className={styles.num}>{date(v.created_at)}</td>
                   </tr>

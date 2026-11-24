@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useAdaCloud } from '@/api/ada';
 import { useChangePlan, useCheckout, useLlmModels, useMe, usePlans } from '@/api/queries';
 import type { Plan } from '@/api/types';
 import { ApiErrorNotice } from '@/components/ApiErrorNotice';
@@ -25,7 +24,6 @@ export function PlansPage() {
   const me = useMe();
   const plans = usePlans();
   const models = useLlmModels();
-  const ada = useAdaCloud() === true;
   const [switching, setSwitching] = useState<Plan | null>(null);
   const change = useChangePlan();
   const checkout = useCheckout();
@@ -76,11 +74,7 @@ export function PlansPage() {
 
       <main className={styles.page}>
         <h1 className={styles.title}>Choose a plan</h1>
-        <p className={styles.subtitle}>
-          {ada
-            ? 'Every plan has unlimited members, installs, models and keys. Never priced per seat.'
-            : 'Every plan has unlimited members, installs and self-hosted runtimes, with Ada included. Never priced per seat.'}
-        </p>
+        <p className={styles.subtitle}>Every plan has unlimited members, installs, models and keys. Never priced per seat.</p>
 
         <ApiErrorNotice error={me.error ?? plans.error ?? checkout.error} />
         {(me.isPending || plans.isPending) && <LoadingCard lines={6} />}
@@ -95,7 +89,6 @@ export function PlansPage() {
                 // Without a subscription there is nothing to move down to Free from, and a contract plan moves with Glyphh.
                 canChoose={isAdmin && !contract && (subscribed || plan.price_cents !== 0)}
                 recommended={plan.name === recommended?.name}
-                ada={ada}
                 pending={checkout.isPending && checkout.variables === plan.name}
                 onChoose={() => choose(plan)}
               />
@@ -150,12 +143,11 @@ type PlanOptionProps = {
   upgrade: boolean;
   canChoose: boolean;
   recommended: boolean;
-  ada: boolean;
   pending: boolean;
   onChoose: () => void;
 };
 
-function PlanOption({ plan, isCurrent, upgrade, canChoose, recommended, ada, pending, onChoose }: PlanOptionProps) {
+function PlanOption({ plan, isCurrent, upgrade, canChoose, recommended, pending, onChoose }: PlanOptionProps) {
   const { amount, per } = priceParts(plan);
 
   return (
@@ -171,7 +163,7 @@ function PlanOption({ plan, isCurrent, upgrade, canChoose, recommended, ada, pen
       </p>
 
       <ul className={styles.features}>
-        {planFacts(plan, ada).map((fact) => (
+        {planFacts(plan).map((fact) => (
           <li key={fact.text}>
             <Icon name={fact.icon} />
             {fact.text}

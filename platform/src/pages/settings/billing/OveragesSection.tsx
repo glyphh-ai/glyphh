@@ -21,7 +21,7 @@ export function overageLines(plan: Plan, billing: Billing, ada: boolean): Line[]
       text:
         max === null
           ? 'By contract.'
-          : `Your plan has ${n(max)} tokens a month for bots and hosted models. Past them, each request is charged to your balance at the model’s rates; with the balance empty, they stop until you add funds.`,
+          : `Your plan has ${n(max)} tokens a month for hosted models. Past them, each request is charged to your balance at the model’s rates; with the balance empty, they stop until you add funds.`,
     });
   }
   const cloud = plan.cloud;
@@ -33,17 +33,6 @@ export function overageLines(plan: Plan, billing: Billing, ada: boolean): Line[]
       text: cloud.overage
         ? `Past ${n(cloud.requests_per_month)} a month, requests go on at ${price}, on your next invoice.`
         : `Past ${n(cloud.requests_per_month)} a month, requests stop until the month turns.`,
-    });
-  }
-  const connections = billing.connections;
-  if (connections && connections.included !== null) {
-    lines.push({
-      icon: 'external',
-      name: 'Connections',
-      text:
-        connections.cents_a_month === null
-          ? `${n(connections.included)} included. Past them, connections are not charged yet.`
-          : `${n(connections.included)} included, then ${money(connections.cents_a_month)} a connection a month.`,
     });
   }
   return lines;

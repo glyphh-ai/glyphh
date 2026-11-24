@@ -95,7 +95,7 @@ function GrantDialog({ org, onClose }: DialogProps) {
       open
       onClose={onClose}
       title="Grant Enterprise"
-      description="On Enterprise through the deal’s last day, billed on its Stripe subscription, with a licence key to then."
+      description="On Enterprise through the deal’s last day, billed on its Stripe subscription."
       actions={
         <>
           <Button variant="ghost" onClick={onClose}>
@@ -192,7 +192,7 @@ function RevokeDialog({ org, onClose }: DialogProps) {
     <ConfirmDialog
       open
       title="Revoke Enterprise"
-      description={`${org.name} goes back on Free, its licence keys revoked. Cancel its subscription in Stripe afterwards.`}
+      description={`${org.name} goes back on Free. Cancel its subscription in Stripe afterwards.`}
       confirmLabel="Revoke"
       pending={revoke.isPending}
       error={revoke.error}

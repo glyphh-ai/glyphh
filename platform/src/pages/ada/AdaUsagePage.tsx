@@ -6,9 +6,8 @@ import { SettingsSection } from '@/layout/SettingsSection/SettingsSection';
 import { date, money, plural } from '@/lib/format';
 import { SettingsTitle } from '@/pages/settings/SettingsTitle';
 import { Card, EmptyState, Icon, LoadingCard, ProgressBar } from '@/ui';
-import usageStyles from '@/pages/settings/UsagePage.module.css';
+import usageStyles from '@/pages/settings/usage/meters.module.css';
 import { TokensSection } from '@/pages/settings/tokens/TokensSection';
-import { ConnectionsMeter } from '@/pages/settings/usage/ConnectionsCard';
 import { UsageCharts } from '@/pages/settings/usage/UsageCharts';
 import { AdaErrorNotice } from './AdaErrorNotice';
 import styles from './ada.module.css';
@@ -76,7 +75,7 @@ export function RequestsNote({ usage, centsPer10k }: { usage: AdaUsage; centsPer
   return <p className={styles.meta}>{`Past ${n(max)}, requests stop until ${again}.`}</p>;
 }
 
-/** Usage, with Ada Cloud on: precedents and requests against the plan's, the month counted, and each model's precedents. */
+/** Usage: precedents and requests against the plan's, the month counted, and each model's precedents. */
 export function AdaUsagePage() {
   const usage = useAdaUsage();
   const models = useAdaModels();
@@ -113,12 +112,11 @@ export function AdaUsagePage() {
               <RequestsNote usage={data} centsPer10k={centsPer10k} />
               {data.requests_per_second !== null && <p className={styles.meta}>{`Up to ${plural(data.requests_per_second, 'call')} a second.`}</p>}
             </Card>
-            <ConnectionsMeter />
           </div>
         )}
       </SettingsSection>
 
-      <UsageCharts ada />
+      <UsageCharts />
 
       <TokensSection />
 

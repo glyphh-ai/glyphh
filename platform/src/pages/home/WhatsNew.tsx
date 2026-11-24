@@ -1,12 +1,10 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useAdaReleases } from '@/api/ada';
-import { useBotTemplates } from '@/api/botTemplates';
-import { useTemplates } from '@/api/templates';
 import { date } from '@/lib/format';
 import { notesPath } from '@/lib/releases';
 import { AdaStatusChip } from '@/pages/ada/AdaRelease';
-import { Card, Chip, Skeleton } from '@/ui';
+import { Card, Skeleton } from '@/ui';
 import styles from './home.module.css';
 
 const SHOWN = 3;
@@ -68,42 +66,15 @@ function AdaNews() {
   return <NewsCard title="New in Ada" more={{ to: '/settings/releases', label: 'All releases' }} items={items} pending={releases.isPending} none="No releases to show." />;
 }
 
-/** Model templates in the Marketplace. */
-function ModelNews() {
-  const templates = useTemplates();
-  const items = templates.data?.slice(0, SHOWN).map<Item>((t) => ({
-    key: t.slug,
-    name: t.name,
-    to: `/marketplace/models/${encodeURIComponent(t.slug)}`,
-    meta: t.installed ? <Chip tone="green">Installed</Chip> : <Chip>{t.category}</Chip>,
-    summary: t.summary,
-  }));
-  return <NewsCard title="Marketplace models" more={{ to: '/marketplace/models', label: 'Browse' }} items={items} pending={templates.isPending} none="No model templates yet." />;
-}
-
-/** Bots Glyphh builds, in the Marketplace. */
-function BotNews() {
-  const templates = useBotTemplates();
-  const items = templates.data?.slice(0, SHOWN).map<Item>((t) => ({
-    key: t.slug,
-    name: t.name,
-    to: `/marketplace/bots/${encodeURIComponent(t.slug)}`,
-    summary: t.summary,
-  }));
-  return <NewsCard title="Marketplace bots" more={{ to: '/marketplace/bots', label: 'Browse' }} items={items} pending={templates.isPending} none="No bots yet." />;
-}
-
-/** What is new at Glyphh: Ada's releases (with Ada Cloud on) and what is in the Marketplace. */
-export function WhatsNew({ ada }: { ada: boolean }) {
+/** What is new at Glyphh: Ada's releases. */
+export function WhatsNew() {
   return (
     <section aria-labelledby="whats-new">
       <h2 id="whats-new" className={styles.rowTitle}>
         What’s new
       </h2>
       <div className={styles.row}>
-        {ada && <AdaNews />}
-        {ada && <ModelNews />}
-        <BotNews />
+        <AdaNews />
       </div>
     </section>
   );

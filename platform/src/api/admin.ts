@@ -136,7 +136,6 @@ export type OrgDetail = {
   models: AdaModelMeta[];
   jobs: AdaJobMeta[];
   api_keys: number;
-  licences: number;
   audit: AuditEntry[];
   /** The hosted models' overage balance, in dollars; missing while hosted models are off or on an older server. */
   balance?: Balance | null;
@@ -149,11 +148,6 @@ export type PlanVersionRow = {
   billing_interval: 'month' | 'year' | null;
   stripe_price_id: string | null;
   self_serve: boolean;
-  max_machines: number | null;
-  precedents: number | null;
-  sync: boolean;
-  ha: boolean;
-  offline: boolean;
   sso: boolean;
   cloud_precedents: number | null;
   cloud_requests: number | null;

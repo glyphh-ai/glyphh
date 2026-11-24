@@ -37,7 +37,6 @@ export function NavItem({ to, icon, end = false, badge, children }: { to: string
   return (
     <NavLink to={to} end={end} title={typeof children === 'string' ? children : undefined} className={({ isActive }) => cx(styles.item, isActive && styles.active)}>
       <Icon name={icon} />
-      {/* Its own element, so the sidebar can fold to icons beside a bare page (Bots). */}
       <span className={styles.text}>{children}</span>
       {badge ? (
         <span className={styles.badge} aria-label={`${badge} waiting`}>

@@ -1,6 +1,7 @@
 import { screen, within } from '@testing-library/react';
+import { adaFake, tickets } from '@/test/ada';
 import { renderApp } from '@/test/render';
-import { http, HttpResponse, server, v1 } from '@/test/server';
+import { server } from '@/test/server';
 
 // The stylesheets as written: the tests run in Node, and the UI's tsconfig carries no Node types, hence the narrow one.
 type Fs = { readFileSync(path: string, encoding: 'utf8'): string };
@@ -14,8 +15,8 @@ const shell = () => screen.getByRole('complementary', { name: 'Main' }).parentEl
 
 describe('the sidebar on a phone', () => {
   it('opens from the Menu button and closes from the scrim', async () => {
-    const { user } = renderApp('/runtimes');
-    await screen.findByRole('heading', { name: 'Runtimes', level: 1 });
+    const { user } = renderApp('/marketplace');
+    await screen.findByRole('heading', { name: 'Marketplace', level: 1 });
     await user.click(await screen.findByRole('button', { name: 'Menu' }));
     expect(shell()).toHaveAttribute('data-sidebar', 'open');
     await user.click(screen.getByRole('button', { name: 'Close menu' }));
@@ -24,8 +25,8 @@ describe('the sidebar on a phone', () => {
   });
 
   it('closes when the Menu button is pressed again', async () => {
-    const { user } = renderApp('/runtimes');
-    await screen.findByRole('heading', { name: 'Runtimes', level: 1 });
+    const { user } = renderApp('/marketplace');
+    await screen.findByRole('heading', { name: 'Marketplace', level: 1 });
     const menu = await screen.findByRole('button', { name: 'Menu' });
     await user.click(menu);
     await user.click(menu);
@@ -33,9 +34,10 @@ describe('the sidebar on a phone', () => {
   });
 
   it('closes on moving to another page', async () => {
+    server.use(...adaFake({ models: [tickets()] }).handlers);
     const { user } = renderApp('/');
     await user.click(await screen.findByRole('button', { name: 'Menu' }));
-    await user.click(screen.getByRole('link', { name: 'API Keys' }));
+    await user.click(await screen.findByRole('link', { name: 'API Keys' }));
     expect(await screen.findByRole('heading', { name: 'API Keys' })).toBeInTheDocument();
     expect(shell()).toHaveAttribute('data-sidebar', 'closed');
   });
@@ -77,22 +79,22 @@ describe('the account menu on a phone', () => {
 });
 
 describe('the main sidebar', () => {
-  it('has the logo and Runtimes & licences, and no organisation group: settings is in the account menu', async () => {
+  it('has the logo, Ada’s pages and the Marketplace, and no organisation group: settings is in the account menu', async () => {
+    server.use(...adaFake({ models: [tickets()] }).handlers);
     renderApp('/');
     const main = await screen.findByRole('complementary', { name: 'Main' });
-    // The links come once the account says Ada Cloud is off.
-    await within(main).findByRole('link', { name: 'Runtimes' });
+    // The links come once the account says Ada Cloud is on.
+    await within(main).findByRole('link', { name: 'Models' });
     expect(within(main).getByRole('img', { name: 'Glyphh' })).toBeInTheDocument();
-    for (const name of ['Runtimes', 'Licence', 'API Keys']) expect(within(main).getByRole('link', { name })).toBeInTheDocument();
+    expect(within(main).getAllByRole('link').map((link) => link.textContent)).toEqual(['Home', 'Models', 'API Keys', 'Usage', 'Marketplace']);
     expect(within(main).queryByRole('group', { name: 'Organisation' })).not.toBeInTheDocument();
     for (const name of ['Billing', 'Members', 'Settings']) expect(within(main).queryByRole('link', { name })).not.toBeInTheDocument();
   });
 
-  it('has nothing Glyphh hosted and no Models with Ada Cloud off: no Machines, Logs or Models', async () => {
-    server.use(http.get(v1('/runtimes/self'), () => HttpResponse.json([])));
+  it('has the Marketplace alone with Ada Cloud off', async () => {
     renderApp('/');
     const main = await screen.findByRole('complementary', { name: 'Main' });
-    await screen.findByRole('heading', { name: 'Runtimes', level: 1 });
-    expect(within(main).getAllByRole('link').map((link) => link.textContent)).toEqual(['Runtimes', 'Licence', 'Apps', 'API Keys', 'Usage', 'Bots', 'Marketplace']);
+    await screen.findByRole('heading', { name: 'Marketplace', level: 1 });
+    expect(within(main).getAllByRole('link').map((link) => link.textContent)).toEqual(['Marketplace']);
   });
 });

@@ -4,10 +4,13 @@ import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import type { Config } from './config.js';
 import { authorizeUrl, exchangeCode, OAuthError, refresh, revoke, type Tokens } from './oauth.js';
 import { callTool, GameError, health, isAction, summary, type Game } from './gamesAdmin.js';
+import { createMarketplace, type MarketplaceReader } from './marketplace.js';
 import { pkce, randomToken, seal, unseal } from './seal.js';
 
 type Deps = {
   config: Config;
+  /** What the Marketplace page shows: github.com/glyphh-ai/plugins, read and kept (marketplace.ts). */
+  marketplace?: MarketplaceReader;
   /** The games the admin reaches (readGames()); none, and the games' admin lists nothing. */
   games?: Game[];
   /** Where each staff action on a game is written; the platform's log by default. */
@@ -40,7 +43,7 @@ function errorBody(code: string, message: string) {
   return { error: { code, message } };
 }
 
-export function createApp({ config, games = [], log = (line) => console.log(line), fetch: fetcher = fetch, now = Date.now }: Deps) {
+export function createApp({ config, games = [], log = (line) => console.log(line), fetch: fetcher = fetch, now = Date.now, marketplace = createMarketplace({ fetch: fetcher, now }) }: Deps) {
   const app = new Hono();
   const secure = config.secureCookies;
   const sessionCookie = secure ? '__Host-glyphh_session' : 'glyphh_session';
@@ -230,6 +233,17 @@ export function createApp({ config, games = [], log = (line) => console.log(line
     });
     return upstream ? passBack(c, upstream) : noSession(c);
   }
+
+  // The Marketplace: the plugins in github.com/glyphh-ai/plugins, read here and kept ten minutes, for signed-in pages.
+  // The repository is public, so no token goes to GitHub and none of the person's goes anywhere.
+  app.get('/api/marketplace', async (c) => {
+    if (!readSession(c)) return noSession(c);
+    try {
+      return c.json(await marketplace.load(), 200, { 'cache-control': 'no-store' });
+    } catch {
+      return c.json(errorBody('E_MARKETPLACE', 'The marketplace could not be loaded from GitHub.'), 502, { 'cache-control': 'no-store' });
+    }
+  });
 
   // ---- The games' admin: staff only, every call made here, server-side, with the game's own key. ----
 

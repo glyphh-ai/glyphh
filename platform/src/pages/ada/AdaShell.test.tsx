@@ -3,58 +3,31 @@ import { adaFake, tickets } from '@/test/ada';
 import { renderApp } from '@/test/render';
 import { server } from '@/test/server';
 
-// rrotor's pages as they are when shown (lib/shelved); Shelved.test.tsx covers them shelved.
-vi.mock('@/lib/shelved', () => ({ RROTOR_SHOWN: true }));
-
 const sidebar = () => screen.getByRole('complementary', { name: 'Main' });
 
 describe('with Ada Cloud on', () => {
   beforeEach(() => server.use(...adaFake({ models: [tickets()] }).handlers));
 
-  it('has Ada’s pages, then Runtimes & licences beside them: no machines or logs', async () => {
+  it('has Ada’s pages and the Marketplace in the sidebar, and nothing else', async () => {
     renderApp('/');
     await within(await screen.findByRole('complementary', { name: 'Main' })).findByRole('link', { name: 'Home' });
-    expect(within(sidebar()).getAllByRole('link').map((link) => link.textContent)).toEqual([
-      'Home',
-      'Models',
-      'Marketplace',
-      'API Keys',
-      'Usage',
-      'Runtimes',
-      'Licence',
-      'Apps',
-      'Runtime keys',
-      'Bots',
-    ]);
-    const ada = within(sidebar()).getByRole('group', { name: 'Ada' });
-    expect(within(ada).getAllByRole('link').map((link) => link.textContent)).toEqual(['Home', 'Models', 'Marketplace', 'API Keys', 'Usage']);
-    const runtimes = within(sidebar()).getByRole('group', { name: 'Runtimes & licences' });
-    expect(within(runtimes).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/runtimes', '/licence', '/apps', '/runtime-keys']);
+    expect(within(sidebar()).getAllByRole('link').map((link) => link.textContent)).toEqual(['Home', 'Models', 'API Keys', 'Usage', 'Marketplace']);
+    expect(within(sidebar()).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/', '/models', '/keys', '/usage', '/marketplace']);
+    expect(within(sidebar()).getAllByRole('group').map((group) => group.getAttribute('aria-label'))).toEqual(['Ada']);
     expect(await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening)/, level: 1 })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('AdaHome');
   });
 
   it.each([
-    ['/runtimes', '/runtimes', 'Runtimes'],
-    ['/machines', '/runtimes', 'Runtimes'],
-    ['/logs', '/runtimes', 'Runtimes'],
-    ['/settings/logs', '/runtimes', 'Runtimes'],
-    ['/getting-started', '/runtimes', 'Runtimes'],
-    ['/licence', '/licence', 'Licence'],
-    ['/settings/licence', '/licence', 'Licence'],
-    ['/runtime-keys', '/runtime-keys', 'Runtime keys'],
-  ])('opens %s at %s, in Runtimes & licences', async (path, at, title) => {
-    const { router } = renderApp(path);
+    ['/keys', 'API Keys'],
+    ['/usage', 'Usage'],
+    ['/models', 'Models'],
+  ])('opens %s as Ada’s %s', async (path, title) => {
+    renderApp(path);
     expect(await screen.findByRole('heading', { name: title, level: 1 })).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe(at);
-    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(`Runtimes & licences${title}`);
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(`Ada${title}`);
   });
 
-  it('keeps Ada’s own API keys apart from the runtime keys', async () => {
-    renderApp('/runtime-keys');
-    expect(await screen.findByRole('heading', { name: 'Runtime keys', level: 1 })).toBeInTheDocument();
-    expect(screen.getByText(/call your self-hosted runtime with an API key/)).toBeInTheDocument();
-  });
 
   it('opens Home, not Add a runtime, from the old ?add=1 link', async () => {
     renderApp('/?add=1');
@@ -90,10 +63,10 @@ describe('with Ada Cloud on', () => {
 });
 
 describe('with Ada Cloud off', () => {
-  it.each(['/models', '/models/new', '/models/tickets'])('has no %s: models are Ada Cloud’s, so it goes to Runtimes', async (path) => {
+  it.each(['/', '/models', '/models/new', '/models/tickets', '/keys', '/usage'])('has no %s: it is Ada Cloud’s, so it goes to the Marketplace', async (path) => {
     const { router } = renderApp(path);
-    expect(await screen.findByRole('heading', { name: 'Runtimes', level: 1 })).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe('/runtimes');
-    expect(within(sidebar()).queryByRole('link', { name: 'Models' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Marketplace', level: 1 })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/marketplace');
+    expect(within(sidebar()).getAllByRole('link').map((link) => link.textContent)).toEqual(['Marketplace']);
   });
 });
