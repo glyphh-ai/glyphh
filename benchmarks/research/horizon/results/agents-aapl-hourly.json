@@ -1,0 +1,109 @@
+{
+ "series": "aapl-hourly",
+ "model": "opus",
+ "effort": "low",
+ "scored": 200,
+ "warm": 100,
+ "from_case": 2992,
+ "free": 0.55,
+ "veto": 0.45,
+ "known": 8,
+ "arms": [
+  {
+   "arm": "hold",
+   "bars": 200,
+   "total": 7.0,
+   "in_market": 1.0,
+   "right": 0.505,
+   "vs_solo": {
+    "a_bar": 0.035,
+    "se": 0.04051748593714406
+   }
+  },
+  {
+   "arm": "solo",
+   "bars": 200,
+   "total": 0.0,
+   "in_market": 0.22,
+   "right": 0.38636363636363635,
+   "vs_hold": {
+    "a_bar": -0.035,
+    "se": 0.04051748593714406
+   }
+  },
+  {
+   "arm": "chat",
+   "bars": 200,
+   "total": 0.125,
+   "in_market": 0.215,
+   "right": 0.3953488372093023,
+   "vs_hold": {
+    "a_bar": -0.034375,
+    "se": 0.04182521916659055
+   },
+   "vs_solo": {
+    "a_bar": 0.000625,
+    "se": 0.00924446155513908
+   }
+  },
+  {
+   "arm": "glyphh",
+   "bars": 200,
+   "total": -5.0,
+   "in_market": 0.28,
+   "right": 0.4642857142857143,
+   "vs_hold": {
+    "a_bar": -0.06,
+    "se": 0.05235926905100524
+   },
+   "vs_solo": {
+    "a_bar": -0.025,
+    "se": 0.027496843253160697
+   }
+  },
+  {
+   "arm": "glyphh, the call alone",
+   "bars": 200,
+   "total": -7.0,
+   "in_market": 0.45,
+   "right": 0.4777777777777778,
+   "vs_hold": {
+    "a_bar": -0.07,
+    "se": 0.05737909995034003
+   },
+   "vs_solo": {
+    "a_bar": -0.035,
+    "se": 0.04144943371815296
+   }
+  }
+ ],
+ "glyphh_paths": {
+  "flat": 110,
+  "free": 38,
+  "skeptic: shrink": 18,
+  "skeptic: veto": 5,
+  "vetoed by the ledger": 29
+ },
+ "theses": {
+  "momentum": [
+   31,
+   14
+  ],
+  "reversion": [
+   58,
+   29
+  ],
+  "drift": [
+   13,
+   7
+  ],
+  "gap_fade": [
+   6,
+   2
+  ]
+ },
+ "spent_this_run": {
+  "usd": 9.113608600000005,
+  "calls": 567
+ }
+}

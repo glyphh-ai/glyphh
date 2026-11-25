@@ -1,0 +1,9 @@
+aapl-hourly: 200 held-out bars from case 2992, the ledger warmed on the 100 before; opus, effort low
+arm                       total %  in market   right   vs hold, a bar    ± se   vs solo, a bar    ± se
+hold                        +7.00       100%   50.5%                                   +0.0350  0.0405
+solo                        +0.00        22%   38.6%          -0.0350  0.0405                         
+chat                        +0.12        22%   39.5%          -0.0344  0.0418          +0.0006  0.0092
+glyphh                      -5.00        28%   46.4%          -0.0600  0.0524          -0.0250  0.0275
+glyphh, the call alone      -7.00        45%   47.8%          -0.0700  0.0574          -0.0350  0.0414
+the glyphh arm's calls went: flat 110, free 38, skeptic: shrink 18, skeptic: veto 5, vetoed by the ledger 29
+the theses in the ledger (calls, paid): drift 13/7, gap_fade 6/2, momentum 31/14, reversion 58/29

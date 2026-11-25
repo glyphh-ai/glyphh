@@ -1,0 +1,40 @@
+ring: 6000 cases, the first 3600 learned from, the last 2400 held out
+chosen before the held-out part: pairs of roles off, halt 0.01 bits
+
+AHEAD (predict), held out
+output  lead     n     Ada    base   stays    lift   ± se    bits   ± se
+zone       1  2399   76.4%   25.8%   76.4%   +0.0%   0.0%  +1.045  0.028   acting 100%: 76.4% (+0.0%)   best possible 76.2%
+zone       2  2398   61.1%   25.9%   57.8%   +3.3%   1.3%  +0.588  0.031   acting 100%: 61.1% (+3.3%)   best possible 61.6%
+zone       3  2397   51.9%   25.9%   43.4%   +8.5%   1.3%  +0.332  0.030   acting 100%: 51.9% (+8.5%)   best possible 53.0%
+zone       5  2395   38.4%   26.0%   27.6%  +10.8%   1.6%  +0.095  0.019   acting 100%: 38.4% (+10.8%)   best possible 38.6%
+zone       8  2392   29.3%   25.8%   21.9%   +3.4%   2.0%  +0.022  0.010   acting 87%: 28.6% (+3.1%)   halted 13%: 33.5% (+5.8%)   best possible 30.1%
+zone      12  2388   26.8%   25.8%   20.9%   +1.0%   2.0%  +0.001  0.006   acting 50%: 24.9% (-0.6%)   halted 50%: 28.6% (+2.6%)   best possible 26.6%
+zone      20  2380   25.5%   25.6%   25.4%   -0.1%   1.9%  -0.008  0.005   acting 28%: 25.6% (+0.2%)   halted 72%: 25.4% (-1.5%)   best possible 25.2%
+
+BACK (lookback), held out
+output  lead     n     Ada    base   stays    lift   ± se    bits   ± se
+zone       1  2400   76.4%   26.2%   76.4%   +0.0%   0.0%  +1.073  0.025   best possible 76.2%
+zone       2  2400   61.8%   26.5%   57.8%   +4.0%   1.3%  +0.599  0.031   best possible 61.6%
+zone       3  2400   53.0%   26.5%   43.5%   +9.5%   1.2%  +0.338  0.032   best possible 53.0%
+zone       5  2400   38.2%   26.4%   27.7%  +10.5%   1.4%  +0.112  0.019   best possible 38.6%
+zone       8  2400   30.8%   26.5%   21.8%   +4.3%   2.1%  +0.019  0.009   best possible 30.1%
+zone      12  2400   28.0%   26.3%   21.0%   +1.7%   1.9%  -0.002  0.006   best possible 26.6%
+zone      20  2400   25.0%   26.1%   25.3%   -1.1%   2.1%  -0.006  0.004   best possible 25.2%
+
+THE BEAM, one step at a time (every 8th held-out case)
+output  lead     n     Ada    base   stays    lift   ± se    bits   ± se
+zone       1   300   78.7%   21.7%   78.7%   +0.0%   0.0%  +1.066  0.075
+zone       2   300   59.7%   24.0%   57.7%   +2.0%   2.2%  +0.585  0.076
+zone       3   300   48.3%   28.7%   42.7%   +5.7%   2.2%  +0.280  0.065
+zone       5   300   35.7%   27.0%   28.7%   +7.0%   2.8%  +0.088  0.030
+zone       8   299   32.8%   23.7%   20.7%   +9.0%   3.4%  +0.058  0.011
+zone      12   299   31.1%   28.1%   20.7%   +3.0%   2.9%  +0.009  0.004
+the same cases and leads, each step read on its own
+output  lead     n     Ada    base   stays    lift   ± se    bits   ± se
+zone       1   300   78.7%   21.7%   78.7%   +0.0%   0.0%  +1.066  0.075
+zone       2   300   59.7%   24.0%   57.7%   +2.0%   2.2%  +0.581  0.076
+zone       3   300   48.3%   28.7%   42.7%   +5.7%   2.2%  +0.279  0.065
+zone       5   300   36.0%   27.0%   28.7%   +7.3%   3.1%  +0.084  0.029
+zone       8   299   31.4%   23.7%   20.7%   +7.7%   4.0%  +0.049  0.021
+zone      12   299   27.8%   28.1%   20.7%   -0.3%   3.4%  +0.016  0.012
+mass the beam cut, on average: 0.0%
