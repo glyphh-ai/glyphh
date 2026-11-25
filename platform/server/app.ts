@@ -3,7 +3,6 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import type { Config } from './config.js';
 import { authorizeUrl, exchangeCode, OAuthError, refresh, revoke, type Tokens } from './oauth.js';
-import { callTool, GameError, health, isAction, summary, type Game } from './gamesAdmin.js';
 import { createMarketplace, type MarketplaceReader } from './marketplace.js';
 import { pkce, randomToken, seal, unseal } from './seal.js';
 
@@ -11,10 +10,6 @@ type Deps = {
   config: Config;
   /** What the Marketplace page shows: github.com/glyphh-ai/plugins, read and kept (marketplace.ts). */
   marketplace?: MarketplaceReader;
-  /** The games the admin reaches (readGames()); none, and the games' admin lists nothing. */
-  games?: Game[];
-  /** Where each staff action on a game is written; the platform's log by default. */
-  log?: (line: string) => void;
   /** The server is reached through this, so tests can put a fake server behind it. */
   fetch?: typeof fetch;
   now?: () => number;
@@ -43,7 +38,7 @@ function errorBody(code: string, message: string) {
   return { error: { code, message } };
 }
 
-export function createApp({ config, games = [], log = (line) => console.log(line), fetch: fetcher = fetch, now = Date.now, marketplace = createMarketplace({ fetch: fetcher, now }) }: Deps) {
+export function createApp({ config, fetch: fetcher = fetch, now = Date.now, marketplace = createMarketplace({ fetch: fetcher, now }) }: Deps) {
   const app = new Hono();
   const secure = config.secureCookies;
   const sessionCookie = secure ? '__Host-glyphh_session' : 'glyphh_session';
@@ -242,75 +237,6 @@ export function createApp({ config, games = [], log = (line) => console.log(line
       return c.json(await marketplace.load(), 200, { 'cache-control': 'no-store' });
     } catch {
       return c.json(errorBody('E_MARKETPLACE', 'The marketplace could not be loaded from GitHub.'), 502, { 'cache-control': 'no-store' });
-    }
-  });
-
-  // ---- The games' admin: staff only, every call made here, server-side, with the game's own key. ----
-
-  /**
-   * Who is asking, as the server says (`GET /v1/me`): staff, or a refusal to answer with. The server only lets staff
-   * sign in at all since the wind-down; this is checked again for every call regardless.
-   */
-  async function staffOnly(c: Context): Promise<{ email: string } | Response> {
-    const me = await withToken(c, (token) =>
-      fetcher(`${config.serverUrl}/v1/me`, { headers: { authorization: `Bearer ${token}`, accept: 'application/json' } }),
-    );
-    if (!me) return noSession(c);
-    const who = (await me.json().catch(() => null)) as { email?: string; staff?: boolean } | null;
-    if (!me.ok || who?.staff !== true) return c.json(errorBody('E_STAFF_ONLY', 'The games’ admin is for Glyphh’s staff.'), 403);
-    return { email: who.email ?? 'staff' };
-  }
-
-  const gameById = (id: string) => games.find((g) => g.id === id);
-  const listed = (g: Game) => ({ id: g.id, name: g.name, site: g.site, icon: `${g.site}${g.icon}`, connected: Boolean(g.key) });
-  const gameRefusal = (c: Context, error: unknown) => {
-    if (error instanceof GameError) return c.json(errorBody(error.code, error.message), error.status);
-    throw error;
-  };
-
-  app.get('/api/games', async (c) => {
-    const who = await staffOnly(c);
-    if (who instanceof Response) return who;
-    return c.json({ games: games.map(listed) }, 200, { 'cache-control': 'no-store' });
-  });
-
-  /** Every game at once: up or not, its build, its numbers. A game that fails says why; the rest still answer. */
-  app.get('/api/games/overview', async (c) => {
-    const who = await staffOnly(c);
-    if (who instanceof Response) return who;
-    const rows = await Promise.all(
-      games.map(async (g) => {
-        const [up, numbers] = await Promise.all([
-          health(g, fetcher, now),
-          summary(g, fetcher, now).then(
-            (s) => ({ summary: s, error: null }),
-            (e: unknown) => ({ summary: null, error: e instanceof GameError ? e.message : `${g.name} could not be read.` }),
-          ),
-        ]);
-        return { ...listed(g), health: up, ...numbers };
-      }),
-    );
-    return c.json({ games: rows, at: now() }, 200, { 'cache-control': 'no-store' });
-  });
-
-  /** One admin tool of one game. Reads and actions alike are POSTs, from this site's own pages only. */
-  app.post('/api/games/:game/tools/:tool', async (c) => {
-    if (!sameOrigin(c)) return forbidden(c);
-    const who = await staffOnly(c);
-    if (who instanceof Response) return who;
-    const game = gameById(c.req.param('game'));
-    if (!game) return c.json(errorBody('E_NOT_FOUND', 'There is no such game.'), 404);
-    const tool = c.req.param('tool');
-    const sent = (await c.req.json().catch(() => ({}))) as { arguments?: unknown };
-    const args = sent.arguments && typeof sent.arguments === 'object' && !Array.isArray(sent.arguments) ? (sent.arguments as Record<string, unknown>) : {};
-    try {
-      const result = await callTool(game, fetcher, tool, args);
-      if (isAction(game, tool)) {
-        log(JSON.stringify({ games_admin: 'action', at: new Date(now()).toISOString(), staff: who.email, game: game.id, tool, args }));
-      }
-      return c.json({ result }, 200, { 'cache-control': 'no-store' });
-    } catch (error) {
-      return gameRefusal(c, error);
     }
   });
 

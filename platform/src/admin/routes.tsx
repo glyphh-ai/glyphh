@@ -1,7 +1,5 @@
 import type { RouteObject } from 'react-router';
 import { RequireSession } from '@/components/RequireSession';
-import { GamePage } from '@/games/GamePage';
-import { GamesPage } from '@/games/GamesPage';
 import { AdminLayout, type AdminHandle } from './AdminLayout';
 import { RequireStaff } from './StaffGate';
 import { AdaVersionsPage } from './pages/AdaVersionsPage';
@@ -42,7 +40,5 @@ export const adminRoutes: RouteObject = {
     { path: 'marketing', element: <MarketingPage />, handle: crumbs('Marketing links') },
     { path: 'ada-versions', element: <AdaVersionsPage />, handle: crumbs('Ada versions') },
     { path: 'audit', element: <AuditPage />, handle: crumbs('Audit log') },
-    { path: 'games', element: <GamesPage />, handle: crumbs('Games') },
-    { path: 'games/:id', element: <GamePage />, handle: crumbs(['Games', '/admin/games'], ':game') },
   ],
 };

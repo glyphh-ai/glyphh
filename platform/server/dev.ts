@@ -3,7 +3,6 @@ import { getRequestListener } from '@hono/node-server';
 import { createServer as createVite } from 'vite';
 import { createApp } from './app.js';
 import { readConfig } from './config.js';
-import { readGames } from './gamesAdmin.js';
 
 /**
  * Development: one port. Vite serves the pages with hot reload; /auth and /api go to the route handlers,
@@ -11,7 +10,7 @@ import { readGames } from './gamesAdmin.js';
  */
 process.loadEnvFile?.('.env');
 const config = readConfig();
-const handle = getRequestListener(createApp({ config, games: readGames() }).fetch);
+const handle = getRequestListener(createApp({ config }).fetch);
 const vite = await createVite({ server: { middlewareMode: true }, appType: 'spa' });
 
 const port = Number(process.env.PORT ?? new URL(config.platformUrl).port ?? 3000);

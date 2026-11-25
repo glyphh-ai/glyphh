@@ -5,14 +5,12 @@ import { createApp } from './app.js';
 import { readConfig } from './config.js';
 import { createBot, isBotPath, serveBotRedirect } from './bot.js';
 import { createDemo, hostOf, readDemoConfig, serveDemoPage, type HistoryRow } from './demo.js';
-import { createGames, readGamesHost } from './games.js';
-import { readGames } from './gamesAdmin.js';
 import { createScreener, isScreenerPath, serveScreenerRedirect } from './screener.js';
 import { createVoice, isVoicePath, serveVoiceRedirect } from './voice.js';
 
-/** Production: the route handlers, the built pages, and index.html for every other path; the demo and the games on their own hosts. */
+/** Production: the route handlers, the built pages, and index.html for every other path and the demo on its own host. */
 const config = readConfig();
-const app = createApp({ config, games: readGames() });
+const app = createApp({ config });
 const clientDir = 'dist/client';
 const indexHtml = await readFile(`${clientDir}/index.html`, 'utf8');
 
@@ -47,15 +45,9 @@ const screener = serveScreenerRedirect(
 );
 const onDemoHost = (req: Request) => (isScreenerPath(new URL(req.url).pathname) ? screener.fetch(req) : onDemo(req));
 
-// games.glyphh.ai: the games Glyphh makes, plain pages and nothing else.
-const gamesHost = readGamesHost();
-const games = createGames();
-const onHost = (req: Request) => {
-  const host = hostOf(req);
-  return host === demoConfig.host ? onDemoHost(req) : host === gamesHost ? games.fetch(req) : app.fetch(req);
-};
+const onHost = (req: Request) => (hostOf(req) === demoConfig.host ? onDemoHost(req) : app.fetch(req));
 
 const port = Number(process.env.PORT ?? 3000);
 serve({ fetch: onHost, port }, () =>
-  console.log(`Glyphh platform on ${config.platformUrl}, the demo on https://${demoConfig.host}, the games on https://${gamesHost} (port ${port})`),
+  console.log(`Glyphh platform on ${config.platformUrl} and the demo on https://${demoConfig.host} (port ${port})`),
 );

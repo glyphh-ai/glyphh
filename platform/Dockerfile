@@ -14,7 +14,6 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/dist ./dist
 COPY demo ./demo
-COPY games ./games
 # demo.glyphh.ai/screener runs the Resume Screener plugin's own code (server/screener.ts): Python, the two packages it
 # needs, and the plugin's skill folder from the public repo at the commit demo/screener/plugin.ref names. One source:
 # nothing of the plugin is copied into this repo.

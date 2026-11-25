@@ -139,10 +139,10 @@ whose text reaches the URL as `?q=` once typing pauses, 24 a page with Previous/
 | `/settings/auth` | Auth | `GET /v1/org/sso`, `GET /v1/me` | Single sign-on, above |
 | `/settings/profile` | Profile | `GET /v1/me` | Rename (`PATCH /v1/me`), link a provider (`POST /v1/me/identities` → its link), unlink (`DELETE /v1/me/identities/{provider}`) |
 | `/settings/installs` | Installs | `GET /v1/installs` | Sign out an install (`DELETE /v1/installs/{id}`) |
-| `/admin`, `/admin/*` | The staff view (Glyphh's staff only) | `/v1/admin/*` | Dashboard, infrastructure, log alerts, organisations and people, plans, traffic, marketing links, Ada versions, the audit log; and the games' admin (`/api/games*`, `server/gamesAdmin.ts`) |
+| `/admin`, `/admin/*` | The staff view (Glyphh's staff only) | `/v1/admin/*` | Dashboard, infrastructure, log alerts, organisations and people, plans, traffic, marketing links, Ada versions, the audit log |
 
 The platform's own routes: `/login`, `/auth/login`, `/auth/callback`, `/auth/logout` (POST), `/auth/session`,
-`/auth/providers` (the server's, passed through), `/api/v1/*`, `/api/ada/v1/*`, `/api/marketplace` and `/api/games*`.
+`/auth/providers` (the server's, passed through), `/api/v1/*`, `/api/ada/v1/*` and `/api/marketplace`.
 Writes must come from this origin.
 
 ## Settings
@@ -161,8 +161,6 @@ Writes must come from this origin.
 | `DEMO_DAILY_CALLS` | The demo's Ada calls a day, all visitors together (default 150) |
 | `DEMO_VOICE_DAILY_CALLS` | The voice demo's (demo.glyphh.ai/voice) Ada calls a day, all visitors together (default 300) |
 | `DEMO_BOT_DAILY_CALLS` | The bot demo's (demo.glyphh.ai/bot) Ada calls a day, all visitors together (default 6000, about 55 takes) |
-| `GAMES_HOST` | The host the games answer on (default `games.glyphh.ai`) |
-| `GAME_ADMIN_KEY_FRANK`, `_CRABBY`, `_MAHJ`, `_CAROL` | Each game's own admin key, for the staff view's games admin; a game without one shows as not connected. `GAME_URL_<GAME>` points at another address of a game |
 
 The Marketplace needs no setting: the repository it reads is public.
 
@@ -275,30 +273,6 @@ no rule at all (a coin toss) the bot went back to asking 8 of the last 10.
 Every demo page wears the platform's look: `demo/public/platform.css` (dark-hc's tokens, white buttons, 8px corners,
 the wordmark), loaded after each page's own stylesheet.
 
-## games.glyphh.ai
-
-The same process answers `games.glyphh.ai` with the games Glyphh makes (`server/games.ts`, `games/public`): plain
-pages in the platform's look (`games/public/games.css`), no sign-in, no session, no `/api`. `/` is the front page, a
-card per game; each game is one entry in `games/public/games.js` (`soon: true` shows its card without a link) and a
-folder of its own. The games run on their own sites; these pages show them and link there. Every game's page is laid
-out by `games/public/game.css` and `game.js` (the copy buttons, one video at a time), and has the same parts: a hero,
-its videos (played from the game's own site, with a poster kept here), screenshots (its `shots` folder), how to play,
-what is in it, how it connects to Claude (its connector's address and tools), its price, and Advertise, which writes
-to support@glyphh.ai. Links to a game carry `?src=games` so the game's admin counts what the page sends.
-
-- `/free-fall-frank/` is Free Fall Frank (freefallfrank.com): its videos are `/ad.mp4`, `/ad2.mp4` and `/ad3.mp4`,
-  its screenshots were taken from the game with its own bot playing, its connector is `https://freefallfrank.com/mcp`,
-  and it has the second level, ROCK BOTTOM ($0.99 once, with a free taste), building a level and making a Frank.
-- `/bams-and-brags/` is Bams & Brags (bamsandbrags.com), American mah jongg: its reel is `/landing/reel-720.mp4`, its
-  screenshots are its landing page's own, its connector is `https://bamsandbrags.com/mcp`, and it has leagues
-  ($29.99 once to start one) and the pass ($2.99 once).
-- `/crabby-knife-fight/` is Crabby Knife Fight (crabbyknifefight.com), a platformer: its videos are
-  `/landing/play-wide.mp4` and `/landing/play-tall.mp4`, its screenshots are its landing page's own, its connector is
-  `https://crabbyknifefight.com/mcp`, and it is free.
-
-What a page says of a game (features, prices, the connector's tools) is taken from that game's own landing page and
-code; when the game changes, its page here is changed with it.
-
 Production is the Fly app `glyphh-ai-app` (`fly.toml`), deployed by CI (`.github/workflows/ci.yml`) on a merge to
 main.
 
@@ -327,10 +301,10 @@ development too.
 
 | Path | What |
 |---|---|
-| `server/` | The route handlers (Hono on Node): `app.ts` the routes, `oauth.ts` the calls to the token endpoint, `seal.ts` the cookie (AES-256-GCM), `config.ts` the settings, `marketplace.ts` the Marketplace's reader, `gamesAdmin.ts` the games' admin; `demo.ts`, `voice.ts`, `bot.ts` and `games.ts` the other hosts |
+| `server/` | The route handlers (Hono on Node): `app.ts` the routes, `oauth.ts` the calls to the token endpoint, `seal.ts` the cookie (AES-256-GCM), `config.ts` the settings, `marketplace.ts` the Marketplace's reader; `demo.ts`, `voice.ts` and `bot.ts` the demo host |
 | `src/api/` | The server's types, the `/api/v1` client, one TanStack Query hook per read and write |
 | `src/pages/` | One folder per page; sign-in and consent in `pages/flows/`, Settings in `pages/settings/`, Ada in `pages/ada/`, the Marketplace in `pages/marketplace/` |
-| `src/admin/`, `src/games/` | The staff view and its games admin |
+| `src/admin/` | The staff view |
 | `src/routes/` | The route table and the two layouts with their sidebars |
 | `src/layout/` | The app shell, sidebar, top bar, account menu, page headers, settings sections, the sign-in card |
 | `src/ui/` | The component library, a folder each with its CSS Module; nothing in it knows the API |

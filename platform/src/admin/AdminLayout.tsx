@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { Outlet, useMatches, useNavigate, useParams } from 'react-router';
-import { catalogOf, catalogs } from '@/games/catalog';
 import { AppShell } from '@/layout/AppShell/AppShell';
 import { NavGroup, NavItem, Sidebar } from '@/layout/Sidebar/Sidebar';
 import type { Crumb } from '@/layout/TopBar/TopBar';
@@ -18,7 +17,7 @@ function useAdminCrumbs(): Crumb[] {
     const handle = matches[i]?.handle as AdminHandle | undefined;
     if (handle?.crumbs) {
       return handle.crumbs.map((c) =>
-        c.label === ':id' ? { ...c, label: params.id ?? '' } : c.label === ':game' ? { ...c, label: catalogOf(params.id)?.name ?? params.id ?? '' } : c,
+        c.label === ':id' ? { ...c, label: params.id ?? '' } : c,
       );
     }
   }
@@ -96,16 +95,6 @@ function AdminNav() {
         <NavItem to="/admin/audit" icon="logs">
           Audit log
         </NavItem>
-      </NavGroup>
-      <NavGroup label="Games">
-        <NavItem to="/admin/games" end icon="home">
-          All games
-        </NavItem>
-        {catalogs.map((c) => (
-          <NavItem key={c.id} to={`/admin/games/${c.id}`} icon="flag">
-            {c.name}
-          </NavItem>
-        ))}
       </NavGroup>
     </>
   );
