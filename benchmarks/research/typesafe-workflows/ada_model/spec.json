@@ -1,0 +1,253 @@
+{
+  "name": "security_incidents",
+  "seed": 5,
+  "dimension": 4096,
+  "layers": [
+    {
+      "name": "alert",
+      "segments": [
+        {
+          "name": "what",
+          "roles": [
+            {
+              "name": "detector"
+            },
+            {
+              "name": "title",
+              "text_encoding": "bag_of_words"
+            },
+            {
+              "name": "kinds"
+            },
+            {
+              "name": "indicators",
+              "text_encoding": "bag_of_words",
+              "similarity_weight": 0.6
+            },
+            {
+              "name": "events",
+              "numeric_config": {
+                "min_value": 0,
+                "max_value": 4,
+                "bin_width": 0.5
+              }
+            },
+            {
+              "name": "id",
+              "key_part": true,
+              "similarity_weight": 0
+            }
+          ]
+        },
+        {
+          "name": "evidence",
+          "roles": [
+            {
+              "name": "processes"
+            },
+            {
+              "name": "file_areas"
+            },
+            {
+              "name": "registry_areas"
+            },
+            {
+              "name": "n_process",
+              "numeric_config": {
+                "min_value": 0,
+                "max_value": 6,
+                "bin_width": 1
+              }
+            },
+            {
+              "name": "n_file",
+              "numeric_config": {
+                "min_value": 0,
+                "max_value": 6,
+                "bin_width": 1
+              }
+            },
+            {
+              "name": "n_registry",
+              "numeric_config": {
+                "min_value": 0,
+                "max_value": 4,
+                "bin_width": 1
+              }
+            },
+            {
+              "name": "source_events",
+              "numeric_config": {
+                "min_value": 0,
+                "max_value": 4,
+                "bin_width": 0.5
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "context",
+      "segments": [
+        {
+          "name": "explains",
+          "roles": [
+            {
+              "name": "change"
+            },
+            {
+              "name": "badge"
+            },
+            {
+              "name": "time_off"
+            },
+            {
+              "name": "factor_age",
+              "numeric_config": {
+                "min_value": 0,
+                "max_value": 3,
+                "bin_width": 0.5
+              }
+            }
+          ]
+        },
+        {
+          "name": "records",
+          "similarity_weight": 0.5,
+          "roles": [
+            {
+              "name": "sources"
+            },
+            {
+              "name": "notes",
+              "text_encoding": "bag_of_words"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "asset",
+      "similarity_weight": 0.6,
+      "segments": [
+        {
+          "name": "where",
+          "roles": [
+            {
+              "name": "environment"
+            },
+            {
+              "name": "tier"
+            },
+            {
+              "name": "type"
+            },
+            {
+              "name": "domain"
+            },
+            {
+              "name": "domain_controller"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "outputs": {
+    "is_true_positive": {
+      "values": [
+        "z0",
+        "z1",
+        "z2",
+        "z3",
+        "z4"
+      ]
+    },
+    "context_explains_activity": {
+      "values": [
+        "z0",
+        "z1"
+      ]
+    },
+    "evidence_strength": {
+      "values": [
+        "0",
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "credentials_exposed": {
+      "values": [
+        "z0",
+        "z1",
+        "z2"
+      ]
+    },
+    "session_in_attacker_hands": {
+      "values": [
+        "z0",
+        "z1",
+        "z2"
+      ]
+    },
+    "malicious_content_in_mailboxes": {
+      "values": [
+        "z0",
+        "z1"
+      ]
+    },
+    "attacker_persistence_present": {
+      "values": [
+        "z0",
+        "z1"
+      ]
+    },
+    "malicious_process_running": {
+      "values": [
+        "z0",
+        "z1"
+      ]
+    },
+    "outbound_channel_active": {
+      "values": [
+        "z0",
+        "z1"
+      ]
+    },
+    "attacker_modified_configuration": {
+      "values": [
+        "z0",
+        "z1"
+      ]
+    },
+    "activity_ongoing": {
+      "values": [
+        "z0",
+        "z1"
+      ]
+    },
+    "spread_beyond_initial_entity": {
+      "values": [
+        "z0",
+        "z1"
+      ]
+    },
+    "affected_scope": {
+      "values": [
+        "single_entity",
+        "workgroup",
+        "organization_wide"
+      ]
+    },
+    "attack_type": {
+      "values": [
+        "host_compromise",
+        "account_takeover",
+        "mail_campaign",
+        "exfiltration"
+      ]
+    }
+  }
+}

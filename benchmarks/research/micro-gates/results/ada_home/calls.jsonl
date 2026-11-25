@@ -1,0 +1,681 @@
+{"session": "1", "tool": "ada_models", "args": {}, "error": false}
+{"session": "1", "tool": "ada_make", "args": {"spec": {"name": "step", "layers": [{"name": "m", "segments": [{"name": "t", "roles": [{"name": "state"}, {"name": "action"}]}]}]}}, "error": false}
+{"session": "1", "tool": "ada_make", "args": {"spec": {"name": "trace", "layers": [{"name": "m", "segments": [{"name": "t", "roles": [{"name": "start"}, {"name": "actions"}]}]}]}}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "piz"}}}, "outcome": "nif"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "fov"}}}, "outcome": "vir"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "nim"}}}, "outcome": "paz"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fov"}}}, "outcome": "nif"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "fov"}}}, "outcome": "vok"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fon"}}}, "outcome": "paz"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "tot"}}}, "outcome": "zip"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "mut"}}}, "outcome": "tid"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "tot"}}}, "outcome": "vin"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "mut"}}}, "outcome": "tid"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "mut"}}}, "outcome": "mub"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "fov"}}}, "outcome": "mob"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "fov"}}}, "outcome": "vir"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "trace", "data": {"m": {"t": {"start": "vir", "actions": "fov mut piz"}}}, "outcome": "mub"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "trace", "data": {"m": {"t": {"start": "paz", "actions": "nim fon"}}}, "outcome": "vir"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "trace", "data": {"m": {"t": {"start": "mob", "actions": "piz tot"}}}, "outcome": "paz"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "trace", "data": {"m": {"t": {"start": "paz", "actions": "fon piz"}}}, "outcome": "tid"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "trace", "data": {"m": {"t": {"start": "tid", "actions": "piz nim nim"}}}, "outcome": "vir"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "trace", "data": {"m": {"t": {"start": "paz", "actions": "fov nim"}}}, "outcome": "tid"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "trace", "data": {"m": {"t": {"start": "tid", "actions": "fov mut mut"}}}, "outcome": "vin"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "trace", "data": {"m": {"t": {"start": "vir", "actions": "nim fov"}}}, "outcome": "mob"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "trace", "data": {"m": {"t": {"start": "mod", "actions": "tot fov tot"}}}, "outcome": "vir"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "trace", "data": {"m": {"t": {"start": "vin", "actions": "tot fov"}}}, "outcome": "vok"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "trace", "data": {"m": {"t": {"start": "vir", "actions": "mut mut fov"}}}, "outcome": "mub"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "trace", "data": {"m": {"t": {"start": "mob", "actions": "mut nim"}}}, "outcome": "mub"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "trace", "data": {"m": {"t": {"start": "tid", "actions": "fov nim nim"}}}, "outcome": "zip"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "trace", "data": {"m": {"t": {"start": "tid", "actions": "piz fov fon"}}}, "outcome": "paz"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "trace", "data": {"m": {"t": {"start": "paz", "actions": "nim mut nim"}}}, "outcome": "mob"}, "error": false}
+{"session": "1", "tool": "ada_record", "args": {"model": "trace", "data": {"m": {"t": {"start": "vir", "actions": "tot fon"}}}, "outcome": "paz"}, "error": false}
+{"session": "1", "tool": "ada_note", "args": {"text": "Hidden-machine puzzle. step=single transitions (state,action->next); trace=multi-step lines (start, actions string->end). All from session 1 (S1). Rules may change per session: first test each new session's single-step lines against step; on conflict, ada_forget stale cases. S1 guesses: fon swaps vir/paz, vir tot=vir, paz nim=paz, tid piz=mob, vir piz=tid. Bash python needed approval (denied), so deduce by hand. S1 answers mostly guesses; 30 lines too few."}, "error": false}
+{"session": "2", "tool": "ada_models", "args": {}, "error": false}
+{"session": "2", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "tot"}}}}, "error": false}
+{"session": "2", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "piz"}}}}, "error": false}
+{"session": "2", "tool": "ada_ask", "args": {"model": "trace", "data": {"m": {"t": {"start": "vir", "actions": "tot mut"}}}}, "error": false}
+{"session": "2", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "nim"}}}}, "error": false}
+{"session": "2", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "piz"}}}}, "error": false}
+{"session": "2", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fon"}}}}, "error": false}
+{"session": "2", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fov"}}}}, "error": false}
+{"session": "2", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "nim"}}}}, "error": false}
+{"session": "2", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "fon"}}}}, "error": false}
+{"session": "2", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "piz"}}}}, "error": false}
+{"session": "2", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "mut"}}}}, "error": false}
+{"session": "2", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "piz"}}}}, "error": false}
+{"session": "2", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "fon"}}}}, "error": false}
+{"session": "2", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "nim"}}}}, "error": false}
+{"session": "2", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "nim"}}}}, "error": false}
+{"session": "2", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "piz"}}}}, "error": false}
+{"session": "2", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "fon"}}}}, "error": false}
+{"session": "2", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "piz"}}}}, "error": false}
+{"session": "2", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "piz"}}}}, "error": false}
+{"session": "2", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "fov"}}}}, "error": false}
+{"session": "2", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "nim"}}}}, "error": false}
+{"session": "2", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "nim"}}}}, "error": false}
+{"session": "2", "tool": "ada_forget", "args": {"model": "step"}, "error": false}
+{"session": "2", "tool": "ada_forget", "args": {"model": "trace"}, "error": false}
+{"session": "2", "tool": "ada_make", "args": {"spec": {"name": "step", "layers": [{"name": "m", "segments": [{"name": "t", "roles": [{"name": "state"}, {"name": "action"}]}]}]}}, "error": false}
+{"session": "2", "tool": "ada_note", "args": {"text": "Hidden-machine puzzle. step=(state,action->next), rebuilt S2 from direct lines + hand deductions; ask is fuzzy: only p>0.8 means an exact case held. Rules DID change S1->S2 (tid nim, tid piz, paz fon differ); old trace model dropped. Each session: compare single-step lines with step, rebuild if conflicting. S2 patterns: piz swaps tid/mob, vin/zip, paz/nif; mut swaps vir/vin; tot mostly identity. Bash python needs approval (denied): deduce by hand. S2 answers mostly guesses."}, "error": false}
+{"session": "2", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "nim"}}}, "outcome": "mob"}, "error": false}
+{"session": "2", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "tot"}}}, "outcome": "vir"}, "error": false}
+{"session": "2", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "nim"}}}, "outcome": "vin"}, "error": false}
+{"session": "2", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "piz"}}}, "outcome": "mob"}, "error": false}
+{"session": "2", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "tot"}}}, "outcome": "nif"}, "error": false}
+{"session": "2", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "fon"}}}, "outcome": "mob"}, "error": false}
+{"session": "2", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "fov"}}}, "outcome": "paz"}, "error": false}
+{"session": "2", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "fon"}}}, "outcome": "zip"}, "error": false}
+{"session": "2", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "piz"}}}, "outcome": "tid"}, "error": false}
+{"session": "2", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "mut"}}}, "outcome": "vin"}, "error": false}
+{"session": "2", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "mut"}}}, "outcome": "vir"}, "error": false}
+{"session": "2", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "fon"}}}, "outcome": "nif"}, "error": false}
+{"session": "2", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fon"}}}, "outcome": "zip"}, "error": false}
+{"session": "2", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "piz"}}}, "outcome": "zip"}, "error": false}
+{"session": "2", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "piz"}}}, "outcome": "vin"}, "error": false}
+{"session": "2", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "piz"}}}, "outcome": "nif"}, "error": false}
+{"session": "2", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fov"}}}, "outcome": "vok"}, "error": false}
+{"session": "2", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "mut"}}}, "outcome": "nif"}, "error": false}
+{"session": "2", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "fon"}}}, "outcome": "mub"}, "error": false}
+{"session": "2", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "nim"}}}, "outcome": "vok"}, "error": false}
+{"session": "2", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fon"}}}, "outcome": "paz"}, "error": false}
+{"session": "2", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "nim"}}}, "outcome": "paz"}, "error": false}
+{"session": "3", "tool": "ada_models", "args": {}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "piz"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "mut"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fon"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fov"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "tot"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "nim"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "piz"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "mut"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "fon"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "fov"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "tot"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "nim"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "piz"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "mut"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "fon"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "fov"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "tot"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "nim"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "piz"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "mut"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "fon"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "fov"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "tot"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "nim"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "mut"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "fon"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "fov"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "tot"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "nim"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "piz"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "mut"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "fon"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "fov"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "tot"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "nim"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "piz"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "mut"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "fon"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "fov"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "tot"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "nim"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "piz"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "mut"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "fon"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "fov"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "tot"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "nim"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "piz"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "mut"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "fon"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "fov"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "tot"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "nim"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "piz"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "mut"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fon"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fov"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "tot"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "nim"}}}}, "error": false}
+{"session": "3", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "piz"}}}}, "error": false}
+{"session": "3", "tool": "ada_forget", "args": {"model": "step"}, "error": false}
+{"session": "3", "tool": "ada_make", "args": {"spec": {"name": "step", "layers": [{"name": "m", "segments": [{"name": "t", "roles": [{"name": "state"}, {"name": "action"}]}]}]}}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "mut"}}}, "outcome": "vin"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fon"}}}, "outcome": "paz"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "tot"}}}, "outcome": "vir"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "nim"}}}, "outcome": "mod"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "fov"}}}, "outcome": "vir"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "tot"}}}, "outcome": "zip"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "nim"}}}, "outcome": "vok"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "piz"}}}, "outcome": "tid"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "mut"}}}, "outcome": "tid"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "fon"}}}, "outcome": "nif"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "fov"}}}, "outcome": "mob"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "nim"}}}, "outcome": "zip"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "piz"}}}, "outcome": "nif"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "mut"}}}, "outcome": "nif"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "fov"}}}, "outcome": "zip"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "nim"}}}, "outcome": "mob"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "piz"}}}, "outcome": "mob"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "tot"}}}, "outcome": "mob"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "fon"}}}, "outcome": "nif"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "mut"}}}, "outcome": "nif"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "fov"}}}, "outcome": "tid"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "tot"}}}, "outcome": "mub"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "nim"}}}, "outcome": "vin"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "mut"}}}, "outcome": "vir"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "fon"}}}, "outcome": "nif"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "piz"}}}, "outcome": "zip"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "mut"}}}, "outcome": "vok"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "nim"}}}, "outcome": "vir"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "tot"}}}, "outcome": "tid"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "nim"}}}, "outcome": "mub"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "piz"}}}, "outcome": "vin"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fon"}}}, "outcome": "zip"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fov"}}}, "outcome": "nif"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "tot"}}}, "outcome": "nif"}, "error": false}
+{"session": "3", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "piz"}}}, "outcome": "paz"}, "error": false}
+{"session": "3", "tool": "ada_note", "args": {"text": "Hidden-machine puzzle. step=(state,action->next), rebuilt S3: 37 entries, mix of direct lines + hand deductions; only p>0.8 = held case. Dump: 60 asks in one turn (cheap). Rules drift a few entries/session (S3 changed zip nim, vir nim, nif fov, vok fon/fov vs S2); most carried. Each session: test table on lines, fix conflicts. Unknown S3: vir fov/piz, zip fov/fon/mut, vin fov/tot/nim, mob mut/fon, mod most. Bash needs approval (denied): do by hand. Long Qs are guesses."}, "error": false}
+{"session": "4", "tool": "ada_models", "args": {}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "nim"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "fov"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "fon"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "piz"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "mut"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "tot"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "nim"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "fov"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "fon"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "piz"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "mut"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "tot"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "nim"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "fov"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "fon"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "piz"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "mut"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "tot"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "nim"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "fov"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "fon"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "piz"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "mut"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "tot"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "nim"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fov"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fon"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "piz"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "mut"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "tot"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "nim"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fov"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fon"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "piz"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "mut"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "tot"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "nim"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "fov"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "fon"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "piz"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "mut"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "tot"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "nim"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "fov"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "fon"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "piz"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "mut"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "tot"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "nim"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "fov"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "fon"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "piz"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "mut"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "tot"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "nim"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "fov"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "fon"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "piz"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "mut"}}}}, "error": false}
+{"session": "4", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "tot"}}}}, "error": false}
+{"session": "4", "tool": "ada_forget", "args": {"model": "step"}, "error": false}
+{"session": "4", "tool": "ada_make", "args": {"spec": {"name": "step", "layers": [{"name": "m", "segments": [{"name": "t", "roles": [{"name": "state"}, {"name": "action"}]}]}]}}, "error": false}
+{"session": "4", "tool": "ada_note", "args": {"text": "Hidden-machine puzzle. step=(state,action->next), rebuilt S4: 54 entries; only p>0.8 = held case. Dump: 60 asks in one turn. Rules drift ~3/session (S4: tid fov, mod fon, zip piz, +new nif mut=paz). Each session: chain lines through table, fix conflicts; forget+remake is the only clean edit. SOFT guesses S4: tid fon, vir fov/piz, vok fon/fov/piz, mod piz. Unknown: zip fov, mob mut, vok tot, vin nim/fov/tot, paz-from-tot. By hand, no Bash tried."}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "nim"}}}, "outcome": "mob"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "fov"}}}, "outcome": "vin"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "fon"}}}, "outcome": "zip"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "piz"}}}, "outcome": "mob"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "mut"}}}, "outcome": "nif"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "tot"}}}, "outcome": "mob"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "nim"}}}, "outcome": "zip"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "fov"}}}, "outcome": "mob"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "fon"}}}, "outcome": "nif"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "piz"}}}, "outcome": "nif"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "mut"}}}, "outcome": "tid"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "tot"}}}, "outcome": "vok"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "nim"}}}, "outcome": "mub"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "fon"}}}, "outcome": "vir"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "piz"}}}, "outcome": "nif"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "mut"}}}, "outcome": "tid"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "tot"}}}, "outcome": "tid"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "nim"}}}, "outcome": "vok"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "fov"}}}, "outcome": "vir"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "fon"}}}, "outcome": "mub"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "piz"}}}, "outcome": "tid"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "tot"}}}, "outcome": "zip"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "nim"}}}, "outcome": "mob"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fov"}}}, "outcome": "nif"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fon"}}}, "outcome": "zip"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "piz"}}}, "outcome": "paz"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "mut"}}}, "outcome": "paz"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "tot"}}}, "outcome": "nif"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "nim"}}}, "outcome": "mod"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fov"}}}, "outcome": "mob"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fon"}}}, "outcome": "paz"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "piz"}}}, "outcome": "vin"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "mut"}}}, "outcome": "vin"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "tot"}}}, "outcome": "vir"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "nim"}}}, "outcome": "vir"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "fov"}}}, "outcome": "vok"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "fon"}}}, "outcome": "vir"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "piz"}}}, "outcome": "vok"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "mut"}}}, "outcome": "vok"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "nim"}}}, "outcome": "vin"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "fov"}}}, "outcome": "tid"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "fon"}}}, "outcome": "vok"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "piz"}}}, "outcome": "mod"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "mut"}}}, "outcome": "nif"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "tot"}}}, "outcome": "mub"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "nim"}}}, "outcome": "vir"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "fov"}}}, "outcome": "mob"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "fon"}}}, "outcome": "vin"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "piz"}}}, "outcome": "vok"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "mut"}}}, "outcome": "mub"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "tot"}}}, "outcome": "mob"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "fon"}}}, "outcome": "nif"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "piz"}}}, "outcome": "zip"}, "error": false}
+{"session": "4", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "mut"}}}, "outcome": "vir"}, "error": false}
+{"session": "5", "tool": "ada_models", "args": {}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "mut"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "fov"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "nim"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "fon"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "tot"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "piz"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "mut"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "fov"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "nim"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "fon"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "tot"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "piz"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "mut"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "fov"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "nim"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "fon"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "tot"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "piz"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "mut"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "fov"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "nim"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "fon"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "tot"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "piz"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "mut"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "fov"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "nim"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "fon"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "tot"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "piz"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "mut"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "fov"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "nim"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "fon"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "tot"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "piz"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "mut"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fov"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "nim"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fon"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "tot"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "piz"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "mut"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "fov"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "nim"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "fon"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "tot"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "piz"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "mut"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "fov"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "nim"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "fon"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "tot"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "piz"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "mut"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fov"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "nim"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fon"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "tot"}}}}, "error": false}
+{"session": "5", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "piz"}}}}, "error": false}
+{"session": "5", "tool": "ada_forget", "args": {"model": "step"}, "error": false}
+{"session": "5", "tool": "ada_make", "args": {"spec": {"name": "step", "layers": [{"name": "m", "segments": [{"name": "t", "roles": [{"name": "state"}, {"name": "action"}]}]}]}}, "error": false}
+{"session": "5", "tool": "ada_note", "args": {"text": "Hidden-machine puzzle. step=(state,action->next), rebuilt S5: 59 entries; only p>0.8 = held case. Dump: 60 asks in one turn. By hand works; ~3 drift+1-2 noise lines/session. Forget+remake=only clean edit. S5 new, 1 line each, SOFT: mod nim, vin fon, nif piz. Inferred: mob mut, vin nim, vin fov. Unexplained S5: tid mut fov nim->mod (nif nim/tid mut?), mod piz mut fon->paz (vok fon/mut?), vok nim fon piz->mod (paz piz/vir fon?). Unknown: zip fov."}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "mut"}}}, "outcome": "mub"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "fov"}}}, "outcome": "mob"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "nim"}}}, "outcome": "tid"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "fon"}}}, "outcome": "vin"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "tot"}}}, "outcome": "mob"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "piz"}}}, "outcome": "vok"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "mut"}}}, "outcome": "nif"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "fov"}}}, "outcome": "tid"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "nim"}}}, "outcome": "vin"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "fon"}}}, "outcome": "vok"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "tot"}}}, "outcome": "mub"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "piz"}}}, "outcome": "mod"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "mut"}}}, "outcome": "vir"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "fov"}}}, "outcome": "vok"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "nim"}}}, "outcome": "nif"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "fon"}}}, "outcome": "tid"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "tot"}}}, "outcome": "vin"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "piz"}}}, "outcome": "zip"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "mut"}}}, "outcome": "nif"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "fov"}}}, "outcome": "vin"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "nim"}}}, "outcome": "mob"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "fon"}}}, "outcome": "zip"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "tot"}}}, "outcome": "mob"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "piz"}}}, "outcome": "mob"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "mut"}}}, "outcome": "vir"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "fov"}}}, "outcome": "vir"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "nim"}}}, "outcome": "vok"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "fon"}}}, "outcome": "mub"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "tot"}}}, "outcome": "zip"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "piz"}}}, "outcome": "tid"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "mut"}}}, "outcome": "tid"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "nim"}}}, "outcome": "mub"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "fon"}}}, "outcome": "vir"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "tot"}}}, "outcome": "tid"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "piz"}}}, "outcome": "nif"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "mut"}}}, "outcome": "paz"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fov"}}}, "outcome": "nif"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "nim"}}}, "outcome": "mob"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fon"}}}, "outcome": "zip"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "tot"}}}, "outcome": "nif"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "piz"}}}, "outcome": "mub"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "mut"}}}, "outcome": "vok"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "fov"}}}, "outcome": "vok"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "nim"}}}, "outcome": "vir"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "fon"}}}, "outcome": "vir"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "tot"}}}, "outcome": "mod"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "piz"}}}, "outcome": "vok"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "mut"}}}, "outcome": "tid"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "fov"}}}, "outcome": "mob"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "nim"}}}, "outcome": "zip"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "fon"}}}, "outcome": "nif"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "tot"}}}, "outcome": "vok"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "piz"}}}, "outcome": "nif"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "mut"}}}, "outcome": "vin"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fov"}}}, "outcome": "mob"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "nim"}}}, "outcome": "mod"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fon"}}}, "outcome": "paz"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "tot"}}}, "outcome": "vir"}, "error": false}
+{"session": "5", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "piz"}}}, "outcome": "vin"}, "error": false}
+{"session": "6", "tool": "ada_models", "args": {}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "nim"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "fon"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "mut"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "fov"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "piz"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "tot"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "nim"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "fon"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "mut"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "fov"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "piz"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "tot"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "nim"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "fon"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "mut"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "fov"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "piz"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "tot"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "nim"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fon"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "mut"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fov"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "piz"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "tot"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "nim"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "fon"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "mut"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "fov"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "piz"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "tot"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "nim"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "fon"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "mut"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "fov"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "piz"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "tot"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "nim"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fon"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "mut"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fov"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "piz"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "tot"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "nim"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "fon"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "mut"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "fov"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "piz"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "tot"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "nim"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "fon"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "mut"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "fov"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "piz"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "tot"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "nim"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "fon"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "mut"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "fov"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "piz"}}}}, "error": false}
+{"session": "6", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "tot"}}}}, "error": false}
+{"session": "6", "tool": "ada_forget", "args": {"model": "step"}, "error": false}
+{"session": "6", "tool": "ada_note", "args": {"text": "Hidden-machine. step=(state,action->next), rebuilt S6: 60 entries; p>0.8=held. Dump: 60 asks in one turn, then fit by hand (python via Bash denied). S6 drift BIG (~18 cells; all of nim; also piz/mut/fov), so expect more than 3. Forget+remake=only clean edit. S6 SOFT (inferred from chains): nim of mub,nif,mod,tid; paz fov, paz piz, paz mut, zip fon, vok piz, vir piz, mob mut, mob fov, tid mut. Noise S6: zip nim fov fon->mub. vir nim unconfirmed."}, "error": false}
+{"session": "6", "tool": "ada_make", "args": {"spec": {"name": "step", "layers": [{"name": "m", "segments": [{"name": "t", "roles": [{"name": "state"}, {"name": "action"}]}]}]}}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "nim"}}}, "outcome": "tid"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "fon"}}}, "outcome": "tid"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "mut"}}}, "outcome": "vir"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "fov"}}}, "outcome": "vok"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "piz"}}}, "outcome": "zip"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "tot"}}}, "outcome": "vin"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "nim"}}}, "outcome": "mub"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "fon"}}}, "outcome": "vok"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "mut"}}}, "outcome": "nif"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "fov"}}}, "outcome": "tid"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "piz"}}}, "outcome": "mod"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "tot"}}}, "outcome": "mub"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "nim"}}}, "outcome": "zip"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "fon"}}}, "outcome": "vin"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "mut"}}}, "outcome": "mub"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "fov"}}}, "outcome": "mob"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "piz"}}}, "outcome": "vin"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "tot"}}}, "outcome": "mob"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "nim"}}}, "outcome": "nif"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fon"}}}, "outcome": "zip"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "mut"}}}, "outcome": "paz"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fov"}}}, "outcome": "nif"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "piz"}}}, "outcome": "mub"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "tot"}}}, "outcome": "nif"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "nim"}}}, "outcome": "zip"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "fon"}}}, "outcome": "zip"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "mut"}}}, "outcome": "mob"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "fov"}}}, "outcome": "vin"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "piz"}}}, "outcome": "mob"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "tot"}}}, "outcome": "mob"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "nim"}}}, "outcome": "nif"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "fon"}}}, "outcome": "tid"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "mut"}}}, "outcome": "tid"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "fov"}}}, "outcome": "paz"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "piz"}}}, "outcome": "nif"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "tot"}}}, "outcome": "tid"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "nim"}}}, "outcome": "mod"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fon"}}}, "outcome": "paz"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "mut"}}}, "outcome": "vin"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fov"}}}, "outcome": "mob"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "piz"}}}, "outcome": "mob"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "tot"}}}, "outcome": "vir"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "nim"}}}, "outcome": "vok"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "fon"}}}, "outcome": "nif"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "mut"}}}, "outcome": "mod"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "fov"}}}, "outcome": "vin"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "piz"}}}, "outcome": "zip"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "tot"}}}, "outcome": "vok"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "nim"}}}, "outcome": "vin"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "fon"}}}, "outcome": "vir"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "mut"}}}, "outcome": "vok"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "fov"}}}, "outcome": "vok"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "piz"}}}, "outcome": "paz"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "tot"}}}, "outcome": "mod"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "nim"}}}, "outcome": "paz"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "fon"}}}, "outcome": "mub"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "mut"}}}, "outcome": "zip"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "fov"}}}, "outcome": "tid"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "piz"}}}, "outcome": "tid"}, "error": false}
+{"session": "6", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "tot"}}}, "outcome": "zip"}, "error": false}
+{"session": "7", "tool": "ada_models", "args": {}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "nim"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "mut"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "fov"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "piz"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "fon"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "tot"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "nim"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "mut"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "fov"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "piz"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "fon"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "tot"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "nim"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "mut"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fov"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "piz"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fon"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "tot"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "nim"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "mut"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "fov"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "piz"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "fon"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "tot"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "nim"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "mut"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "fov"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "piz"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "fon"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "tot"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "nim"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "mut"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "fov"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "piz"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "fon"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "tot"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "nim"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "mut"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "fov"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "piz"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "fon"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "tot"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "nim"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "mut"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "fov"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "piz"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "fon"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "tot"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "nim"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "mut"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "fov"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "piz"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "fon"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "tot"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "nim"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "mut"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fov"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "piz"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fon"}}}}, "error": false}
+{"session": "7", "tool": "ada_ask", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "tot"}}}}, "error": false}
+{"session": "7", "tool": "ada_forget", "args": {"model": "step"}, "error": false}
+{"session": "7", "tool": "ada_note", "args": {"text": "Hidden-machine. S7 table, cols nim mut fov piz fon tot (fit by hand, no dump needed; model step mirrors it):\nzip nif tid paz nif tid tid\npaz vok mod vin mob nif vok\nvir mod vin mob vir paz vir\nvok vin vok vok paz vir mod\nmod mob mub vir vin vin mob\nmub mub nif mod mod vok mub\nvin tid vir mub zip tid vin\ntid zip mob zip mob zip mob\nmob paz zip tid tid mod zip\nnif vir paz nif mub zip nif\nDrift ~9 cells/session. Soft: mob fon(mub/mob?), tid fov, nif nim."}, "error": false}
+{"session": "7", "tool": "ada_make", "args": {"spec": {"name": "step", "layers": [{"name": "m", "segments": [{"name": "t", "roles": [{"name": "state"}, {"name": "action"}]}]}]}}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "nim"}}}, "outcome": "nif"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "mut"}}}, "outcome": "tid"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "fov"}}}, "outcome": "paz"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "piz"}}}, "outcome": "nif"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "fon"}}}, "outcome": "tid"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "zip", "action": "tot"}}}, "outcome": "tid"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "nim"}}}, "outcome": "vok"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "mut"}}}, "outcome": "mod"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "fov"}}}, "outcome": "vin"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "piz"}}}, "outcome": "mob"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "fon"}}}, "outcome": "nif"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "paz", "action": "tot"}}}, "outcome": "vok"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "nim"}}}, "outcome": "mod"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "mut"}}}, "outcome": "vin"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fov"}}}, "outcome": "mob"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "piz"}}}, "outcome": "vir"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "fon"}}}, "outcome": "paz"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "tot"}}}, "outcome": "vir"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "nim"}}}, "outcome": "vin"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "mut"}}}, "outcome": "vok"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "fov"}}}, "outcome": "vok"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "piz"}}}, "outcome": "paz"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "fon"}}}, "outcome": "vir"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "tot"}}}, "outcome": "mod"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "nim"}}}, "outcome": "mob"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "mut"}}}, "outcome": "mub"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "fov"}}}, "outcome": "vir"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "piz"}}}, "outcome": "vin"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "fon"}}}, "outcome": "vin"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mod", "action": "tot"}}}, "outcome": "mob"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "nim"}}}, "outcome": "mub"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "mut"}}}, "outcome": "nif"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "fov"}}}, "outcome": "mod"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "piz"}}}, "outcome": "mod"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "fon"}}}, "outcome": "vok"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mub", "action": "tot"}}}, "outcome": "mub"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "nim"}}}, "outcome": "tid"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "mut"}}}, "outcome": "vir"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "fov"}}}, "outcome": "mub"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "piz"}}}, "outcome": "zip"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "fon"}}}, "outcome": "tid"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vin", "action": "tot"}}}, "outcome": "vin"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "nim"}}}, "outcome": "zip"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "mut"}}}, "outcome": "mob"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "fov"}}}, "outcome": "zip"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "piz"}}}, "outcome": "mob"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "fon"}}}, "outcome": "zip"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "tid", "action": "tot"}}}, "outcome": "mob"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "nim"}}}, "outcome": "paz"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "mut"}}}, "outcome": "zip"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "fov"}}}, "outcome": "tid"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "piz"}}}, "outcome": "tid"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "fon"}}}, "outcome": "mod"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "tot"}}}, "outcome": "zip"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "nim"}}}, "outcome": "vir"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "mut"}}}, "outcome": "paz"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fov"}}}, "outcome": "nif"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "piz"}}}, "outcome": "mub"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fon"}}}, "outcome": "zip"}, "error": false}
+{"session": "7", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "tot"}}}, "outcome": "nif"}, "error": false}
+{"session": "8", "tool": "ada_models", "args": {}, "error": false}
+{"session": "8", "tool": "ada_note", "args": {"text": "Hidden-machine. S8 table, cols nim mut fov piz fon tot (fit by hand; Bash python/file write blocked, skip it):\nzip nif tid paz nif tid tid\npaz vok mod vin mob nif vok\nvir mod vin mob vir paz zip\nvok vin mod vok paz vir mod\nmod mob mub vir vin vin mob\nmub mub nif mod mod vok mub\nvin tid vir mub zip tid vin\ntid zip mob zip mob zip mob\nmob paz zip tid tid mub zip\nnif vir paz mob mub nif nif\nDrift ~5-9 cells/session. Soft: vir tot, nif fon, nif fov. Model step is stale; trust this note."}, "error": false}
+{"session": "8", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vok", "action": "mut"}}}, "outcome": "mod"}, "error": false}
+{"session": "8", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "mob", "action": "fon"}}}, "outcome": "mub"}, "error": false}
+{"session": "8", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fov"}}}, "outcome": "mob"}, "error": false}
+{"session": "8", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "nif", "action": "fon"}}}, "outcome": "nif"}, "error": false}
+{"session": "8", "tool": "ada_record", "args": {"model": "step", "data": {"m": {"t": {"state": "vir", "action": "tot"}}}, "outcome": "zip"}, "error": false}
+{"session": "9", "tool": "ada_models", "args": {}, "error": false}
+{"session": "9", "tool": "ada_note", "args": {"text": "Hidden-machine. S9 table, cols nim mut fov piz fon tot (fit by hand; Bash blocked, skip it):\nzip nif tid paz nif tid vok\npaz vok mod vin mob nif vok\nvir mod vin nif vir paz zip\nvok vin vok vok paz mod mod\nmod mob mub vir vin vin mob\nmub mub nif mod mod vok mub\nvin tid vir mub zip tid vin\ntid zip mob zip mob zip paz\nmob paz zip tid tid mub zip\nnif vir paz tid mub nif nif\nDrift ~5-9 cells/session. Soft: nif fov, paz piz/mob fon, zip tot, tid tot. Model step stale; trust this note."}, "error": false}
+{"session": "10", "tool": "ada_models", "args": {}, "error": false}
+{"session": "10", "tool": "ada_note", "args": {"text": "Hidden-machine. S10 table, cols nim mut fov piz fon tot (fit by hand; skip Bash):\nzip nif tid paz nif vir tid\npaz vok mod vin vok nif vok\nvir mod vin nif vir paz zip\nvok vin vok vok paz mod mod\nmod mob mub vir vin vin mob\nmub mub nif mod mod vok mub\nvin tid vir mub zip tid vin\ntid zip tid zip mod zip vir\nmob paz zip mob tid mub zip\nnif vir paz mob mub nif nif\nDrift ~6-8 cells/session. Soft: tid mut/piz/tot, zip tot, paz piz. Model step stale; trust this note."}, "error": false}

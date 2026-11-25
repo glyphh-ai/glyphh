@@ -1,0 +1,29 @@
+Claude with Ada as its only memory: seed 11, 30 chains a session.
+
+session  right   tokens   sec  turns    models    make  record     ask    beam  forget    note
+1            2   126989    88     36         1       2      29       0       0       0       1
+2            1   171400   113     52         1       1      22      22       0       2       1
+3            1   212484   164    102         1       1      35      60       0       1       1
+4            1   198277   171    120         1       1      54      60       0       1       1
+5            3   199371   175    125         1       1      59      60       0       1       1
+6            6   290468   203    127         1       1      60      60       0       1       1
+7            3   240996   177    126         1       1      60      60       0       1       1
+8           11   124361    71     12         1       0       5       0       0       0       1
+9           13    77732    56      4         1       0       0       0       0       0       1
+10          11    76916    53      4         1       0       0       0       0       0       1
+
+ada: 52 of 200 right, 1,718,994 tokens, $5.67
+
+Its note to itself:
+Hidden-machine. S10 table, cols nim mut fov piz fon tot (fit by hand; skip Bash):
+zip nif tid paz nif vir tid
+paz vok mod vin vok nif vok
+vir mod vin nif vir paz zip
+vok vin vok vok paz mod mod
+mod mob mub vir vin vin mob
+mub mub nif mod mod vok mub
+vin tid vir mub zip tid vin
+tid zip tid zip mod zip vir
+mob paz zip mob tid mub zip
+nif vir paz mob mub nif nif
+Drift ~6-8 cells/session. Soft: tid mut/piz/tot, zip tot, paz piz. Model step stale; trust this note.

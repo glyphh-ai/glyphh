@@ -1,0 +1,4 @@
+# TypeSafe's published viewer data is fetched, never committed (published.py)
+data/published/
+# generated cases, answers, logs and spend ledgers: committed with the results when they are published
+data/
