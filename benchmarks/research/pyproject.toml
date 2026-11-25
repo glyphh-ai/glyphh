@@ -1,6 +1,7 @@
 [project]
 name = "glyphh-benchmarks"
 version = "0.1.0"
+license = "Apache-2.0"
 requires-python = ">=3.13"
 dependencies = [
     "glyphh==3.1.0",

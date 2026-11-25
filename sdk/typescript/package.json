@@ -37,7 +37,7 @@
     "url": "git+https://github.com/glyphh-ai/glyphh.git",
     "directory": "sdk/typescript"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "publishConfig": {
     "access": "public"
   },

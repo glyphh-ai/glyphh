@@ -1,6 +1,7 @@
 {
   "name": "ada-expenses-demo",
   "private": true,
+  "license": "Apache-2.0",
   "version": "1.0.0",
   "description": "Ada, live: expense approvals from your own precedents, on Ada Cloud through the Glyphh SDK.",
   "type": "module",

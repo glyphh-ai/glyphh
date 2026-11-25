@@ -677,4 +677,4 @@ The research stacks carry their own tests; see
 
 ## License
 
-Proprietary — glyphh.ai
+Apache-2.0 (see the repository's LICENSE and NOTICE). Copyright 2026 Chris Timmerman / Glyphh AI LLC.
