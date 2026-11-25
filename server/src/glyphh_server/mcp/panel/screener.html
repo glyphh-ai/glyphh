@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screening verdict</title>
+<style>
+:root{color-scheme:light dark}
+body{margin:0;padding:16px;background:transparent;color:var(--color-text-primary,CanvasText);
+  font-family:var(--font-sans,system-ui,sans-serif);font-size:var(--font-text-md-size,14px);line-height:var(--font-text-md-line-height,1.45)}
+.top{display:flex;gap:8px;align-items:baseline;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px}
+h1{margin:0;font-size:var(--font-heading-sm-size,16px);font-weight:var(--font-weight-semibold,600);overflow-wrap:anywhere}
+h2{margin:0;font-size:var(--font-text-sm-size,12px);font-weight:var(--font-weight-semibold,600);
+  color:var(--color-text-secondary,GrayText);text-transform:uppercase;letter-spacing:.06em}
+.sub{color:var(--color-text-secondary,GrayText);font-size:var(--font-text-sm-size,12px)}
+.box{border:var(--border-width-regular,1px) solid var(--color-border-primary,rgba(128,128,128,.35));
+  border-radius:var(--border-radius-lg,12px);padding:12px 14px;display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.head{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.verdict{font-size:var(--font-heading-md-size,20px);font-weight:var(--font-weight-semibold,600)}
+.chip{font-size:var(--font-text-sm-size,12px);padding:1px 8px;border-radius:999px;white-space:nowrap;
+  border:var(--border-width-regular,1px) solid var(--color-border-primary,rgba(128,128,128,.35))}
+.suspect{border-color:var(--color-border-danger,#c0392b);color:var(--color-text-danger,inherit)}
+.unsure{border-color:var(--color-border-warning,#c98a00);color:var(--color-text-warning,inherit)}
+.fine{border-color:var(--color-border-success,#2e8b57);color:var(--color-text-success,inherit)}
+.signal{border-top:var(--border-width-regular,1px) solid var(--color-border-primary,rgba(128,128,128,.2));padding-top:8px;
+  display:flex;flex-direction:column;gap:4px}
+.signal ul,.box>ul{margin:0;padding-left:18px;font-size:var(--font-text-sm-size,12px);color:var(--color-text-secondary,GrayText)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+button{font:inherit;font-size:var(--font-text-sm-size,12px);padding:3px 12px;border-radius:var(--border-radius-md,8px);cursor:pointer;
+  border:var(--border-width-regular,1px) solid var(--color-border-primary,rgba(128,128,128,.35));
+  background:var(--color-background-secondary,transparent);color:var(--color-text-primary,CanvasText)}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible{outline:2px solid var(--color-ring-primary,Highlight);outline-offset:2px}
+.bad{color:var(--color-text-danger,inherit)} .empty{color:var(--color-text-secondary,GrayText)} [hidden]{display:none!important}
+.note{font-size:var(--font-text-sm-size,12px);color:var(--color-text-secondary,GrayText);margin:0}
+</style></head>
+<body>
+<div class="top"><h1 id="title">Screening verdict</h1><span class="sub" id="role"></span></div>
+<p class="empty" id="waiting">Waiting for the verdict.</p>
+<div id="card"></div>
+<p class="note" id="note" hidden>A screening, not a judgement of the person. Ada decides from your precedents; where it was unsure, a rule or you did.</p>
+<p class="bad" id="error" hidden></p>
+<script type="module">__APP_JS__</script>
+<script type="module">
+// The Resume Screener's verdict for one application, from screener_verdict (the plugin's skill worked it out):
+// is this a real person first, each signal with what it says, who said it and what it found; the fit second; how the
+// text was written as one line. A signal Ada was unsure of that carries `teach` gets two buttons: the person's
+// answer is recorded as a precedent through the tool it names (ada_record), and the model is told.
+const $ = (id) => document.getElementById(id);
+const app = new window.McpApp({ name: "glyphh-screener", version: "1" }, {}, { autoResize: true });
+const view = { verdict: null, told: {} };
+
+function theme(ctx) {
+  if (!ctx) return;
+  const root = document.documentElement;
+  for (const [k, v] of Object.entries(ctx.styles?.variables || {})) if (v) root.style.setProperty(k, v);
+  if (ctx.theme) root.style.colorScheme = ctx.theme;
+  const fonts = ctx.styles?.css?.fonts;
+  if (fonts && !$("host-fonts")) { const s = document.createElement("style"); s.id = "host-fonts"; s.textContent = fonts; document.head.append(s); }
+}
+
+function failed(message) { $("error").textContent = message; $("error").hidden = !message; }
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+const pct = (p) => `${Math.round(100 * p)}%`;
+const KIND = { "real person": "fine", fine: "fine", suspect: "suspect", unsure: "unsure" };
+const BY = { ada: "Ada", rule: "no close precedent", you: "you" };
+
+function chip(says, extra) { return el("span", `chip ${KIND[says] || ""}`, extra ? `${says} · ${extra}` : says); }
+function list(items) { const ul = el("ul"); for (const x of items || []) ul.append(el("li", "", x)); return ul; }
+
+// The whole verdict again once the person has answered: any suspect is suspect, else any unsure is unsure.
+function overall(v) {
+  const says = v.person.signals.map((s) => view.told[s.signal] || s.says);
+  if (says.includes("suspect")) return "suspect";
+  return says.includes("unsure") || says.every((s) => s === "not checked") ? "unsure" : "real person";
+}
+
+async function answer(signal, outcome, buttons) {
+  buttons.forEach((b) => { b.disabled = true; }); failed("");
+  try {
+    const r = await app.callServerTool({ name: signal.teach.tool, arguments: { ...signal.teach.args, outcome } });
+    if (r?.isError) throw new Error(r.structuredContent?.error?.message || r.content?.[0]?.text || "Recording failed.");
+    view.told[signal.signal] = outcome; show();
+    try { await app.updateModelContext({ content: [{ type: "text", text: `The person answered that the ${signal.title} signal is ${outcome} for ${view.verdict.applicant}; recorded as a precedent.` }] }); } catch {}
+  } catch (e) {
+    buttons.forEach((b) => { b.disabled = false; }); failed(e.message);
+  }
+}
+
+function signalRow(s) {
+  const row = el("div", "signal");
+  const told = view.told[s.signal];
+  const head = el("div", "head");
+  head.append(el("span", "", s.title));
+  const who = told ? BY.you : s.by === "ada" && s.confidence != null ? `${BY.ada} ${pct(s.confidence)}` : BY[s.by] || "";
+  head.append(chip(told || s.says, s.says === "not checked" ? "" : who));
+  row.append(head, list(s.found));
+  if (s.says === "unsure" && !told && s.teach) {
+    const ask = el("div", "row");
+    const fine = el("button", "", "This is fine"); const bad = el("button", "", "This is suspect");
+    fine.onclick = () => answer(s, "fine", [fine, bad]); bad.onclick = () => answer(s, "suspect", [fine, bad]);
+    ask.append(el("span", "sub", "Ada is unsure. What do you say?"), fine, bad);
+    row.append(ask);
+  }
+  return row;
+}
+
+function decided(title, d, unsure) {
+  const box = el("div", "box");
+  const head = el("div", "head");
+  head.append(el("h2", "", title));
+  const chips = el("div", "row");
+  chips.append(el("span", "chip", d.confidence != null ? `${d.outcome} · ${pct(d.confidence)}` : d.outcome));
+  if (d.ask) chips.append(el("span", "chip unsure", unsure));
+  head.append(chips);
+  box.append(head, list(d.found));
+  return box;
+}
+
+function show() {
+  const v = view.verdict;
+  if (!v) return;
+  $("waiting").hidden = true; $("note").hidden = false;
+  $("title").textContent = v.applicant; $("role").textContent = v.role || "";
+  const person = el("div", "box");
+  const head = el("div", "head");
+  head.append(el("h2", "", "Is this a real person?"), el("span", `verdict`, overall(v)));
+  person.append(head, ...v.person.signals.map(signalRow));
+  const made = el("p", "note", v.made.ask || v.made.outcome === "no answer"
+    ? "How it was written: Ada is unsure."
+    : `How it was written: reads as ${v.made.outcome} generated${v.made.confidence != null ? ` (${pct(v.made.confidence)})` : ""}.`);
+  $("card").replaceChildren(person, decided("Fit for the role", v.fit, "Ada is unsure"), made);
+}
+
+app.ontoolresult = (result) => {
+  if (result?.isError) { failed(result.structuredContent?.error?.message || result.content?.[0]?.text || "The verdict could not be shown."); $("waiting").hidden = true; return; }
+  view.verdict = result?.structuredContent || null; view.told = {}; show();
+};
+app.onhostcontextchanged = theme;
+app.connect().then(() => theme(app.getHostContext())).catch((e) => failed("The card could not connect: " + (e?.message || e)));
+</script>
+</body></html>
