@@ -1,0 +1,1695 @@
+#141992 kind-master-golang-tip red: upstream net/http bug, not a kubelet bug
+  truth: ['sig/architecture', 'sig/node', 'sig/testing']  situation: {"kind": "other", "components": ["build_release", "kubelet", "runtime", "test_infra"], "title": ["build_release", "kubelet"]}
+  -> sig/node score 0.6818 via #140944 flakiness in `ci-node-crio-kubelet-serial`  fix PRs [] dirs []
+       components: score 0.6309 x w 4.0 -> 0.4807
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.2246 x w 0.25 -> 0.0107
+  -> sig/node score 0.5514 via #140553 Failure cluster [9c0f0ea6...] `ci-cgroup-systemd-containerd-node-e2e-g  fix PRs [] dirs []
+       components: score 0.4575 x w 4.0 -> 0.3486
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.2583 x w 0.25 -> 0.0123
+  -> sig/node score 0.5504 via #135277 [Failing-Test]: RestartAllContainersWithKubeletRestarts [Serial] [Disr  fix PRs [35915] dirs ['config/jobs']
+       components: score 0.4561 x w 4.0 -> 0.3475
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.2622 x w 0.25 -> 0.0125
+
+#141993 Memory Manager accepts an incomplete pod-level checkpoint as a restored allocation after kubelet restart
+  truth: ['sig/node']  situation: {"kind": "bug", "components": ["admission", "cgroup", "kubelet", "security"], "title": ["kubelet"]}
+  -> sig/node score 0.657 via #141069 Memory Manager pod-scope restore compares container blocks with the po  fix PRs [141070] dirs ['pkg/kubelet']
+       components: score 0.6123 x w 4.0 -> 0.4665
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/node score 0.5681 via #140906 Memory Manager AllocatePod re-applies restored pod allocations after k  fix PRs [141077] dirs ['pkg/kubelet']
+       components: score 0.4331 x w 4.0 -> 0.33
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+  -> sig/node score 0.5309 via #135907 Kubelet SyncLoop Remove Error  fix PRs [] dirs []
+       components: score 0.3843 x w 4.0 -> 0.2928
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+
+#142002 DRA kubelet plugin helper can generate overlong rolling-update service socket paths
+  truth: ['sig/node']  situation: {"kind": "bug", "components": ["device", "kubelet", "network"], "title": ["device", "kubelet"]}
+  -> sig/node score 0.931 via #136021 Fix panic when allocate gpu parallelly  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.4819 x w 0.25 -> 0.0219
+  -> sig/node score 0.6138 via #138446 Kubelet restart triggers UnexpectedAdmissionError for pods using devic  fix PRs [] dirs []
+       components: score 0.4932 x w 4.0 -> 0.3757
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+  -> sig/node score 0.6138 via #134519 No share ID in DRA kubelet plugin's API  fix PRs [134520] dirs ['pkg/kubelet', 'pkg/registry', 'staging/src/k8s.io/dynamic-resource-allocation']
+       components: score 0.4932 x w 4.0 -> 0.3757
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+
+#142005 grpc-go v1.83.0+ pulls three unwanted modules via cloud.google.com/go/auth, affecting all future grpc bumps
+  truth: ['sig/architecture']  situation: {"kind": "other", "components": ["auth", "build_release", "security"]}
+  -> sig/etcd score 0.6667 via #141230 Kubernetes ships etcd 3.6.6-0 with 61 CVEs (2 Critical) across all sup  fix PRs [] dirs []
+       components: score 0.625 x w 4.0 -> 0.4762
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/cluster-lifecycle score 0.6667 via #141230 Kubernetes ships etcd 3.6.6-0 with 61 CVEs (2 Critical) across all sup  fix PRs [] dirs []
+       components: score 0.625 x w 4.0 -> 0.4762
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/architecture score 0.6109 via #136879 [kube-api-linter] Enable the `dependenttags` linter  fix PRs [] dirs []
+       components: score 0.5137 x w 4.0 -> 0.4109
+       kind: score 1.0 x w 1.0 -> 0.2
+
+#142008 In-tree FC block teardown skips current-device cleanup when the recorded device path is stale
+  truth: ['sig/storage']  situation: {"kind": "bug", "components": ["kubelet", "storage"]}
+  -> sig/storage score 0.9524 via #135736 Kubelet retries NodeStageVolume indefinitely on NOT_FOUND  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/storage score 0.9524 via #134643 handleSELinuxMetricError prints error from logger.V(4).Error() still p  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 0.0 x w 0.25 -> 0.0
+  -> sig/storage score 0.9091 via #135909 Before mount the volume, kubelet cannot determine whether CSI is regis  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142011 Tracking: investigate and document deprecated label usage related to KEP-837
+  truth: ['sig/cloud-provider']  situation: {"kind": "other", "components": ["cloud_provider", "feature_gate"], "title": ["feature_gate"]}
+  -> sig/node score 0.6228 via #140749 [FG: InPlacePodVerticalScalingExclusiveCPUs] KEP 5554 alpha implementa  fix PRs [] dirs []
+       components: score 0.5049 x w 4.0 -> 0.3847
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+  -> sig/scheduling score 0.6228 via #138373 Remove SchedulerQueueingHints feature gate entirely, since it's GA'd s  fix PRs [138420, 138708] dirs ['pkg/features', 'pkg/scheduler', 'staging/src/k8s.io/kube-scheduler']
+       components: score 0.5049 x w 4.0 -> 0.3847
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+  -> sig/architecture score 0.6228 via #135657 Block new `Disable*` feature gates  fix PRs [] dirs []
+       components: score 0.5049 x w 4.0 -> 0.3847
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+
+#142016 Proposal: Lifecycle-Aware Persistence for Dormant Kubernetes Custom Resources
+  truth: ['sig/api-machinery']  situation: {"kind": "other", "components": ["apiserver", "client_go", "etcd", "feature_gate"]}
+  -> sig/api-machinery score 0.5536 via #138494 apiserver: consistent read fallback to etcd can overload apiserver and  fix PRs [] dirs []
+       components: score 0.5112 x w 4.0 -> 0.3718
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/scheduling score 0.5371 via #140082 Preemptor pod gets stuck in unschedulable queue when preempting a pod   fix PRs [] dirs []
+       components: score 0.4214 x w 4.0 -> 0.3371
+       kind: score 1.0 x w 1.0 -> 0.2
+  -> sig/scheduling score 0.5182 via #135900 SchedulerAsyncAPICalls can lead to performance issues.  fix PRs [] dirs []
+       components: score 0.4302 x w 4.0 -> 0.3278
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142022 kubelet: cut PLEG relist memory with CRI field projection + delta listing
+  truth: ['sig/node']  situation: {"kind": "feature", "components": ["feature_gate", "kubelet", "node_lifecycle", "pod_lifecycle", "runtime"], "title": ["kubelet", "runtime"]}
+  -> sig/node score 0.7033 via #140544 [Feature] Support hugepages in kubelet's `--system-reserved` and `--ku  fix PRs [] dirs []
+       components: score 0.6416 x w 4.0 -> 0.4888
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.5029 x w 0.25 -> 0.0239
+  -> sig/node score 0.5173 via #134813 Implement a kubelet oomwatcher that does not depend on /dev/kmsg  fix PRs [] dirs []
+       components: score 0.3975 x w 4.0 -> 0.3028
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.5029 x w 0.25 -> 0.0239
+  -> sig/node score 0.5154 via #137317 Kubelet device manager: Improve reconciliation/cleanup for failed Pods  fix PRs [] dirs []
+       components: score 0.395 x w 4.0 -> 0.301
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.5029 x w 0.25 -> 0.0239
+
+#142024 Namespace-scoped `RoleBinding` can grant write permissions on the namespace itself
+  truth: ['sig/auth']  situation: {"kind": "bug", "components": ["auth", "kubeadm", "kubectl", "security"]}
+  -> sig/k8s-infra score 0.5223 via #138595 Server certificate for pkgs.k8s.io is expired at Apr 25 2026  fix PRs [] dirs []
+       components: score 0.4355 x w 4.0 -> 0.3318
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/api-machinery score 0.5156 via #137943 K81.35.3 upgrade causing error in kubectl logs  fix PRs [] dirs []
+       components: score 0.4268 x w 4.0 -> 0.3251
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/api-machinery score 0.5145 via #141152 sig/network: API Server validation error message leaks full ClusterIP   fix PRs [] dirs []
+       components: score 0.4253 x w 4.0 -> 0.324
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142032 kubelet: containers that fail before ever running don't get exponential CrashLoopBackOff treatment
+  truth: ['sig/node']  situation: {"kind": "bug", "components": ["cgroup", "kubelet", "runtime"], "title": ["kubelet"], "paths": ["pkg/kubelet"]}
+  -> sig/node score 0.9553 via #138731 CPU manager AddContainer does not write cgroup cpuset, reconciler neve  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 0.0156 x w 0.25 -> 0.0007
+  -> sig/node score 0.9545 via #135907 Kubelet SyncLoop Remove Error  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 1.0 x w 0.25 -> 0.0455
+  -> sig/node score 0.8161 via #137912 [Failing Test] user namespaces kubeconfig tests [LinuxOnly] [Feature:U  fix PRs [137930] dirs ['test/e2e_node']
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score -0.0117 x w 1.0 -> -0.0021
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 1.0 x w 0.25 -> 0.0455
+
+#142040 test flake: DRA Extended Resource "must cleanup extended resource claims when pods complete"
+  truth: ['sig/node']  situation: {"kind": "flake", "components": ["apimachinery", "apiserver", "auth", "device", "feature_gate", "kubelet", "pod_lifecycle", "runtime", "scheduler", "security", "storage", "test_infra"], "title": ["device"]}
+  -> sig/node score 0.7082 via #136696 Test flake: [sig-node] [DRA] kubelet [Feature:DynamicResourceAllocatio  fix PRs [136905] dirs ['test/e2e', 'test/e2e_node']
+       components: score 0.6494 x w 4.0 -> 0.4948
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.4819 x w 0.25 -> 0.0229
+  -> sig/apps score 0.6538 via #135894 job integration: TestUpdateJobPodResources "field is immutable" flake  fix PRs [136076] dirs ['test/integration']
+       components: score 0.6489 x w 4.0 -> 0.4719
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/node score 0.6346 via #134517 [Flaking Test] [sig-node] Kubernetes e2e suite.[It] [sig-node] [Featur  fix PRs [35674] dirs ['config/jobs']
+       components: score 0.5601 x w 4.0 -> 0.4073
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 1.0 x w 0.25 -> 0.0455
+
+#142062 kube-apiserver: the watch cache retains every object fully decoded, costing several times their serialized size
+  truth: ['sig/api-machinery']  situation: {"kind": "feature", "components": ["apimachinery", "apiserver", "auth", "cgroup", "client_go", "controller_manager", "crd", "etcd", "feature_gate", "gc_quota", "kubectl", "metrics", "network", "pod_lifecycle", "runtime", "security", "workloads"], "title": ["apimachinery", "apiserver", "client_go"], "paths": ["pkg/endpoints", "pkg/registry", "pkg/storage", "staging/src/k8s.io/apiextensions-apiserver", "staging/src/k8s.io/apiserver"]}
+  -> sig/api-machinery score 0.4725 via #137865 Allow api server cache to be ready even when corruption exists in etcd  fix PRs [] dirs []
+       components: score 0.3838 x w 4.0 -> 0.2791
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.2539 x w 0.25 -> 0.0115
+  -> sig/scalability score 0.4701 via #136950 Unblock enablement of the ConcurrentWatchObjectDecode by default (to f  fix PRs [] dirs []
+       components: score 0.3965 x w 4.0 -> 0.2884
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score -0.0029 x w 0.25 -> -0.0001
+       title: score 0.0005 x w 0.25 -> 0.0
+  -> sig/api-machinery score 0.4701 via #136950 Unblock enablement of the ConcurrentWatchObjectDecode by default (to f  fix PRs [] dirs []
+       components: score 0.3965 x w 4.0 -> 0.2884
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score -0.0029 x w 0.25 -> -0.0001
+       title: score 0.0005 x w 0.25 -> 0.0
+
+#142068 kube-proxy iptables: nfacct probe doesn't cover xt_nfacct match, all syncs fail
+  truth: ['sig/network']  situation: {"kind": "bug", "components": ["apiserver", "dns", "gc_quota", "kube_proxy", "kubectl", "metrics", "network", "pod_lifecycle", "runtime"], "title": ["kube_proxy", "pod_lifecycle"], "paths": ["pkg/proxy", "pkg/util"]}
+  -> sig/node score 0.5269 via #140881 Exec readiness probes silently broken during graceful pod termination   fix PRs [140882] dirs ['pkg/kubelet']
+       components: score 0.4424 x w 4.0 -> 0.3217
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.5127 x w 0.25 -> 0.0233
+  -> sig/network score 0.5135 via #136475 Service creation fails "provided IP is already allocated" even if IP i  fix PRs [] dirs []
+       components: score 0.4561 x w 4.0 -> 0.3317
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/node score 0.4989 via #139462 apiserver: return 4xx instead of 500 when pod runtimeClassName is empt  fix PRs [140108] dirs ['plugin/pkg']
+       components: score 0.4355 x w 4.0 -> 0.3168
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0078 x w 0.25 -> 0.0004
+
+#142072 resource quota controller leaks informer event handlers when a monitored resource is removed
+  truth: ['sig/api-machinery']  situation: {"kind": "bug", "components": ["client_go", "controller_manager", "crd", "gc_quota", "test_infra"], "title": ["client_go"], "paths": ["pkg/controller"]}
+  -> sig/api-machinery score 0.5862 via #135621 DATA RACE garbage collector: blockingDependents  fix PRs [135647] dirs ['pkg/controller']
+       components: score 0.5244 x w 4.0 -> 0.3814
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.5171 x w 0.25 -> 0.0235
+       title: score -0.0112 x w 0.25 -> -0.0005
+  -> sig/cli score 0.5107 via #137439 "foregroundDeletion" finalizer which is defined on the resource wasn't  fix PRs [] dirs []
+       components: score 0.4517 x w 4.0 -> 0.3285
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0093 x w 0.25 -> 0.0004
+  -> sig/apps score 0.5096 via #141346 The pod associated with the Job cannot be deleted after reaching the '  fix PRs [141329] dirs ['pkg/controller']
+       components: score 0.3882 x w 4.0 -> 0.2823
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142079 unit-master-golang-tip red: two upstream net/http bugs, not kubernetes bugs
+  truth: ['sig/api-machinery', 'sig/testing']  situation: {"kind": "other", "components": ["apimachinery", "apiserver", "build_release", "network", "test_infra"], "title": ["build_release"], "paths": ["pkg/endpoints", "pkg/server", "pkg/util"]}
+  -> sig/api-machinery score 0.6595 via #139263 ci-kubernetes-unit-golang-tip failing: http2.ConfigureServer no longer  fix PRs [] dirs []
+       components: score 0.626 x w 4.0 -> 0.4553
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0049 x w 0.25 -> 0.0002
+       title: score 0.4893 x w 0.25 -> 0.0222
+  -> sig/network score 0.6396 via #135721 "Netpol" e2e tests are still too resource-intensive  fix PRs [] dirs []
+       components: score 0.6289 x w 4.0 -> 0.4574
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0078 x w 0.25 -> 0.0004
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/architecture score 0.5434 via #138334 `sig-arch-code-organization#unit-master-dependencies` is failing!  fix PRs [] dirs []
+       components: score 0.4355 x w 4.0 -> 0.3168
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score -0.0146 x w 0.25 -> -0.0007
+       title: score 1.0 x w 0.25 -> 0.0455
+
+#142080 [Flaking Test] Volume metrics provisioning specs can never pass when two test drivers share a name prefix
+  truth: ['sig/storage']  situation: {"kind": "flake", "components": ["controller_manager", "metrics", "storage", "test_infra"], "title": ["metrics", "storage"], "paths": ["test/e2e"]}
+  -> sig/storage score 0.5351 via #137039 [Flaking Tests][sig-storage] CSI Volumes [Driver: csi-hostpath] [Testp  fix PRs [] dirs []
+       components: score 0.3916 x w 4.0 -> 0.2848
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 0.5063 x w 0.25 -> 0.023
+  -> sig/storage score 0.523 via #140251 [Flaky Test] [sig-storage] CSI Volumes [Driver: csi-hostpath] [Testpat  fix PRs [] dirs []
+       components: score 0.375 x w 4.0 -> 0.2727
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 0.5063 x w 0.25 -> 0.023
+  -> sig/storage score 0.523 via #137040 [Flaking tests][sig-storage] gce-cos-master-slow - CSI Volumes [Driver  fix PRs [] dirs []
+       components: score 0.375 x w 4.0 -> 0.2727
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 0.5063 x w 0.25 -> 0.023
+
+#142090 [Flaky test] [sig-storage] Volume metrics PVC should create metrics for total time taken in volume operations in P/V Controller
+  truth: ['sig/storage']  situation: {"kind": "flake", "components": ["dns", "metrics", "storage", "test_infra"], "title": ["metrics", "storage"], "paths": ["test/e2e"]}
+  -> sig/storage score 0.5315 via #137039 [Flaking Tests][sig-storage] CSI Volumes [Driver: csi-hostpath] [Testp  fix PRs [] dirs []
+       components: score 0.3867 x w 4.0 -> 0.2812
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 0.5063 x w 0.25 -> 0.023
+  -> sig/storage score 0.5259 via #137479 [Flaking Test] [sig-storage] CSI Mock volume storage capacity tests ti  fix PRs [] dirs []
+       components: score 0.3945 x w 4.0 -> 0.2869
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 0.2578 x w 0.25 -> 0.0117
+  -> sig/storage score 0.5209 via #138051 [Flaking Test] CSI Mock volume storage capacity storage capacity exhau  fix PRs [138230] dirs ['test/e2e']
+       components: score 0.3721 x w 4.0 -> 0.2706
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 0.5063 x w 0.25 -> 0.023
+
+#142091 [Flaking Test] [sig-node] ImageGCNoEviction: DiskPressure not encountered on ci-node-crio-eviction
+  truth: ['sig/node']  situation: {"kind": "flake", "components": ["feature_gate", "kubelet", "pod_lifecycle", "runtime", "test_infra"], "title": ["pod_lifecycle", "runtime"]}
+  -> sig/node score 0.6857 via #141787 [Flaking Test] Containers Lifecycle when A pod with restartable init c  fix PRs [] dirs []
+       components: score 0.6187 x w 4.0 -> 0.4714
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.501 x w 0.25 -> 0.0239
+  -> sig/node score 0.6857 via #139493 [Flake] ci-node-e2e: Containers Lifecycle restartable init containers   fix PRs [139547] dirs ['test/e2e_node']
+       components: score 0.6187 x w 4.0 -> 0.4714
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.501 x w 0.25 -> 0.0239
+  -> sig/node score 0.6791 via #139469 ci-kubernetes-node-kubelet-serial-containerd flaking  fix PRs [] dirs []
+       components: score 0.625 x w 4.0 -> 0.4762
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.2617 x w 0.25 -> 0.0125
+
+#142094 [Flaking test] [sig-autoscaling] [Feature:HPA] "Should scale with a CRD targetRef": conflict updating the custom resource in GetReplicas is fatal
+  truth: ['sig/autoscaling', 'sig/testing']  situation: {"kind": "flake", "components": ["apiserver", "autoscaling", "crd", "feature_gate", "test_infra", "workloads"], "title": ["autoscaling", "crd"], "paths": ["test/e2e"]}
+  -> sig/autoscaling score 0.5946 via #139200 [Flaking Test] [sig-autoscaling] Horizontal pod autoscaling (scale res  fix PRs [139714] dirs ['test/e2e']
+       components: score 0.4897 x w 4.0 -> 0.3562
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 0.2456 x w 0.25 -> 0.0112
+  -> sig/apps score 0.5709 via #137393 [Flaky test][sig-apps]ReplicaSet Replicaset should have a working scal  fix PRs [137403] dirs ['test/e2e']
+       components: score 0.4736 x w 4.0 -> 0.3445
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score -0.0176 x w 0.25 -> -0.0008
+  -> sig/apps score 0.5709 via #141288 [Flaking Test] ci-kubernetes-e2e-kind-alpha-beta-features.[sig-apps] S  fix PRs [141292] dirs ['test/e2e']
+       components: score 0.4736 x w 4.0 -> 0.3445
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score -0.0186 x w 0.25 -> -0.0008
+
+#142101 Eliminate the usage of empty/short secrets for `ComputeDetachedSignature()` for kubeadm/cluster-bootstrap operations
+  truth: ['sig/auth', 'sig/cluster-lifecycle']  situation: {"kind": "other", "components": ["auth", "kubeadm"], "title": ["kubeadm"], "paths": ["staging/src/k8s.io/cluster-bootstrap"]}
+  -> sig/architecture score 0.551 via #136872 [kube-api-linter] Enable the `optionalorrequired` linter for the `rbac  fix PRs [136900] dirs ['api/openapi-spec', 'hack/golangci-hints.yaml', 'hack/golangci.yaml']
+       components: score 0.5073 x w 4.0 -> 0.369
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0049 x w 0.25 -> 0.0002
+  -> sig/api-machinery score 0.551 via #136872 [kube-api-linter] Enable the `optionalorrequired` linter for the `rbac  fix PRs [136900] dirs ['api/openapi-spec', 'hack/golangci-hints.yaml', 'hack/golangci.yaml']
+       components: score 0.5073 x w 4.0 -> 0.369
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0049 x w 0.25 -> 0.0002
+  -> sig/architecture score 0.551 via #136863 [kube-api-linter] Enable the `optionalorrequired` linter for the `cert  fix PRs [] dirs []
+       components: score 0.5073 x w 4.0 -> 0.369
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0049 x w 0.25 -> 0.0002
+
+#142105 [Declarative Validation] Support config-driven custom formats and named validations
+  truth: ['sig/api-machinery']  situation: {"kind": "other", "components": ["admission", "kubectl"]}
+  -> sig/api-machinery score 0.5807 via #139592 Replace CEL CIDR and IP library with newly upstreamed version in cel-g  fix PRs [] dirs []
+       components: score 0.5122 x w 4.0 -> 0.3903
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/api-machinery score 0.5807 via #138065 Feature Request: Easy & Efficient CEL Access to *all* containers in Po  fix PRs [] dirs []
+       components: score 0.5122 x w 4.0 -> 0.3903
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/architecture score 0.5807 via #136858 [kube-api-linter] Enable the `optionalorrequired` linter for the `admi  fix PRs [] dirs []
+       components: score 0.5122 x w 4.0 -> 0.3903
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142110 [Flaky test] [sig-api-machinery] k8s.io/kubernetes/test/integration/apiserver.oidc
+  truth: ['sig/api-machinery', 'sig/auth']  situation: {"kind": "flake", "components": ["apiserver", "auth", "runtime", "test_infra"], "title": ["apiserver", "auth"], "paths": ["cmd/kube-apiserver", "test/integration"]}
+  -> sig/auth score 0.7468 via #137837 Flaking integration test TestNodeAuthorizerNamespaceNameConfusion  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score -0.019 x w 1.0 -> -0.0035
+       paths: score 0.5054 x w 0.25 -> 0.023
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/testing score 0.7001 via #137686 [Flaking Test] k8s.io/kubernetes/test/integration/apiserver/discovery.  fix PRs [] dirs []
+       components: score 0.6201 x w 4.0 -> 0.451
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 0.481 x w 0.25 -> 0.0219
+  -> sig/api-machinery score 0.5714 via #134828 [Flaking Test] unittest k8s.io/apiserver/pkg/admission/plugin/policy:   fix PRs [134829] dirs ['staging/src/k8s.io/apiserver']
+       components: score 0.5215 x w 4.0 -> 0.3793
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score -0.0078 x w 0.25 -> -0.0004
+       title: score 0.2339 x w 0.25 -> 0.0106
+
+#142129 Start localhost nodeport proxy only when nodeport address contains 127.0.0.1
+  truth: ['sig/network']  situation: {"kind": "other", "components": ["kube_proxy"]}
+  -> sig/network score 0.9091 via #135546 Create a cleaner interface between `cmd/kube-proxy` and `pkg/proxy/{ip  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/windows score 0.5811 via #135747 Update vendored hnslib to v0.1.2 in Kubernetes  fix PRs [135748] dirs ['LICENSES/vendor', 'hack/unwanted-dependencies.json']
+       components: score 0.5127 x w 4.0 -> 0.3906
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 0.0 x w 0.25 -> 0.0
+  -> sig/network score 0.5811 via #135747 Update vendored hnslib to v0.1.2 in Kubernetes  fix PRs [135748] dirs ['LICENSES/vendor', 'hack/unwanted-dependencies.json']
+       components: score 0.5127 x w 4.0 -> 0.3906
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 0.0 x w 0.25 -> 0.0
+
+#142142 Job controller does not recover when a Job is deleted and recreated with the same name during status tracking
+  truth: ['sig/apps']  situation: {"kind": "bug", "components": ["apiserver", "cloud_provider", "controller_manager", "feature_gate", "gc_quota", "kubectl", "workloads"], "title": ["workloads"]}
+  -> sig/apps score 0.6016 via #136918 Cronjob controller try to get existed job without namespace  fix PRs [136920] dirs ['pkg/controller']
+       components: score 0.5146 x w 4.0 -> 0.3743
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 1.0 x w 0.25 -> 0.0455
+  -> sig/apps score 0.5848 via #139428 Job controller manageJob() returns active=0 during backoff, causing "c  fix PRs [139457] dirs ['pkg/controller']
+       components: score 0.4551 x w 4.0 -> 0.3467
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+  -> sig/auth score 0.5843 via #136890 Kubelet sets incorrect ownerReference apiVersion "core/v1" on PodCerti  fix PRs [137008] dirs ['pkg/kubelet']
+       components: score 0.5166 x w 4.0 -> 0.3936
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0049 x w 0.25 -> 0.0002
+
+#142145 Native sidecar container which is not in a ready state should not affect the pod readiness, atleast it should be configurable
+  truth: ['sig/node']  situation: {"kind": "bug", "components": ["cgroup", "controller_manager", "feature_gate", "kubectl", "kubelet", "network", "pod_lifecycle"], "title": ["pod_lifecycle"], "paths": ["pkg/kubelet"]}
+  -> sig/node score 0.6399 via #137984 Eviction signal is not hugepages aware  fix PRs [138127] dirs ['pkg/features', 'pkg/kubelet', 'test/compatibility_lifecycle']
+       components: score 0.5049 x w 4.0 -> 0.3672
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 1.0 x w 0.25 -> 0.0455
+  -> sig/node score 0.6291 via #141609 cgroup v2: Node Allocatable memory.max update can trigger reclaim/OOM   fix PRs [] dirs []
+       components: score 0.522 x w 4.0 -> 0.3796
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 0.4878 x w 0.25 -> 0.0222
+  -> sig/node score 0.6069 via #141483 Pod evicted for exceeding its ephemeral-storage limit is indistinguish  fix PRs [] dirs []
+       components: score 0.522 x w 4.0 -> 0.3796
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 1.0 x w 0.25 -> 0.0455
+
+#142147 [Failing Test] ci-kubernetes-node-e2e-containerd-serial failing with rotating specs
+  truth: ['sig/node']  situation: {"kind": "failing_test", "components": ["feature_gate", "gc_quota", "kubelet", "metrics", "network", "runtime", "test_infra"], "title": ["runtime", "test_infra"]}
+  -> sig/node score 0.6217 via #140628 [Failing Test] ci-node-crio-resource-managers  fix PRs [140631] dirs ['test/e2e_node']
+       components: score 0.5352 x w 4.0 -> 0.4077
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.4932 x w 0.25 -> 0.0235
+  -> sig/node score 0.6202 via #138402 [sig-node] Summary API should report resource usage through the stats   fix PRs [] dirs []
+       components: score 0.5327 x w 4.0 -> 0.4059
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.5 x w 0.25 -> 0.0238
+  -> sig/node score 0.6102 via #136331 [failing-test] containerd serial tests failing on reboot  fix PRs [] dirs []
+       components: score 0.52 x w 4.0 -> 0.3962
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.4932 x w 0.25 -> 0.0235
+
+#142155 [HPA] ReplicaCalculator evaluates unactuated pod.spec instead of pod.status during In-Place Pod Vertical Scaling
+  truth: ['sig/autoscaling']  situation: {"kind": "bug", "components": ["autoscaling", "cgroup", "feature_gate", "kubelet", "scheduler"], "title": ["autoscaling"], "paths": ["pkg/controller", "staging/src/k8s.io/component-helpers"]}
+  -> sig/node score 0.6437 via #141237 CPU Manager incorrectly spans sockets with distribute-cpus-across-core  fix PRs [141238] dirs ['pkg/kubelet']
+       components: score 0.6357 x w 4.0 -> 0.4624
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score -0.0098 x w 0.25 -> -0.0004
+  -> sig/node score 0.641 via #141196 CPU Manager strict reservation can leave an empty default CPUSet  fix PRs [] dirs []
+       components: score 0.6318 x w 4.0 -> 0.4595
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0024 x w 0.25 -> 0.0001
+       title: score -0.0098 x w 0.25 -> -0.0004
+  -> sig/node score 0.6261 via #140688 CPUManager distribute-cpus-across-cores relies on CPU numbering order   fix PRs [140766] dirs ['pkg/kubelet']
+       components: score 0.6108 x w 4.0 -> 0.4442
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142181 MutatingAdmissionPolicy: a JSON patch value holding an Object initializer inside a list panics the apiserver
+  truth: ['sig/api-machinery']  situation: {"kind": "bug", "components": ["admission", "apiserver", "scheduler", "workloads"], "title": ["apiserver"], "paths": ["pkg/admission", "pkg/cel", "plugin/policy", "staging/src/k8s.io/apiserver"]}
+  -> sig/scheduling score 0.6453 via #138546 Pods with required anti-affinity configured are scheduled to the same   fix PRs [] dirs []
+       components: score 0.6357 x w 4.0 -> 0.4624
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0249 x w 0.25 -> 0.0011
+  -> sig/api-machinery score 0.5237 via #135352 ValidatingAdmissionPolicy namespace lookup raced newly created namespa  fix PRs [135359] dirs ['staging/src/k8s.io/apiserver']
+       components: score 0.4561 x w 4.0 -> 0.3317
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.2383 x w 0.25 -> 0.0108
+       title: score -0.0127 x w 0.25 -> -0.0006
+  -> sig/api-machinery score 0.511 via #141318 kube-aggregator: HTTP/2 health check for aggregated apiserver backends  fix PRs [] dirs []
+       components: score 0.3901 x w 4.0 -> 0.2837
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 1.0 x w 0.25 -> 0.0455
+
+#142183 Localhost nodeport nftables proxy doesn't flip to enabled when conditions are met during proxy restart
+  truth: ['sig/network']  situation: {"kind": "bug", "components": ["kube_proxy"], "title": ["kube_proxy"]}
+  -> sig/network score 0.7771 via #135546 Create a cleaner interface between `cmd/kube-proxy` and `pkg/proxy/{ip  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 0.0239 x w 1.0 -> 0.0044
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 1.0 x w 0.25 -> 0.0455
+  -> sig/network score 0.6257 via #141943 nf_conntrack_max in sysctls.go for kube-proxy - regression from 1.35 t  fix PRs [142035] dirs ['pkg/proxy']
+       components: score 0.5088 x w 4.0 -> 0.3876
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+  -> sig/network score 0.6161 via #139276 kube-proxy IPVS mode: MASQUERADE may select a source port from service  fix PRs [] dirs []
+       components: score 0.4961 x w 4.0 -> 0.378
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+
+#142187 `Pod didn't trigger scale-up` should specify needs
+  truth: ['sig/scheduling']  situation: {"kind": "bug", "components": ["kubectl", "scheduler"]}
+  -> sig/scheduling score 0.9524 via #141953 scheduler: pods blocked by namespaceSelector podAffinity are not reque  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/scheduling score 0.6184 via #139914 Document caveats related to re-using the PodGroup name  fix PRs [] dirs []
+       components: score 0.5229 x w 4.0 -> 0.4184
+       kind: score 1.0 x w 1.0 -> 0.2
+  -> sig/scheduling score 0.6184 via #138267 Unschedulable pods are kept in node nominator under "" key  fix PRs [139904] dirs ['pkg/scheduler']
+       components: score 0.5229 x w 4.0 -> 0.4184
+       kind: score 1.0 x w 1.0 -> 0.2
+
+#142195 Objects that return v1.status don't return resource version on update
+  truth: ['sig/api-machinery']  situation: {"kind": "other", "components": ["feature_gate", "pod_lifecycle"]}
+  -> sig/api-machinery score 0.7655 via #137857 [declarative-validation] Feature-Request/Discussion: DV tag for one-wa  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 0.019 x w 1.0 -> 0.0036
+       paths: score 0.0 x w 0.25 -> 0.0
+  -> sig/node score 0.6086 via #140903 [FG: InPlacePodVerticalScalingExclusiveCPUs] Handle currentlyAllocated  fix PRs [] dirs []
+       components: score 0.5107 x w 4.0 -> 0.4086
+       kind: score 1.0 x w 1.0 -> 0.2
+  -> sig/node score 0.6027 via #140719 [FG: InPlacePodVerticalScalingExclusiveCPUs] Improve `KeepOnly` functi  fix PRs [140988] dirs ['pkg/kubelet']
+       components: score 0.5034 x w 4.0 -> 0.4027
+       kind: score 1.0 x w 1.0 -> 0.2
+
+#142205 [Flaking Test] Kubernetes e2e suite.[It] [sig-node] Pod Allocated Endpoint [FeatureGate:KubeletAllocatedPodsEndpoint] should return all allocated pods with status cleared when listing [Alpha] [Feature:OffByDefault] [FeatureGate:InPlacePodVerticalScaling]
+  truth: ['sig/node']  situation: {"kind": "flake", "components": ["feature_gate", "network", "test_infra"], "title": ["feature_gate", "network"], "paths": ["test/e2e"]}
+  -> sig/node score 0.7469 via #134737 failing test[sig-node] Override hostname of Pod [FeatureGate:HostnameO  fix PRs [134757] dirs ['test/e2e', 'test/e2e_node']
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score -0.019 x w 1.0 -> -0.0035
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.5083 x w 0.25 -> 0.0231
+  -> sig/network score 0.7469 via #134737 failing test[sig-node] Override hostname of Pod [FeatureGate:HostnameO  fix PRs [134757] dirs ['test/e2e', 'test/e2e_node']
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score -0.019 x w 1.0 -> -0.0035
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.5083 x w 0.25 -> 0.0231
+  -> sig/autoscaling score 0.6461 via #137437 Kubernetes e2e suite: [It] [sig-autoscaling] [Feature:HPA] [Slow] [Fea  fix PRs [137612] dirs ['test/e2e']
+       components: score 0.6221 x w 4.0 -> 0.4524
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.2607 x w 0.25 -> 0.0119
+
+#142208 kubectl describe pod does not show env vars sourced from valueFrom.fileKeyRef
+  truth: ['sig/cli']  situation: {"kind": "bug", "components": ["auth", "feature_gate", "kubectl", "storage"], "title": ["kubectl"], "paths": ["pkg/describe", "staging/src/k8s.io/kubectl"]}
+  -> sig/node score 0.9087 via #135519 `EnvFiles` feature (KEP-3721): Unclear quote handling behavior  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score -0.0088 x w 0.25 -> -0.0004
+  -> sig/node score 0.511 via #141155 Liveness probe failure container restart leads to container starting u  fix PRs [141342] dirs ['pkg/kubelet', 'test/e2e', 'test/e2e_node']
+       components: score 0.4521 x w 4.0 -> 0.3288
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0083 x w 0.25 -> 0.0004
+  -> sig/cli score 0.5099 via #139201 kubectl cp fails on large files and leaving hanging tar zombie process  fix PRs [] dirs []
+       components: score 0.3887 x w 4.0 -> 0.2827
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 1.0 x w 0.25 -> 0.0455
+
+#142209 kubectl describe service prints "+ 0 more..." when 3 ready endpoints are followed by not-ready endpoints
+  truth: ['sig/cli']  situation: {"kind": "bug", "components": ["kubectl", "network", "pod_lifecycle", "workloads"], "title": ["kubectl", "network"], "paths": ["pkg/describe", "staging/src/k8s.io/kubectl"]}
+  -> sig/cli score 0.6599 via #134470 kubectl apply fails to update container ports section on reapply  fix PRs [] dirs []
+       components: score 0.626 x w 4.0 -> 0.4553
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.5015 x w 0.25 -> 0.0228
+  -> sig/api-machinery score 0.6599 via #134470 kubectl apply fails to update container ports section on reapply  fix PRs [] dirs []
+       components: score 0.626 x w 4.0 -> 0.4553
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.5015 x w 0.25 -> 0.0228
+  -> sig/network score 0.5569 via #135266 kube-proxy generate no iptables rules when endpointslices have two ep   fix PRs [135593] dirs ['pkg/proxy']
+       components: score 0.4995 x w 4.0 -> 0.3633
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0117 x w 0.25 -> 0.0005
+       title: score 0.2471 x w 0.25 -> 0.0112
+
+#142210 kubectl describe node: per-pod resource rows print -9223372036854775808% on nodes without allocatable and disagree with the totals during in-place resize
+  truth: ['sig/cli']  situation: {"kind": "bug", "components": ["cgroup", "kubectl", "kubelet", "pod_lifecycle"], "title": ["kubectl"], "paths": ["pkg/describe", "staging/src/k8s.io/kubectl"]}
+  -> sig/node score 0.909 via #137984 Eviction signal is not hugepages aware  fix PRs [138127] dirs ['pkg/features', 'pkg/kubelet', 'test/compatibility_lifecycle']
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score -0.0098 x w 0.25 -> -0.0004
+       title: score 0.0083 x w 0.25 -> 0.0004
+  -> sig/node score 0.6403 via #140031 [FG:InPlacePodVerticalScalingExclusiveCPUs]:When enabling the `InPlace  fix PRs [] dirs []
+       components: score 0.6304 x w 4.0 -> 0.4585
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0015 x w 0.25 -> 0.0001
+  -> sig/node score 0.6396 via #136910 Some crashed or OOMKilled containers fail to restart in v1.35  fix PRs [137146] dirs ['pkg/kubelet', 'test/e2e_node']
+       components: score 0.6294 x w 4.0 -> 0.4577
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142211 ParseToLabelSelector rejects "!=", so kubectl create pdb and kubectl set selector fail on selectors that work with kubectl get -l
+  truth: ['sig/api-machinery', 'sig/cli']  situation: {"kind": "bug", "components": ["apimachinery", "kubectl"], "title": ["kubectl"], "paths": ["pkg/apis", "pkg/labels", "staging/src/k8s.io/apimachinery"]}
+  -> sig/cli score 0.603 via #141115 kubectl get: PrintObj errors are silently discarded in human-readable   fix PRs [] dirs []
+       components: score 0.5161 x w 4.0 -> 0.3754
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0073 x w 0.25 -> 0.0003
+       title: score 1.0 x w 0.25 -> 0.0455
+  -> sig/cli score 0.603 via #140347 kubectl logs: fix typos in flag help text (--previous, --ignore-errors  fix PRs [] dirs []
+       components: score 0.5161 x w 4.0 -> 0.3754
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0073 x w 0.25 -> 0.0003
+       title: score 1.0 x w 0.25 -> 0.0455
+  -> sig/cli score 0.6026 via #141703 kubectl kuberc set accepts an empty option name  fix PRs [141704] dirs ['staging/src/k8s.io/kubectl']
+       components: score 0.5161 x w 4.0 -> 0.3754
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 1.0 x w 0.25 -> 0.0455
+
+#142212 Pod-level limit defaulting is skipped for pods that have an ephemeral container
+  truth: ['sig/node']  situation: {"kind": "bug", "components": ["feature_gate", "kubectl"], "paths": ["pkg/api", "pkg/registry"]}
+  -> sig/network score 0.7319 via #135741 `kubectl describe service` does not display `appProtocol` field  fix PRs [135744] dirs ['staging/src/k8s.io/kubectl']
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 0.0239 x w 1.0 -> 0.0044
+       paths: score 0.0068 x w 0.25 -> 0.0003
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/cli score 0.7319 via #135741 `kubectl describe service` does not display `appProtocol` field  fix PRs [135744] dirs ['staging/src/k8s.io/kubectl']
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 0.0239 x w 1.0 -> 0.0044
+       paths: score 0.0068 x w 0.25 -> 0.0003
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/scheduling score 0.7316 via #134474 KEP-4671: Add Workload API operations to kubectl  fix PRs [134564] dirs ['api/discovery', 'api/openapi-spec', 'cmd/kube-apiserver']
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 0.0239 x w 1.0 -> 0.0044
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142220 Kubelet omits volume stats after all pod container cgroups are removed
+  truth: ['sig/node']  situation: {"kind": "bug", "components": ["cgroup", "kubelet", "pod_lifecycle", "storage"], "title": ["cgroup", "kubelet", "storage"]}
+  -> sig/storage score 0.6886 via #139535 kubelet CleanSubPaths can leave pods stuck Terminating when subPath ta  fix PRs [] dirs []
+       components: score 0.6235 x w 4.0 -> 0.4751
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.4849 x w 0.25 -> 0.0231
+  -> sig/node score 0.665 via #136175 Pod stuck in terminating state  fix PRs [] dirs []
+       components: score 0.6235 x w 4.0 -> 0.4751
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score -0.0122 x w 0.25 -> -0.0006
+  -> sig/node score 0.6434 via #141483 Pod evicted for exceeding its ephemeral-storage limit is indistinguish  fix PRs [] dirs []
+       components: score 0.5952 x w 4.0 -> 0.4535
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score -0.0122 x w 0.25 -> -0.0006
+
+#142223 API Server Write Throughput: Address Allocation Ceiling and Degraded State Bottlenecks
+  truth: ['sig/api-machinery', 'sig/scalability']  situation: {"kind": "feature", "components": ["admission", "apimachinery", "apiserver", "client_go", "etcd", "feature_gate", "gc_quota", "runtime", "test_infra"], "title": ["apiserver"]}
+  -> sig/scalability score 0.5941 via #137109 Interning for API Server and controller memory reduction  fix PRs [] dirs []
+       components: score 0.4673 x w 4.0 -> 0.356
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+  -> sig/api-machinery score 0.5941 via #137109 Interning for API Server and controller memory reduction  fix PRs [] dirs []
+       components: score 0.4673 x w 4.0 -> 0.356
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+  -> sig/api-machinery score 0.5612 via #137865 Allow api server cache to be ready even when corruption exists in etcd  fix PRs [] dirs []
+       components: score 0.4565 x w 4.0 -> 0.3478
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.4814 x w 0.25 -> 0.0229
+
+#142228 API Server Write Throughput: Reduce Write Allocations
+  truth: ['sig/api-machinery', 'sig/scalability']  situation: {"kind": "feature", "components": ["admission", "apimachinery", "apiserver", "client_go", "runtime"], "title": ["apiserver"], "paths": ["pkg/registry"]}
+  -> sig/network score 0.7304 via #137863 `TestEgressToWebhookWithProxy` needs to be updated to actually test pr  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 0.019 x w 1.0 -> 0.0035
+       paths: score -0.0063 x w 0.25 -> -0.0003
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/api-machinery score 0.656 via #138458 Allow to unmarshal into applyconfig from client-go result  fix PRs [] dirs []
+       components: score 0.6514 x w 4.0 -> 0.4737
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score -0.0015 x w 0.25 -> -0.0001
+       title: score 0.0107 x w 0.25 -> 0.0005
+  -> sig/scalability score 0.5369 via #137109 Interning for API Server and controller memory reduction  fix PRs [] dirs []
+       components: score 0.4258 x w 4.0 -> 0.3097
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 1.0 x w 0.25 -> 0.0455
+
+#142230 Kubelet OOM score calculation collapses to 999 for small/medium containers on large-memory nodes and ignores per-container memory guarantees
+  truth: ['sig/node']  situation: {"kind": "feature", "components": ["cgroup", "device", "feature_gate", "kubelet", "runtime"], "title": ["cgroup", "kubelet"], "paths": ["pkg/kubelet"]}
+  -> sig/node score 0.6761 via #140937 kubelet: support version emulation for CPU and Topology Manager policy  fix PRs [] dirs []
+       components: score 0.6172 x w 4.0 -> 0.4489
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 1.0 x w 0.25 -> 0.0455
+  -> sig/node score 0.671 via #140544 [Feature] Support hugepages in kubelet's `--system-reserved` and `--ku  fix PRs [] dirs []
+       components: score 0.6401 x w 4.0 -> 0.4656
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.52 x w 0.25 -> 0.0236
+  -> sig/node score 0.6667 via #134813 Implement a kubelet oomwatcher that does not depend on /dev/kmsg  fix PRs [] dirs []
+       components: score 0.6343 x w 4.0 -> 0.4613
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.52 x w 0.25 -> 0.0236
+
+#142243 [BUG] GetDiskFormat in k8s.io/mount-utils returns ("", nil) for unreadable devices, leading callers to destructive mkfs
+  truth: ['sig/storage']  situation: {"kind": "bug", "components": ["pod_lifecycle", "storage"], "title": ["storage"], "paths": ["staging/src/k8s.io/mount-utils"]}
+  -> sig/storage score 0.5843 via #135622 E2e test "should preempt lower priority pods using ReadWriteOncePod vo  fix PRs [135623] dirs ['test/e2e']
+       components: score 0.4912 x w 4.0 -> 0.3572
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score -0.0044 x w 0.25 -> -0.0002
+       title: score 1.0 x w 0.25 -> 0.0455
+  -> sig/storage score 0.5757 via #136908 Why does CSI perform the removeMountDir operation when attaching a vol  fix PRs [] dirs []
+       components: score 0.478 x w 4.0 -> 0.3477
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0161 x w 0.25 -> 0.0007
+       title: score 1.0 x w 0.25 -> 0.0455
+  -> sig/storage score 0.5757 via #136075 A potential goroutine leak in pkg/volume/util/nestedpendingoperations/  fix PRs [] dirs []
+       components: score 0.478 x w 4.0 -> 0.3477
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0161 x w 0.25 -> 0.0007
+       title: score 1.0 x w 0.25 -> 0.0455
+
+#142258 kubelet: containerLogs returns HTTP 200 when the container is gone from the runtime
+  truth: ['sig/node']  situation: {"kind": "bug", "components": ["kubectl", "kubelet", "network", "runtime"], "title": ["kubelet", "runtime"]}
+  -> sig/node score 0.6882 via #138175 Preloaded image pull spec poisoned by a pulled image  fix PRs [] dirs []
+       components: score 0.6211 x w 4.0 -> 0.4732
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.5146 x w 0.25 -> 0.0245
+  -> sig/node score 0.6734 via #135299 PodReadyToStartContainers condition lacks diagnostic message when pods  fix PRs [135300] dirs ['pkg/kubelet']
+       components: score 0.6338 x w 4.0 -> 0.4829
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/node score 0.6683 via #138633 Kubelet starts pods before CNI is configured  fix PRs [] dirs []
+       components: score 0.6099 x w 4.0 -> 0.4647
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.2764 x w 0.25 -> 0.0132
+
+#142260 kubectl create ingress panics when a rule path contains a comma
+  truth: ['sig/cli']  situation: {"kind": "bug", "components": ["kubectl", "network", "runtime"], "title": ["kubectl", "network"], "paths": ["cmd/kubectl", "pkg/cmd", "staging/src/k8s.io/kubectl"]}
+  -> sig/node score 0.9091 via #135299 PodReadyToStartContainers condition lacks diagnostic message when pods  fix PRs [135300] dirs ['pkg/kubelet']
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/cli score 0.6168 via #140922 kubectl create ingress accepts trailing data in --rule and silently dr  fix PRs [140926] dirs ['staging/src/k8s.io/kubectl']
+       components: score 0.5039 x w 4.0 -> 0.3665
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.5063 x w 0.25 -> 0.023
+       title: score 1.0 x w 0.25 -> 0.0455
+  -> sig/network score 0.5745 via #138374 The IP address allocated by the IPv6 service exceeds the serviceCIDR r  fix PRs [] dirs []
+       components: score 0.5098 x w 4.0 -> 0.3707
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.4834 x w 0.25 -> 0.022
+
+#142262 [Flaking Test] [sig-testing] ci-kubernetes-e2e-gce-cos-alphafeatures-master kubetest.Timeout [gce-cos-alphafeatures-master, gce-cos-alphafeatures-1.37]
+  truth: ['sig/node', 'sig/release', 'sig/testing']  situation: {"kind": "flake", "components": ["feature_gate", "kubelet", "network", "runtime", "storage", "test_infra"], "title": ["test_infra"]}
+  -> sig/node score 0.6188 via #139804 [Flaking Test] ci-kubernetes-node-e2e-containerd.Node Tests  fix PRs [] dirs []
+       components: score 0.5298 x w 4.0 -> 0.4036
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.5176 x w 0.25 -> 0.0246
+  -> sig/node score 0.5955 via #139469 ci-kubernetes-node-kubelet-serial-containerd flaking  fix PRs [] dirs []
+       components: score 0.5 x w 4.0 -> 0.381
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.5049 x w 0.25 -> 0.024
+  -> sig/storage score 0.5747 via #137234 Flaky pull-kubernetes-node-e2e-containerd  fix PRs [] dirs []
+       components: score 0.5078 x w 4.0 -> 0.3693
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.5176 x w 0.25 -> 0.0235
+
+#142268 [Failing Test] [sig-node] PLR Pod InPlace Resize [FeatureGate:InPlacePodLevelResourcesVerticalScaling] related tests are failing
+  truth: ['sig/node', 'sig/testing']  situation: {"kind": "failing_test", "components": ["cgroup", "feature_gate", "kubelet", "test_infra"], "title": ["feature_gate"]}
+  -> sig/node score 0.9309 via #137886 [Failing Test] ci-kubernetes-e2e-kind-alpha-beta-features for InPlaceP  fix PRs [137889] dirs ['pkg/kubelet', 'test/e2e_node']
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.4805 x w 0.25 -> 0.0218
+  -> sig/node score 0.7113 via #138527 [SIG Node][Failing Test] "Ensure Credential Pulled Images pulling imag  fix PRs [138642] dirs ['test/e2e_node']
+       components: score 0.6211 x w 4.0 -> 0.4732
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+  -> sig/node score 0.7113 via #136546 [Failing Test][SIG Node] "Ensure Credential Pulled Images pulling imag  fix PRs [] dirs []
+       components: score 0.6211 x w 4.0 -> 0.4732
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+
+#142269 [Feature][scheduler] Asynchronously or concurrently update (Composite)PodGroup status conditions to avoid scheduling cycle head-of-line blocking
+  truth: ['sig/scheduling']  situation: {"kind": "other", "components": ["apiserver", "scale", "scheduler"], "title": ["scheduler"], "paths": ["pkg/scheduler"]}
+  -> sig/scalability score 0.9087 via #138670 Latency differences between LIST and WatchList at large scale  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score -0.0088 x w 0.25 -> -0.0004
+  -> sig/api-machinery score 0.9087 via #138670 Latency differences between LIST and WatchList at large scale  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score -0.0088 x w 0.25 -> -0.0004
+  -> sig/scheduling score 0.6527 via #139293 [kube-scheduler][WAS] Update PodGroup.Status when SchedulerNames diffe  fix PRs [140183] dirs ['pkg/scheduler']
+       components: score 0.5225 x w 4.0 -> 0.38
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 1.0 x w 0.25 -> 0.0455
+
+#142274 [Flaking Test] [sig-node] k8s.io/dynamic-resource-allocation.resourceslice
+  truth: ['sig/node']  situation: {"kind": "flake", "components": ["test_infra"], "paths": ["staging/src/k8s.io/dynamic-resource-allocation"]}
+  -> sig/node score 0.9535 via #136906 [Flaking Test][sig-node] Pod InPlace Resize Container guaranteed qos -  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 0.0239 x w 0.25 -> 0.0011
+  -> sig/node score 0.9529 via #137179 [Flaking tests] k8s.io/kubernetes/test/integration/podcertificatereque  fix PRs [137338] dirs ['test/integration']
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 0.0103 x w 0.25 -> 0.0005
+  -> sig/autoscaling score 0.9524 via #140040 [Flake] TestScaleCPU/scale_up_ignores_deletion_pods  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 0.0 x w 0.25 -> 0.0
+
+#142280 Volume health status with 2 messages with duplicate "reason" field blocked pod deletion
+  truth: ['sig/storage']  situation: {"kind": "bug", "components": ["apiserver", "auth", "kubelet", "pod_lifecycle", "runtime", "storage"], "title": ["storage"]}
+  -> sig/node score 0.6198 via #136210 Ubuntu-based pods fail to mount service account volume with runc 1.3.3  fix PRs [] dirs []
+       components: score 0.501 x w 4.0 -> 0.3817
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+  -> sig/storage score 0.609 via #134954 concurrent processing of volume(s) of a static pod while it's being re  fix PRs [] dirs []
+       components: score 0.4868 x w 4.0 -> 0.3709
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+  -> sig/node score 0.609 via #134954 concurrent processing of volume(s) of a static pod while it's being re  fix PRs [] dirs []
+       components: score 0.4868 x w 4.0 -> 0.3709
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+
+#142281 scheduler: allow a caller-supplied SharedDRAManager
+  truth: ['sig/scheduling']  situation: {"kind": "feature", "components": ["device", "scheduler"], "title": ["scheduler"]}
+  -> sig/api-machinery score 0.9088 via #135073 [Umbrella] DRA Declarative Validation Migration Tracking Issue  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score -0.0063 x w 0.25 -> -0.0003
+  -> sig/scheduling score 0.7883 via #135493 DRA: DBC - scheduler behavior after binding failure  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 0.019 x w 1.0 -> 0.0036
+       title: score 0.4775 x w 0.25 -> 0.0227
+  -> sig/scheduling score 0.7652 via #140534 Add podGroupPostFilter for DRA  fix PRs [140535] dirs ['cmd/kube-scheduler', 'pkg/scheduler']
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 0.019 x w 1.0 -> 0.0036
+       title: score -0.0063 x w 0.25 -> -0.0003
+
+#142282 [Failing test] ci-kubernetes-e2e-kops-aws-500-node-dra-with-workload-amazonvpc-using-cl2: control-plane instance not created
+  truth: ['sig/k8s-infra', 'sig/scalability']  situation: {"kind": "failing_test", "components": ["device", "test_infra"], "title": ["device", "test_infra"]}
+  -> sig/scheduling score 1.0 via #137429 pull-kubernetes-dra-integration fails because of unexpected container   fix PRs [137434] dirs ['test/e2e_dra']
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+  -> sig/node score 1.0 via #137429 pull-kubernetes-dra-integration fails because of unexpected container   fix PRs [137434] dirs ['test/e2e_dra']
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+  -> sig/scheduling score 1.0 via #137428 pull-kubernetes-dra-integration fails with `create *v1.DeviceClass: de  fix PRs [137434] dirs ['test/e2e_dra']
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+
+#142284 [Flaking Test] Pods should support retrieving logs from the container over websockets
+  truth: ['sig/node']  situation: {"kind": "flake", "components": ["auth", "runtime", "test_infra"], "paths": ["test/e2e"]}
+  -> sig/network score 0.6261 via #137232 [Flaking tests] Kubernetes e2e suite [It] [sig-network] NoSNAT Should   fix PRs [137235] dirs ['test/e2e']
+       components: score 0.5093 x w 4.0 -> 0.388
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 1.0 x w 0.25 -> 0.0476
+  -> sig/node score 0.6127 via #136906 [Flaking Test][sig-node] Pod InPlace Resize Container guaranteed qos -  fix PRs [] dirs []
+       components: score 0.4917 x w 4.0 -> 0.3746
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 1.0 x w 0.25 -> 0.0476
+  -> sig/network score 0.6042 via #140270 [Flaking Test] (gcloud.compute.images.list) You do not currently have   fix PRs [] dirs []
+       components: score 0.4805 x w 4.0 -> 0.3661
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 1.0 x w 0.25 -> 0.0476
+
+#142293 Kubelet emits spurious Pod status updates due to nondeterministic allocated resource health ordering
+  truth: ['sig/node']  situation: {"kind": "bug", "components": ["apimachinery", "apiserver", "client_go", "device", "kubectl", "kubelet"], "title": ["kubelet"], "paths": ["pkg/kubelet"]}
+  -> sig/cli score 0.5572 via #135424 Rename AllowlistEntry.Name to Command to match kubeconfig  fix PRs [] dirs []
+       components: score 0.5166 x w 4.0 -> 0.3757
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score -0.0078 x w 0.25 -> -0.0004
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/node score 0.5473 via #139823 kubelet memory growth: `startPodSync` `context` memory leak on every `  fix PRs [139850, 964] dirs ['packages/kubernetes-1.36', 'pkg/kubelet']
+       components: score 0.4165 x w 4.0 -> 0.3029
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.3755 x w 0.25 -> 0.0171
+       title: score 1.0 x w 0.25 -> 0.0455
+  -> sig/api-machinery score 0.5429 via #141869 validateQualifiedName / resourcesQualifiedName silently accept names w  fix PRs [] dirs []
+       components: score 0.4971 x w 4.0 -> 0.3615
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score -0.0093 x w 0.25 -> -0.0004
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142295 kubectl create quota and set resources accept empty resource names
+  truth: ['sig/cli']  situation: {"kind": "bug", "components": ["gc_quota", "kubectl"], "title": ["kubectl"], "paths": ["pkg/cmd", "staging/src/k8s.io/kubectl"]}
+  -> sig/api-machinery score 0.9095 via #138208 Namespace deletion reports "All content successfully removed" in statu  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0088 x w 0.25 -> 0.0004
+  -> sig/cli score 0.732 via #135009 Nuke option for Finalizers  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 0.0239 x w 1.0 -> 0.0044
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0088 x w 0.25 -> 0.0004
+  -> sig/cli score 0.642 via #141115 kubectl get: PrintObj errors are silently discarded in human-readable   fix PRs [] dirs []
+       components: score 0.5078 x w 4.0 -> 0.3693
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 1.0 x w 0.25 -> 0.0455
+
+#142301 [Flaking Test] ci-kubernetes-e2e-capz-master-windows.Overall
+  truth: ['sig/windows']  situation: {"kind": "flake", "components": ["test_infra", "windows"], "title": ["test_infra", "windows"], "paths": ["pkg/entrypoint", "pkg/entrypoint.options.executeprocess"]}
+  -> sig/testing score 0.9325 via #136121 [Flaking Test] pull-kubernetes-typecheck hangs sometimes  fix PRs [136124] dirs ['hack/verify-typecheck.sh']
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.5146 x w 0.25 -> 0.0234
+  -> sig/windows score 0.7725 via #140900 [Failing Test] pull-kubernetes-unit-windows-master failing on all PRs:  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score -0.001 x w 1.0 -> -0.0002
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 1.0 x w 0.25 -> 0.0455
+  -> sig/testing score 0.7725 via #140900 [Failing Test] pull-kubernetes-unit-windows-master failing on all PRs:  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score -0.001 x w 1.0 -> -0.0002
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 1.0 x w 0.25 -> 0.0455
+
+#142302 `GetOldObject` not implemented by `admission.VersionedAttributes`
+  truth: ['sig/api-machinery']  situation: {"kind": "bug", "components": ["admission", "apiserver", "crd"], "title": ["admission"], "paths": ["pkg/admission", "staging/src/k8s.io/apiserver"]}
+  -> sig/api-machinery score 0.6107 via #140591 CEL map-list concatenation preserves duplicate new keys from the right  fix PRs [] dirs []
+       components: score 0.5112 x w 4.0 -> 0.3718
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.2554 x w 0.25 -> 0.0116
+       title: score 1.0 x w 0.25 -> 0.0455
+  -> sig/api-machinery score 0.5956 via #141904 ResourceQuota admission admits over-quota requests when an unrelated q  fix PRs [] dirs []
+       components: score 0.5029 x w 4.0 -> 0.3658
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.5347 x w 0.25 -> 0.0243
+       title: score 0.522 x w 0.25 -> 0.0237
+  -> sig/api-machinery score 0.5831 via #138140 Validate resource name length before admission  fix PRs [] dirs []
+       components: score 0.4893 x w 4.0 -> 0.3558
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 1.0 x w 0.25 -> 0.0455
+
+#142308 [Flaky Test] [sig-storage] In-tree Volumes [Driver: nfs] [Testpattern: Pre-provisioned PV (default fs)] volumes should allow exec of files on the volume (ci-kubernetes-e2e-kind)
+  truth: ['sig/storage']  situation: {"kind": "flake", "components": ["apimachinery", "auth", "feature_gate", "kubelet", "pod_lifecycle", "runtime", "scheduler", "storage", "test_infra"], "title": ["storage", "test_infra"], "paths": ["test/e2e"]}
+  -> sig/storage score 0.7829 via #139498 [Flaking test] [sig-storage] PersistentVolumes NFS with Single PV job   fix PRs [] dirs []
+       components: score 0.7324 x w 4.0 -> 0.5327
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 0.5054 x w 0.25 -> 0.023
+  -> sig/storage score 0.7758 via #138011 [Flaking Test] [sig-storage] PersistentVolumes NFS with Single PV - PV  fix PRs [] dirs []
+       components: score 0.7227 x w 4.0 -> 0.5256
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 0.5054 x w 0.25 -> 0.023
+  -> sig/scheduling score 0.7607 via #140893 [Flaking Test][sig-scheduling] WorkloadAwarePreemption should preempt   fix PRs [140872] dirs ['test/e2e']
+       components: score 0.7334 x w 4.0 -> 0.5334
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142309 kubectl describe pod prints nothing for clusterTrustBundle and podCertificate projected volume sources
+  truth: ['sig/cli']  situation: {"kind": "bug", "components": ["auth", "feature_gate", "kubectl", "storage"], "title": ["kubectl", "storage"], "paths": ["pkg/describe", "pkg/features", "staging/src/k8s.io/kubectl"]}
+  -> sig/node score 0.909 via #135519 `EnvFiles` feature (KEP-3721): Unclear quote handling behavior  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score -0.0015 x w 0.25 -> -0.0001
+  -> sig/node score 0.5101 via #141155 Liveness probe failure container restart leads to container starting u  fix PRs [141342] dirs ['pkg/kubelet', 'test/e2e', 'test/e2e_node']
+       components: score 0.4521 x w 4.0 -> 0.3288
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score -0.0117 x w 0.25 -> -0.0005
+  -> sig/storage score 0.5025 via #135089 Concurrent map write error when creating a pod with empty volumes  fix PRs [135174] dirs ['pkg/volume']
+       components: score 0.4106 x w 4.0 -> 0.2987
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0054 x w 0.25 -> 0.0002
+       title: score 0.48 x w 0.25 -> 0.0218
+
+#142318 Deprecate and remove `AuthorizationConfiguration` versions `v1alpha1` and `v1beta1`
+  truth: ['sig/auth']  situation: {"kind": "other", "components": ["auth"], "title": ["auth"]}
+  -> sig/architecture score 1.0 via #136872 [kube-api-linter] Enable the `optionalorrequired` linter for the `rbac  fix PRs [136900] dirs ['api/openapi-spec', 'hack/golangci-hints.yaml', 'hack/golangci.yaml']
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+  -> sig/api-machinery score 1.0 via #136872 [kube-api-linter] Enable the `optionalorrequired` linter for the `rbac  fix PRs [136900] dirs ['api/openapi-spec', 'hack/golangci-hints.yaml', 'hack/golangci.yaml']
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+  -> sig/architecture score 1.0 via #136863 [kube-api-linter] Enable the `optionalorrequired` linter for the `cert  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+
+#142321 [Flaky Test] [sig api-machinery] CustomResourceValidationRules [Privileged:ClusterAdmin]
+  truth: ['sig/api-machinery']  situation: {"kind": "flake", "components": ["apimachinery", "crd", "runtime", "test_infra"], "title": ["crd"], "paths": ["test/e2e"]}
+  -> sig/api-machinery score 0.9773 via #141952 [Flaking Test] [sig-api-machinery] CustomResourcePublishOpenAPI [Privi  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 0.4995 x w 0.25 -> 0.0227
+  -> sig/api-machinery score 0.9773 via #141951 [Flaking Test] [sig-api-machinery] CustomResourcePublishOpenAPI [Privi  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 0.4995 x w 0.25 -> 0.0227
+  -> sig/api-machinery score 0.9773 via #141950 [Flaking Test] [sig-api-machinery] CustomResourcePublishOpenAPI [Privi  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 0.4995 x w 0.25 -> 0.0227
+
+#142324 [Flaky Test] [sig api-machinery] ResourceQuota should create a ResourceQuota and capture the life of a ResourceClaim [DRA]
+  truth: ['sig/api-machinery']  situation: {"kind": "flake", "components": ["apimachinery", "controller_manager", "device", "gc_quota", "storage", "test_infra", "workloads"], "title": ["device", "gc_quota"], "paths": ["test/e2e"]}
+  -> sig/node score 0.5646 via #137842 DRA: flaky extended resource upgrade/downgrade test  fix PRs [137958] dirs ['test/e2e_dra', 'test/utils']
+       components: score 0.4946 x w 4.0 -> 0.3597
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.5068 x w 0.25 -> 0.023
+  -> sig/testing score 0.54 via #140358 [Flaking Test] ci-kubernetes-e2e-gce-cos-default-master: kubetest.Test  fix PRs [] dirs []
+       components: score 0.4922 x w 4.0 -> 0.358
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0049 x w 0.25 -> 0.0002
+  -> sig/node score 0.4901 via #141200 [Flaking Test] [sig-node] [Feature:GPUDevicePlugin] Sanity test using   fix PRs [] dirs []
+       components: score 0.3613 x w 4.0 -> 0.2628
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142328 Node Declared Features: allow a feature to opt out of re-admission enforcement after kubelet restart
+  truth: ['sig/node']  situation: {"kind": "feature", "components": ["admission", "feature_gate", "kubelet", "pod_lifecycle", "scale", "scheduler"], "title": ["admission", "kubelet"], "paths": ["pkg/kubelet", "pkg/scheduler"]}
+  -> sig/node score 0.5666 via #137317 Kubelet device manager: Improve reconciliation/cleanup for failed Pods  fix PRs [] dirs []
+       components: score 0.4985 x w 4.0 -> 0.3626
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.4883 x w 0.25 -> 0.0222
+  -> sig/scheduling score 0.5379 via #140909 scheduler: graduate PreQueueingHint extension point  fix PRs [] dirs []
+       components: score 0.4893 x w 4.0 -> 0.3558
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0054 x w 0.25 -> 0.0002
+  -> sig/scheduling score 0.5045 via #139996 Skip CriticalPodAdmissionHandler for resizes  fix PRs [] dirs []
+       components: score 0.689 x w 4.0 -> 0.5011
+       kind: score 0.019 x w 1.0 -> 0.0035
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142330 WAS: Gang-scheduled Job never completes if an index pod fails after another index has completed
+  truth: ['sig/apps', 'sig/scheduling']  situation: {"kind": "bug", "components": ["client_go", "feature_gate", "metrics", "pod_lifecycle", "scheduler", "workloads"]}
+  -> sig/scheduling score 0.5744 via #134810 TopologySpreadConstraint not acting well When multiple deployments rol  fix PRs [] dirs []
+       components: score 0.5039 x w 4.0 -> 0.3839
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/scheduling score 0.5744 via #136782 scheduler assigned large number of pods to a single node in a very sho  fix PRs [] dirs []
+       components: score 0.5039 x w 4.0 -> 0.3839
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/autoscaling score 0.5348 via #138505 HPA tolerance check causes unexpected scale-up during rolling updates  fix PRs [] dirs []
+       components: score 0.4854 x w 4.0 -> 0.353
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142331 [Bug]: Informer cache lag on out-of-service taint causes premature force deletion / volume detachment
+  truth: ['sig/apps', 'sig/storage']  situation: {"kind": "bug", "components": ["apiserver", "auth", "client_go", "pod_lifecycle", "scheduler", "storage"], "title": ["client_go", "scheduler", "storage"], "paths": ["pkg/controller"]}
+  -> sig/storage score 0.5555 via #135622 E2e test "should preempt lower priority pods using ReadWriteOncePod vo  fix PRs [135623] dirs ['test/e2e']
+       components: score 0.4819 x w 4.0 -> 0.3505
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0054 x w 0.25 -> 0.0002
+       title: score 0.5049 x w 0.25 -> 0.0229
+  -> sig/api-machinery score 0.549 via #134928 Controller silently drops errors when applying deltas to storage  fix PRs [] dirs []
+       components: score 0.5054 x w 4.0 -> 0.3675
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score -0.0083 x w 0.25 -> -0.0004
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/api-machinery score 0.5486 via #141818 apiserver_init_events_total counts events after watcher was already te  fix PRs [] dirs []
+       components: score 0.5054 x w 4.0 -> 0.3675
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score -0.0171 x w 0.25 -> -0.0008
+
+#142332 [Bug]: Informer cache lag on PVC claim state in pv_controller can trigger premature volume deletion
+  truth: ['sig/storage']  situation: {"kind": "bug", "components": ["apiserver", "client_go", "storage"], "title": ["client_go", "storage"], "paths": ["pkg/controller"]}
+  -> sig/api-machinery score 0.6621 via #141528 fake client-go: a deletion between List and Watch is lost, and the inf  fix PRs [] dirs []
+       components: score 0.6289 x w 4.0 -> 0.4574
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0098 x w 0.25 -> 0.0004
+       title: score 0.4937 x w 0.25 -> 0.0224
+  -> sig/api-machinery score 0.6447 via #139485 apiserver: return 400 instead of 500 for invalid resourceVersion API r  fix PRs [] dirs []
+       components: score 0.6362 x w 4.0 -> 0.4627
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0044 x w 0.25 -> 0.0002
+  -> sig/api-machinery score 0.5675 via #140464 client-go: Request.Watch leaks the response body when content-type neg  fix PRs [] dirs []
+       components: score 0.5 x w 4.0 -> 0.3636
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score -0.0083 x w 0.25 -> -0.0004
+       title: score 0.4937 x w 0.25 -> 0.0224
+
+#142345 Make `conversion-gen` automatically pick up autogenerated conversion functions of types across packages
+  truth: ['sig/api-machinery']  situation: {"kind": "bug", "components": ["admission", "auth"], "paths": ["pkg/apis"]}
+  -> sig/auth score 0.5714 via #139769 api-server does not always refetch JWKS on unknown key ID  fix PRs [] dirs []
+       components: score 0.5 x w 4.0 -> 0.381
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 0.0 x w 0.25 -> 0.0
+  -> sig/auth score 0.5466 via #141010 ServiceAccountIssuerDiscovery testing should allow any supported algor  fix PRs [] dirs []
+       components: score 0.5 x w 4.0 -> 0.3636
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0244 x w 0.25 -> 0.0011
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/scheduling score 0.4528 via #140468 DRA: validate and reject negative capacity across consumable and node-  fix PRs [] dirs []
+       components: score 0.3726 x w 4.0 -> 0.271
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142346 Add roundtrip coverage of fuzzing an external version, ensuring a roundtrip through internal preserves data
+  truth: ['sig/api-machinery']  situation: {"kind": "feature", "components": ["apimachinery"]}
+  -> sig/architecture score 0.8038 via #136877 [kube-api-linter] Enable the `requiredfields` linter  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.8
+       kind: score 0.019 x w 1.0 -> 0.0038
+  -> sig/api-machinery score 0.8038 via #136877 [kube-api-linter] Enable the `requiredfields` linter  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.8
+       kind: score 0.019 x w 1.0 -> 0.0038
+  -> sig/api-machinery score 0.8038 via #136262 Validation code generated by Validation-gen should fail fast on see im  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.8
+       kind: score 0.019 x w 1.0 -> 0.0038
+
+#142349 [Flaky Test] [sig-storage] k8s.io/kubernetes/pkg/controller/volume/attachdetach.reconciler
+  truth: ['sig/storage']  situation: {"kind": "flake", "components": ["storage", "test_infra"], "title": ["storage"], "paths": ["pkg/controller"]}
+  -> sig/storage score 0.9548 via #140251 [Flaky Test] [sig-storage] CSI Volumes [Driver: csi-hostpath] [Testpat  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0054 x w 0.25 -> 0.0002
+       title: score 1.0 x w 0.25 -> 0.0455
+  -> sig/storage score 0.9548 via #137040 [Flaking tests][sig-storage] gce-cos-master-slow - CSI Volumes [Driver  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0054 x w 0.25 -> 0.0002
+       title: score 1.0 x w 0.25 -> 0.0455
+  -> sig/storage score 0.9548 via #134566 [Flaking Test] CSI Mock volume expansion Expansion with recovery shoul  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0054 x w 0.25 -> 0.0002
+       title: score 1.0 x w 0.25 -> 0.0455
+
+#142357 Pod validation: AllowIndivisibleHugePagesValues ratchets every hugepages entry, not just the stored one
+  truth: ['sig/api-machinery']  situation: {"kind": "bug", "components": ["workloads"]}
+  -> sig/node score 1.0 via #138473 PodLevelResources: Why is pod created when resource requests exceed li  fix PRs [138474] dirs ['pkg/apis']
+       components: score 1.0 x w 4.0 -> 0.8
+       kind: score 1.0 x w 1.0 -> 0.2
+  -> sig/node score 1.0 via #135029 Feature request: allow nodes (CP/worker) in the same cluster to get co  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.8
+       kind: score 1.0 x w 1.0 -> 0.2
+  -> sig/apps score 1.0 via #134712 a quantity of pods status are OutOfcpu  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.8
+       kind: score 1.0 x w 1.0 -> 0.2
+
+#142361 Resize failure & start container
+  truth: ['sig/node']  situation: {"kind": "other"}
+  -> sig/api-machinery score 1.0 via #141362 Is Events API eligible for conversion to Declarative Validation?  fix PRs [] dirs []
+       kind: score 1.0 x w 1.0 -> 1.0
+  -> sig/contributor-experience score 1.0 via #140940 Remove the retired Go Report Card badge from README  fix PRs [140941] dirs []
+       kind: score 1.0 x w 1.0 -> 1.0
+  -> sig/api-machinery score 1.0 via #140510 SelectionPredicate.Empty does not account for ShardSelector  fix PRs [140513] dirs ['staging/src/k8s.io/apiserver']
+       kind: score 1.0 x w 1.0 -> 1.0
+
+#142362 [Failing Test] [sig-scalability] ci-kubernetes-e2e-gce-scale-correctness kubetest2.Up
+  truth: ['sig/scalability']  situation: {"kind": "failing_test", "components": ["test_infra"], "title": ["test_infra"]}
+  -> sig/cloud-provider score 1.0 via #140987 [Failing][sig-cloud-provider] ci-kubernetes-ec2-conformance-latest  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+  -> sig/scalability score 1.0 via #138326 [Failing Test] [sig-scalability] ci-kubernetes-e2e-gce-scale-correctne  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+  -> sig/cloud-provider score 1.0 via #134557 [Failing Test] [sig-cloud-provider] ci-kubernetes-gce-conformance-late  fix PRs [134567] dirs ['cluster/gce']
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+
+#142363 [FG:InPlacePodVerticalScalingExclusiveCPUs] Need to track actuated changes
+  truth: ['sig/node']  situation: {"kind": "other", "components": ["admission", "cgroup", "runtime"]}
+  -> sig/api-machinery score 0.602 via #139600 Clean up OptionalSlice validation interface to avoid using errors for   fix PRs [] dirs []
+       components: score 0.5024 x w 4.0 -> 0.402
+       kind: score 1.0 x w 1.0 -> 0.2
+  -> sig/testing score 0.602 via #137722 Support for locally running node_e2e  fix PRs [] dirs []
+       components: score 0.5024 x w 4.0 -> 0.402
+       kind: score 1.0 x w 1.0 -> 0.2
+  -> sig/node score 0.602 via #137722 Support for locally running node_e2e  fix PRs [] dirs []
+       components: score 0.5024 x w 4.0 -> 0.402
+       kind: score 1.0 x w 1.0 -> 0.2
+
+#142364 Stale repos - gopkg.in/inf.v0 (github.com/go-inf/inf)
+  truth: ['sig/api-machinery', 'sig/architecture']  situation: {"kind": "other", "components": ["apimachinery", "apiserver", "build_release", "feature_gate", "security"], "paths": ["pkg/api"]}
+  -> sig/api-machinery score 0.5163 via #134444 Verify if calling both ValidateObjectMeta and ValidateObjectMetaUpdate  fix PRs [] dirs []
+       components: score 0.397 x w 4.0 -> 0.3025
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 0.4902 x w 0.25 -> 0.0233
+  -> sig/api-machinery score 0.5108 via #138115 Declarative Validation: Add `+k8s:exclusiveMinimum` declarative valida  fix PRs [] dirs []
+       components: score 0.397 x w 4.0 -> 0.3025
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 0.376 x w 0.25 -> 0.0179
+  -> sig/api-machinery score 0.5108 via #138110 [Declarative Validation] Feature: Add `+k8s:multipleOf` declarative va  fix PRs [] dirs []
+       components: score 0.397 x w 4.0 -> 0.3025
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 0.376 x w 0.25 -> 0.0179
+
+#142365 Windows side tests for KEP-4960
+  truth: ['sig/node', 'sig/windows']  situation: {"kind": "other", "components": ["admission", "feature_gate", "windows"], "title": ["feature_gate", "windows"], "paths": ["test/e2e"]}
+  -> sig/node score 0.6242 via #135341 [InPlacePodVerticalScaling] Move feasibility checks to admission  fix PRs [] dirs []
+       components: score 0.6069 x w 4.0 -> 0.4414
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.022 x w 0.25 -> 0.001
+  -> sig/node score 0.5796 via #140749 [FG: InPlacePodVerticalScalingExclusiveCPUs] KEP 5554 alpha implementa  fix PRs [] dirs []
+       components: score 0.5156 x w 4.0 -> 0.375
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.502 x w 0.25 -> 0.0228
+  -> sig/scheduling score 0.5796 via #138373 Remove SchedulerQueueingHints feature gate entirely, since it's GA'd s  fix PRs [138420, 138708] dirs ['pkg/features', 'pkg/scheduler', 'staging/src/k8s.io/kube-scheduler']
+       components: score 0.5156 x w 4.0 -> 0.375
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.502 x w 0.25 -> 0.0228
+
+#142370 Three stale documentation references: two dead kubernetes.io links and one broken relative path
+  truth: ['sig/docs']  situation: {"kind": "bug", "components": ["admission", "apiserver", "dns", "gc_quota", "kubeadm", "kubectl", "kubelet"], "paths": ["cmd/kubeadm", "plugin/pkg", "staging/src/k8s.io/apiserver", "staging/src/k8s.io/kubectl"]}
+  -> sig/cli score 0.5801 via #136533 panic: assignment to entry in nil map in pkg/util/resource.maxResource  fix PRs [136534] dirs ['staging/src/k8s.io/kubectl']
+       components: score 0.5103 x w 4.0 -> 0.3888
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 0.019 x w 0.25 -> 0.0009
+  -> sig/api-machinery score 0.5497 via #141904 ResourceQuota admission admits over-quota requests when an unrelated q  fix PRs [] dirs []
+       components: score 0.4932 x w 4.0 -> 0.3587
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.2031 x w 0.25 -> 0.0092
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/api-machinery score 0.5455 via #137943 K81.35.3 upgrade causing error in kubectl logs  fix PRs [] dirs []
+       components: score 0.5 x w 4.0 -> 0.3636
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142376 Exec drops end of stdout when client reads slowly
+  truth: ['sig/api-machinery', 'sig/cli', 'sig/node']  situation: {"kind": "bug", "components": ["apiserver", "dns", "kubectl", "kubelet", "network", "runtime", "storage"]}
+  -> sig/node score 0.5945 via #135299 PodReadyToStartContainers condition lacks diagnostic message when pods  fix PRs [135300] dirs ['pkg/kubelet']
+       components: score 0.4932 x w 4.0 -> 0.3945
+       kind: score 1.0 x w 1.0 -> 0.2
+  -> sig/node score 0.5818 via #139916 kubelet allocates hostUsers:false pod UID/GID range ending at UINT32_M  fix PRs [] dirs []
+       components: score 0.5137 x w 4.0 -> 0.3914
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/node score 0.5725 via #139462 apiserver: return 4xx instead of 500 when pod runtimeClassName is empt  fix PRs [140108] dirs ['plugin/pkg']
+       components: score 0.5015 x w 4.0 -> 0.3821
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142377 Was leaving NativeHistogramMinResetDuration unset in component-base intentional?
+  truth: ['sig/instrumentation']  situation: {"kind": "other", "components": ["feature_gate", "metrics", "runtime", "test_infra"], "paths": ["staging/src/k8s.io/component-base"]}
+  -> sig/api-machinery score 0.6715 via #139197 +k8s:ifEnabled / +k8s:ifDisabled silently treat unknown options as dis  fix PRs [140380] dirs ['pkg/api', 'pkg/registry', 'staging/src/k8s.io/apimachinery']
+       components: score 0.6313 x w 4.0 -> 0.481
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 0.0 x w 0.25 -> 0.0
+  -> sig/node score 0.6333 via #136078 Failure cluster [03b09a06...] InPlacePodLevelResourcesVerticalScaling   fix PRs [] dirs []
+       components: score 0.6201 x w 4.0 -> 0.451
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0103 x w 0.25 -> 0.0005
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/architecture score 0.5347 via #141283 compatibility-versions-feature-gate-test always fails since the 1.37 c  fix PRs [] dirs []
+       components: score 0.4219 x w 4.0 -> 0.3214
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 0.479 x w 0.25 -> 0.0228
+
+#142379 Some kube-apiserver histograms stay classic because ApplyFeatureGates() runs after informers and REST clients are built
+  truth: ['sig/instrumentation']  situation: {"kind": "bug", "components": ["apiserver", "client_go", "feature_gate", "kubelet", "metrics", "network", "runtime", "test_infra"], "title": ["apiserver", "client_go"], "paths": ["cmd/kube-apiserver", "cmd/kubelet", "pkg/controlplane", "pkg/util", "staging/src/k8s.io/apiserver", "staging/src/k8s.io/component-base"]}
+  -> sig/network score 0.5267 via #138735 `decoratedWatcher` does not unwrap `CacheableObject` before applying d  fix PRs [] dirs []
+       components: score 0.436 x w 4.0 -> 0.3171
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0898 x w 0.25 -> 0.0041
+       title: score 0.5215 x w 0.25 -> 0.0237
+  -> sig/api-machinery score 0.5267 via #138735 `decoratedWatcher` does not unwrap `CacheableObject` before applying d  fix PRs [] dirs []
+       components: score 0.436 x w 4.0 -> 0.3171
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0898 x w 0.25 -> 0.0041
+       title: score 0.5215 x w 0.25 -> 0.0237
+  -> sig/node score 0.5174 via #138633 Kubelet starts pods before CNI is configured  fix PRs [] dirs []
+       components: score 0.4604 x w 4.0 -> 0.3349
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0146 x w 0.25 -> 0.0007
+
+#142383 Client-go: Add support for Connection Pool
+  truth: ['sig/api-machinery']  situation: {"kind": "feature", "components": ["apiserver", "build_release", "client_go", "kubelet", "network", "scale"], "title": ["client_go"], "paths": ["pkg/framework"]}
+  -> sig/scalability score 0.4794 via #136030 Support compression for WATCH responses  fix PRs [] dirs []
+       components: score 0.3467 x w 4.0 -> 0.2521
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 1.0 x w 0.25 -> 0.0455
+  -> sig/api-machinery score 0.4794 via #136030 Support compression for WATCH responses  fix PRs [] dirs []
+       components: score 0.3467 x w 4.0 -> 0.2521
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 1.0 x w 0.25 -> 0.0455
+  -> sig/api-machinery score 0.4613 via #138800 dynamicinformer (client-go): ForResource() should return a fresh infor  fix PRs [] dirs []
+       components: score 0.3218 x w 4.0 -> 0.234
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 1.0 x w 0.25 -> 0.0455
+
+#142384 `gsutil` will no longer be available from March 2027
+  truth: ['sig/cloud-provider', 'sig/testing']  situation: {"kind": "other", "components": ["build_release", "storage", "test_infra"]}
+  -> sig/storage score 0.6047 via #137387 TestReconstructedVolumeShouldUnmountSucceedAfterSetupFailed flake on t  fix PRs [] dirs []
+       components: score 0.5059 x w 4.0 -> 0.4047
+       kind: score 1.0 x w 1.0 -> 0.2
+  -> sig/scheduling score 0.6047 via #136261 Failure cluster [db1839c4...] TestUnReservePreBindPlugins flaking  fix PRs [] dirs []
+       components: score 0.5059 x w 4.0 -> 0.4047
+       kind: score 1.0 x w 1.0 -> 0.2
+  -> sig/testing score 0.6047 via #134862 Make sig-node CI test coverage adhere to defined guidance  fix PRs [] dirs []
+       components: score 0.5059 x w 4.0 -> 0.4047
+       kind: score 1.0 x w 1.0 -> 0.2
+
+#142404 [Flaking Test] E2eNode Suite [It] [sig-node] [DRA] [Feature:DynamicResourceAllocation] Two resource Kubelet Plugins must call NodeUnprepareResources again if it's in progress for one plugin when Kubelet restarts [Serial]
+  truth: ['sig/node']  situation: {"kind": "flake", "components": ["device", "kubelet", "runtime", "test_infra"], "title": ["device", "kubelet"]}
+  -> sig/node score 0.6869 via #138607 [Flaking Issue] DevicePlugin Does not keep device plugin assignments a  fix PRs [] dirs []
+       components: score 0.6367 x w 4.0 -> 0.4851
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.2383 x w 0.25 -> 0.0113
+  -> sig/node score 0.6724 via #139469 ci-kubernetes-node-kubelet-serial-containerd flaking  fix PRs [] dirs []
+       components: score 0.6167 x w 4.0 -> 0.4699
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.2534 x w 0.25 -> 0.0121
+  -> sig/node score 0.575 via #137602 [Flaking Issue] DevicePlugin [Serial] [Disruptive] Does not keep devic  fix PRs [] dirs []
+       components: score 0.4897 x w 4.0 -> 0.3731
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.2383 x w 0.25 -> 0.0113
+
+#142417 e2e_node: make ImageGCPeriod (and other e2e_node wait budgets) configurable for tests
+  truth: ['sig/node']  situation: {"kind": "other", "components": ["kubelet", "runtime", "test_infra", "windows"]}
+  -> sig/node score 0.6682 via #140944 flakiness in `ci-node-crio-kubelet-serial`  fix PRs [] dirs []
+       components: score 0.627 x w 4.0 -> 0.4777
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/windows score 0.6477 via #137469 Windows flaking test: k8s.io/kubernetes/pkg/kubelet TestUpdateNewNodeS  fix PRs [137845] dirs ['pkg/kubelet']
+       components: score 0.6406 x w 4.0 -> 0.4659
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/node score 0.5602 via #140644 [Flaking test] HugepageAwareMemoryReporting  fix PRs [140694] dirs ['test/e2e_node']
+       components: score 0.4502 x w 4.0 -> 0.3602
+       kind: score 1.0 x w 1.0 -> 0.2
+
+#142422 MirrorPod restart status flaps False->True due to status write racing kubelet's own readiness probe
+  truth: ['sig/node']  situation: {"kind": "other", "components": ["kubelet", "pod_lifecycle"], "title": ["kubelet", "pod_lifecycle"]}
+  -> sig/node score 0.9759 via #139831 [kubelet] Make AllocationManager the source of truth for pod allocatio  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.4932 x w 0.25 -> 0.0235
+  -> sig/node score 0.9545 via #139832 [kubelet] Calling UpdatePod on an untracked but terminated pod should   fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 1.0 x w 0.25 -> 0.0455
+  -> sig/node score 0.9524 via #137950 [Flake] Container Lifecycle tests flaky with PLEGOnDemandRelist featur  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142423 new-line in COS image url when more than one non-deprecated image present in repo at the same time
+  truth: ['sig/cloud-provider', 'sig/scalability', 'sig/testing']  situation: {"kind": "bug", "components": ["scale", "test_infra"]}
+  -> sig/scalability score 0.7597 via #141417 [Failing test] [sig-scalability] ci-kubernetes-e2e-kops-aws-scale-amaz  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score -0.0117 x w 1.0 -> -0.0022
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/scalability score 0.7597 via #136794 [Failing test][sig-scalability] ci-kubernetes-e2e-kops-aws-scale-amazo  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score -0.0117 x w 1.0 -> -0.0022
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/testing score 0.7597 via #134561 [Failing Test] ci-kubernetes-e2e-gci-gce  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score -0.0117 x w 1.0 -> -0.0022
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142430 Leverage remote partitions for exclusive CPUs (Linux 6.7+)
+  truth: ['sig/node']  situation: {"kind": "other", "components": ["cgroup", "kubelet"]}
+  -> sig/node score 0.7665 via #140814 Memory Manager pod scope drops hugepage requests used only by regular   fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 0.0239 x w 1.0 -> 0.0046
+       paths: score 0.0 x w 0.25 -> 0.0
+  -> sig/node score 0.7665 via #140495 Kubelet allocates system-reserved CPU to pod when cpu-topology is hybr  fix PRs [140498] dirs ['pkg/kubelet']
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 0.0239 x w 1.0 -> 0.0046
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/node score 0.7665 via #136604 kubelet saving inconsistent cpu-manager state to checkpoint file  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 0.0239 x w 1.0 -> 0.0046
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142439 kubelet: cAdvisor GetVfsStats data race in a race-enabled DRA presubmit
+  truth: ['sig/node']  situation: {"kind": "bug", "components": ["device", "kubelet", "test_infra"], "title": ["device", "kubelet"]}
+  -> sig/node score 0.8073 via #139761 DRA kubelet version skew jobs failing to fetch v1.32 release artifacts  fix PRs [37263] dirs ['config/jobs', 'config/tests']
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score -0.0117 x w 1.0 -> -0.0022
+       title: score 1.0 x w 0.25 -> 0.0476
+  -> sig/testing score 0.6632 via #138317 DRA tests fail with image mirroring  fix PRs [138318] dirs ['test/e2e']
+       components: score 0.6318 x w 4.0 -> 0.4595
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.4819 x w 0.25 -> 0.0219
+  -> sig/node score 0.6135 via #138446 Kubelet restart triggers UnexpectedAdmissionError for pods using devic  fix PRs [] dirs []
+       components: score 0.4927 x w 4.0 -> 0.3754
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+
+#142440 [Flaking Test] [sig-node] pull-kubernetes-kind-dra-all API timeouts
+  truth: ['sig/node', 'sig/testing']  situation: {"kind": "flake", "components": ["apiserver", "auth", "cgroup", "controller_manager", "device", "etcd", "kubelet", "node_lifecycle", "runtime", "scheduler", "test_infra"], "title": ["device", "test_infra"], "paths": ["test/e2e"]}
+  -> sig/node score 0.5238 via #134517 [Flaking Test] [sig-node] Kubernetes e2e suite.[It] [sig-node] [Featur  fix PRs [35674] dirs ['config/jobs']
+       components: score 0.3755 x w 4.0 -> 0.2731
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 0.5151 x w 0.25 -> 0.0234
+  -> sig/node score 0.4816 via #139469 ci-kubernetes-node-kubelet-serial-containerd flaking  fix PRs [] dirs []
+       components: score 0.3965 x w 4.0 -> 0.2884
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.2524 x w 0.25 -> 0.0115
+  -> sig/node score 0.4805 via #141200 [Flaking Test] [sig-node] [Feature:GPUDevicePlugin] Sanity test using   fix PRs [] dirs []
+       components: score 0.3481 x w 4.0 -> 0.2532
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142454 cloud-controller-manager accepts the NativeHistograms feature gate but never applies it
+  truth: ['sig/cloud-provider', 'sig/instrumentation']  situation: {"kind": "bug", "components": ["admission", "apiserver", "client_go", "cloud_provider", "controller_manager", "feature_gate", "kube_proxy", "kubelet", "metrics", "scheduler"], "title": ["cloud_provider", "controller_manager", "feature_gate"], "paths": ["staging/src/k8s.io/cloud-provider", "staging/src/k8s.io/component-base", "test/integration"]}
+  -> sig/node score 0.5485 via #141241 PodRequests/PodLimits mutate the Pod they are given when pod-level res  fix PRs [] dirs []
+       components: score 0.5029 x w 4.0 -> 0.3658
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0195 x w 0.25 -> 0.0009
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/node score 0.4725 via #141940 getKubeletMappings() picks a different user namespace ID range dependi  fix PRs [] dirs []
+       components: score 0.3984 x w 4.0 -> 0.2898
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0015 x w 0.25 -> 0.0001
+       title: score 0.019 x w 0.25 -> 0.0009
+  -> sig/node score 0.4707 via #136333 Zero value Kubelet PSI metrics emitted even if underlying OS doesn't e  fix PRs [137326] dirs ['cmd/kubelet', 'pkg/kubelet']
+       components: score 0.3984 x w 4.0 -> 0.2898
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0015 x w 0.25 -> 0.0001
+       title: score -0.0215 x w 0.25 -> -0.001
+
+#142462 [Flaking Test] [sig-node] Pods Extended (pod generation) Pod Generation pod generation should start at 1 and increment per update [MinimumKubeletVersion:1.34] [Conformance]
+  truth: ['sig/node']  situation: {"kind": "flake", "components": ["cloud_provider", "network", "runtime", "test_infra"], "paths": ["test/e2e"]}
+  -> sig/network score 0.7024 via #139786 [Flaking Test] [sig-network] Networking Granular Checks: Services shou  fix PRs [] dirs []
+       components: score 0.6094 x w 4.0 -> 0.4643
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 1.0 x w 0.25 -> 0.0476
+  -> sig/node score 0.5499 via #135713 [Flaky test] [sig-node] Pods Extended Pod Container Status should neve  fix PRs [137749] dirs ['test/e2e']
+       components: score 0.4092 x w 4.0 -> 0.3118
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 1.0 x w 0.25 -> 0.0476
+  -> sig/node score 0.5402 via #136906 [Flaking Test][sig-node] Pod InPlace Resize Container guaranteed qos -  fix PRs [] dirs []
+       components: score 0.3965 x w 4.0 -> 0.3021
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 1.0 x w 0.25 -> 0.0476
+
+#142464 The volume subpath may have wrong 0755 perm while calling SafeMakedir, kubelet happened to be restarted
+  truth: ['sig/storage']  situation: {"kind": "bug", "components": ["kubelet", "storage"], "title": ["kubelet", "storage"], "paths": ["pkg/kubelet", "pkg/volume"]}
+  -> sig/storage score 0.9773 via #135909 Before mount the volume, kubelet cannot determine whether CSI is regis  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.501 x w 0.25 -> 0.0228
+       title: score 1.0 x w 0.25 -> 0.0455
+  -> sig/storage score 0.932 via #134643 handleSELinuxMetricError prints error from logger.V(4).Error() still p  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.5029 x w 0.25 -> 0.0229
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/storage score 0.9309 via #135736 Kubelet retries NodeStageVolume indefinitely on NOT_FOUND  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7273
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.48 x w 0.25 -> 0.0218
+
+#142470 [Flaking Test] [sig-node] [Feature:GPUDevicePlugin] Sanity test using nvidia-smi [Provider:aws,gce] should run nvidia-smi and cuda-demo-suite [Serial]
+  truth: ['sig/node']  situation: {"kind": "flake", "components": ["device", "test_infra"], "paths": ["test/e2e"]}
+  -> sig/node score 1.0 via #136378 [Flaking Test] [sig-node] [Feature:GPUDevicePlugin] [Serial] Sanity te  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 1.0 x w 0.25 -> 0.0476
+  -> sig/scheduling score 0.9538 via #141059 [Flaking tests] TestDRA/all/OptionalNodeOperations/podgroup-scheduled-  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 0.0293 x w 0.25 -> 0.0014
+  -> sig/node score 0.9538 via #141059 [Flaking tests] TestDRA/all/OptionalNodeOperations/podgroup-scheduled-  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 0.0293 x w 0.25 -> 0.0014
+
+#142483 Track unwanted grpc dependencies
+  truth: ['sig/architecture']  situation: {"kind": "other", "components": ["auth", "build_release"], "title": ["build_release"]}
+  -> sig/architecture score 0.58 via #136879 [kube-api-linter] Enable the `dependenttags` linter  fix PRs [] dirs []
+       components: score 0.5112 x w 4.0 -> 0.3895
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/api-machinery score 0.58 via #136879 [kube-api-linter] Enable the `dependenttags` linter  fix PRs [] dirs []
+       components: score 0.5112 x w 4.0 -> 0.3895
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/architecture score 0.5645 via #136872 [kube-api-linter] Enable the `optionalorrequired` linter for the `rbac  fix PRs [136900] dirs ['api/openapi-spec', 'hack/golangci-hints.yaml', 'hack/golangci.yaml']
+       components: score 0.4907 x w 4.0 -> 0.3739
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.002 x w 0.25 -> 0.0001
+
+#142489 DRA: ResourceSlice validation panics on a zero with an extreme negative exponent in capacity.requestPolicy.validValues
+  truth: ['sig/node']  situation: {"kind": "bug", "components": ["apiserver", "device", "feature_gate", "pod_lifecycle", "runtime"], "title": ["device"], "paths": ["pkg/apis"]}
+  -> sig/node score 0.7116 via #140472 DRA: ResourceSlice validRange.step of 2^64 re-panics with integer divi  fix PRs [140666] dirs ['pkg/apis']
+       components: score 0.6035 x w 4.0 -> 0.4389
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 1.0 x w 0.25 -> 0.0455
+  -> sig/node score 0.689 via #139653 DRA ResourceSlice validation panics on zero validRange.step  fix PRs [139698] dirs ['pkg/apis']
+       components: score 0.603 x w 4.0 -> 0.4386
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.5103 x w 0.25 -> 0.0232
+       title: score 1.0 x w 0.25 -> 0.0455
+  -> sig/node score 0.5795 via #140457 DRA: CapacityRequestPolicy validValues rejects distinct fractional val  fix PRs [] dirs []
+       components: score 0.4219 x w 4.0 -> 0.3068
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 1.0 x w 0.25 -> 0.0455
+
+#142501 Document that matchConditions cannot use namespaceObject or variables
+  truth: ['sig/api-machinery']  situation: {"kind": "bug", "components": ["admission", "apimachinery", "apiserver", "auth", "feature_gate", "runtime"], "paths": ["pkg/admission", "pkg/apis", "pkg/authentication", "pkg/cel", "pkg/runtime", "pkg/util"]}
+  -> sig/node score 0.6002 via #138935 panic: index out of range in StripedLockSet.Lock when KubeletEnsureSec  fix PRs [138937] dirs ['pkg/kubelet']
+       components: score 0.5273 x w 4.0 -> 0.4018
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 0.167 x w 0.25 -> 0.008
+  -> sig/api-machinery score 0.5702 via #136295 code-generation 0.35.0 resulting in permission denied errors  fix PRs [] dirs []
+       components: score 0.4839 x w 4.0 -> 0.3687
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 0.2329 x w 0.25 -> 0.0111
+  -> sig/auth score 0.568 via #138133 JSON tag missing for metav1.TypeMeta AuthenticationConfiguration resul  fix PRs [138260] dirs ['api/openapi-spec', 'cmd/fieldnamedocscheck', 'cmd/genswaggertypedocs']
+       components: score 0.5107 x w 4.0 -> 0.3714
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.3247 x w 0.25 -> 0.0148
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142505 [Flaking Test] [sig-apps] k8s.io/kubernetes/pkg/controller.replicaset TestExpectationsOnRecreate
+  truth: ['sig/apps']  situation: {"kind": "flake", "components": ["apimachinery", "build_release", "client_go", "test_infra", "workloads"], "title": ["workloads"], "paths": ["pkg/controller", "pkg/controller.", "pkg/controller.replicaset", "pkg/util", "staging/src/k8s.io/apimachinery", "staging/src/k8s.io/client-go"]}
+  -> sig/scheduling score 0.5661 via #137803 DATA RACE: test/integration/scheduler/podgroup  fix PRs [] dirs []
+       components: score 0.5107 x w 4.0 -> 0.3714
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.2993 x w 0.25 -> 0.0136
+       title: score -0.0161 x w 0.25 -> -0.0007
+  -> sig/api-machinery score 0.5579 via #138608 [Flaking Test] integration/apiserver: admissionwebhook  fix PRs [] dirs []
+       components: score 0.4951 x w 4.0 -> 0.3601
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.3564 x w 0.25 -> 0.0162
+       title: score -0.0049 x w 0.25 -> -0.0002
+  -> sig/api-machinery score 0.5267 via #141315 Potential goroutine leak in k8s.io/client-go/tools/cache  fix PRs [] dirs []
+       components: score 0.4424 x w 4.0 -> 0.3217
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.5044 x w 0.25 -> 0.0229
+       title: score 0.0039 x w 0.25 -> 0.0002
+
+#142521 Graceful Node Shutdown should allow admission of high priority pods
+  truth: ['sig/node']  situation: {"kind": "bug", "components": ["admission", "kubelet", "pod_lifecycle", "scheduler", "storage", "workloads"], "title": ["admission", "pod_lifecycle"], "paths": ["pkg/controller"]}
+  -> sig/node score 0.6787 via #140653 kubelet preemption during init leaves pod stuck in Init:N/M with no re  fix PRs [] dirs []
+       components: score 0.6846 x w 4.0 -> 0.4979
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score -0.0215 x w 0.25 -> -0.001
+  -> sig/apps score 0.5811 via #136932 DaemonSet controller fails to recreate Pods  fix PRs [136933] dirs ['pkg/controller', 'test/integration']
+       components: score 0.4873 x w 4.0 -> 0.3544
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score -0.0117 x w 0.25 -> -0.0005
+  -> sig/node score 0.5656 via #134395 Static Memory Manager doesn't verify OS reported available huge pages   fix PRs [] dirs []
+       components: score 0.498 x w 4.0 -> 0.3622
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.4736 x w 0.25 -> 0.0215
+
+#142526 apimachinery yaml: last line silently dropped when its length is a multiple of the buffer size
+  truth: ['sig/api-machinery']  situation: {"kind": "bug", "components": ["apimachinery", "apiserver", "crd", "metrics"], "title": ["apimachinery"], "paths": ["pkg/util"]}
+  -> sig/api-machinery score 0.6543 via #136091 Standard numeric format validation (int32, int64, float, double) is no  fix PRs [136582] dirs ['staging/src/k8s.io/api', 'staging/src/k8s.io/apiextensions-apiserver', 'staging/src/k8s.io/apimachinery']
+       components: score 0.6499 x w 4.0 -> 0.4727
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score -0.0171 x w 0.25 -> -0.0008
+       title: score 0.0122 x w 0.25 -> 0.0006
+  -> sig/api-machinery score 0.5802 via #139253 SSA: typed patch object schema error returns 500 instead of 400  fix PRs [] dirs []
+       components: score 0.4521 x w 4.0 -> 0.3288
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.5308 x w 0.25 -> 0.0241
+       title: score 1.0 x w 0.25 -> 0.0455
+  -> sig/api-machinery score 0.5505 via #138631 storage: DetectCacheInconsistency checker fails on large API collectio  fix PRs [] dirs []
+       components: score 0.5049 x w 4.0 -> 0.3672
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0322 x w 0.25 -> 0.0015
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142530 Should conformance-style comments be allowed on non-conformance tests?
+  truth: ['sig/architecture', 'sig/testing']  situation: {"kind": "other", "components": ["admission", "apimachinery", "apiserver", "auth", "crd", "device", "feature_gate", "gc_quota", "kubectl", "kubelet", "metrics", "network", "pod_lifecycle", "scheduler", "storage", "test_infra", "workloads"], "paths": ["test/e2e"]}
+  -> sig/api-machinery score 0.6218 via #141166 Burndown: Quantity int64 overflow and checked accessors  fix PRs [] dirs []
+       components: score 0.5664 x w 4.0 -> 0.4315
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score -0.0054 x w 0.25 -> -0.0003
+  -> sig/testing score 0.5614 via #140901 E2E Test Flakiness: API Server Timeouts, Silent Failures, and Resource  fix PRs [] dirs []
+       components: score 0.4595 x w 4.0 -> 0.3342
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/storage score 0.5614 via #140901 E2E Test Flakiness: API Server Timeouts, Silent Failures, and Resource  fix PRs [] dirs []
+       components: score 0.4595 x w 4.0 -> 0.3342
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 1.0 x w 0.25 -> 0.0455
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142539 Watch requests get 429 ```storage is (re)initializing``` for first request
+  truth: ['sig/api-machinery']  situation: {"kind": "bug", "components": ["apimachinery", "apiserver", "auth", "client_go", "crd", "feature_gate", "kubectl"], "title": ["client_go"]}
+  -> sig/api-machinery score 0.5803 via #137430 Improper Metadata Restriction in CRD Status API Allows Arbitrary CRD D  fix PRs [] dirs []
+       components: score 0.5479 x w 4.0 -> 0.3984
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0005 x w 0.25 -> 0.0
+  -> sig/cli score 0.5662 via #140961 "kubectl auth can-i impersonate <resource>" broken with overlapping CR  fix PRs [] dirs []
+       components: score 0.4937 x w 4.0 -> 0.3761
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score -0.0073 x w 0.25 -> -0.0003
+  -> sig/auth score 0.5662 via #140961 "kubectl auth can-i impersonate <resource>" broken with overlapping CR  fix PRs [] dirs []
+       components: score 0.4937 x w 4.0 -> 0.3761
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score -0.0073 x w 0.25 -> -0.0003
+
+#142548 [Scheduling] Enable SignPod for InterPodAffinity and PodTopologySpread
+  truth: ['sig/scheduling']  situation: {"kind": "other", "components": ["scheduler"], "title": ["scheduler"]}
+  -> sig/scheduling score 1.0 via #140281 Extract and expose scheduling logic in scheduler for scheduler-library  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+  -> sig/scheduling score 1.0 via #139615 Decouple Workload Aware Preemption from scheduler struct  fix PRs [139616] dirs ['pkg/scheduler', 'staging/src/k8s.io/kube-scheduler']
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+  -> sig/scheduling score 1.0 via #139406 Add integration test for checking binding and NNN for gang scheduling  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 1.0 x w 0.25 -> 0.0476
+
+#142560 [Flaking Test] ci-kubernetes-e2e-gce-scale-performance-100.Overall fails with unknown flag: --metadata
+  truth: ['sig/cluster-lifecycle', 'sig/scalability']  situation: {"kind": "flake", "components": ["scale", "test_infra"], "title": ["scale", "test_infra"]}
+  -> sig/scalability score 0.9758 via #141447 [Flake test] [sig-scalability] Test failure  - ec2-master-scale-perfor  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.4927 x w 0.25 -> 0.0235
+  -> sig/k8s-infra score 0.9758 via #141447 [Flake test] [sig-scalability] Test failure  - ec2-master-scale-perfor  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.4927 x w 0.25 -> 0.0235
+  -> sig/testing score 0.8093 via #138484 [Failing Test] ci-kubernetes-e2e-gce-scale-performance-100 PreTestCmd  fix PRs [] dirs []
+       components: score 1.0 x w 4.0 -> 0.7619
+       kind: score -0.001 x w 1.0 -> -0.0002
+       title: score 1.0 x w 0.25 -> 0.0476
+
+#142562 Explore publishing an aggregated OpenAPI v3 schema for downstream consumers
+  truth: ['sig/api-machinery']  situation: {"kind": "feature", "components": ["apimachinery", "apiserver", "network", "runtime"], "title": ["apimachinery"]}
+  -> sig/api-machinery score 0.4696 via #138458 Allow to unmarshal into applyconfig from client-go result  fix PRs [] dirs []
+       components: score 0.395 x w 4.0 -> 0.2873
+       kind: score 1.0 x w 1.0 -> 0.1818
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0117 x w 0.25 -> 0.0005
+  -> sig/security score 0.4676 via #138113 [Declarative Validation] Add `k8s-cidr` format to `+k8s:format` declar  fix PRs [] dirs []
+       components: score 0.6382 x w 4.0 -> 0.4641
+       kind: score 0.019 x w 1.0 -> 0.0035
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/network score 0.4676 via #138113 [Declarative Validation] Add `k8s-cidr` format to `+k8s:format` declar  fix PRs [] dirs []
+       components: score 0.6382 x w 4.0 -> 0.4641
+       kind: score 0.019 x w 1.0 -> 0.0035
+       paths: score 0.0 x w 0.25 -> 0.0
+       title: score 0.0 x w 0.25 -> 0.0
+
+#142569 MemoryQoS: container memory.high is not reset when an in-place resize makes the memory request equal the limit
+  truth: ['sig/node']  situation: {"kind": "bug", "components": ["autoscaling", "cgroup", "feature_gate", "kubectl", "kubelet", "runtime"]}
+  -> sig/node score 0.5945 via #135640 --feature-gates=InPlacePodVerticalScaling=true；It is not possible to d  fix PRs [] dirs []
+       components: score 0.4932 x w 4.0 -> 0.3945
+       kind: score 1.0 x w 1.0 -> 0.2
+  -> sig/node score 0.5906 via #140688 CPUManager distribute-cpus-across-cores relies on CPU numbering order   fix PRs [140766] dirs ['pkg/kubelet']
+       components: score 0.4883 x w 4.0 -> 0.3906
+       kind: score 1.0 x w 1.0 -> 0.2
+  -> sig/node score 0.5906 via #137674 Pod-level memory.min not reconciled when MemoryQoS config changes  fix PRs [137719] dirs ['cmd/kubelet', 'pkg/generated', 'pkg/kubelet']
+       components: score 0.4883 x w 4.0 -> 0.3906
+       kind: score 1.0 x w 1.0 -> 0.2
+
+#142572 MemoryQoS TieredReservation: pod-level memory.low is not updated on a request-only in-place memory resize
+  truth: ['sig/node']  situation: {"kind": "bug", "components": ["cgroup", "feature_gate", "kubectl", "runtime"]}
+  -> sig/node score 0.6996 via #135640 --feature-gates=InPlacePodVerticalScaling=true；It is not possible to d  fix PRs [] dirs []
+       components: score 0.6245 x w 4.0 -> 0.4996
+       kind: score 1.0 x w 1.0 -> 0.2
+  -> sig/node score 0.5335 via #134673 kubernetes 1.34: The result of kubectl get cgroupDriver from the node   fix PRs [134743] dirs ['cmd/kubelet']
+       components: score 0.4502 x w 4.0 -> 0.343
+       kind: score 1.0 x w 1.0 -> 0.1905
+       title: score 0.0 x w 0.25 -> 0.0
+  -> sig/node score 0.5257 via #140731 Pod & Container statuses not reporting memory requests accurately when  fix PRs [] dirs []
+       components: score 0.4399 x w 4.0 -> 0.3352
+       kind: score 1.0 x w 1.0 -> 0.1905
+       paths: score 0.0 x w 0.25 -> 0.0
+

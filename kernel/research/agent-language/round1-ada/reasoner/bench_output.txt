@@ -1,0 +1,91 @@
+
+== E1 calibration of judge(): unbind a role from a bundle of n pairs
+ conf bin      N   P(best correct)  [present queries]
+ [0.00,0.10)     16   acc=0.188  mean_conf=0.055
+ [0.10,0.30)     53   acc=0.226  mean_conf=0.209
+ [0.30,0.50)     76   acc=0.447  mean_conf=0.412
+ [0.50,0.70)    104   acc=0.731  mean_conf=0.597
+ [0.70,0.90)    200   acc=0.940  mean_conf=0.816
+ [0.90,0.99)    205   acc=1.000  mean_conf=0.956
+ [0.99,1.00)   1611   acc=1.000  mean_conf=1.000
+ ECE(present)=0.024  precision of 'known'=1.0000 coverage(present)=0.802  raw best-acc(present)=0.940
+ absent-role queries: false 'known' rate=0.0000 (n=735)
+ threshold sweep: known_at -> precision, coverage(present), false-known(absent)
+   0.50 -> 0.9208, 0.936, 0.1891
+   0.70 -> 0.9766, 0.890, 0.0490
+   0.90 -> 1.0000, 0.802, 0.0000
+   0.99 -> 1.0000, 0.711, 0.0000
+ best-acc / known-rate by bundle size n:
+   n in [1,20): acc=1.000 known=1.000 (N=1096)
+   n in [20,60): acc=1.000 known=0.993 (N=449)
+   n in [60,120): acc=0.992 known=0.770 (N=261)
+   n in [120,250): acc=0.821 known=0.229 (N=279)
+   n in [250,401): acc=0.533 known=0.050 (N=180)
+
+== E2 analogy a:b::c:?  (a=country_i, b=its value for attr, c=country_j)
+ attrs/frame  relational acc  known   algebraic acc  known   (40 countries)
+     3          1.000   1.000 (prec 1.000)    1.000   1.000 (prec 1.000)
+     6          1.000   1.000 (prec 1.000)    0.995   0.940 (prec 1.000)
+    12          1.000   1.000 (prec 1.000)    0.595   0.035 (prec 1.000)
+    24          1.000   1.000 (prec 1.000)    0.085   0.000 (prec nan)
+    48          1.000   0.980 (prec 1.000)    0.010   0.000 (prec nan)
+
+== E3 multi-hop inference: accuracy vs depth
+ small frames (2 relations):
+   depth  clean-hop acc  known  prec(known)  mean_conf   holistic acc
+       1         1.000  1.000       1.000      1.000          0.973
+       2         1.000  1.000       1.000      1.000          0.007
+       3         1.000  1.000       1.000      1.000          0.020
+       4         1.000  1.000       1.000      1.000          0.007
+       6         1.000  1.000       1.000      1.000          0.027
+       8         1.000  1.000       1.000      1.000          0.033
+ big frames (180 relations, per-hop noisy):
+   depth  clean-hop acc  known  prec(known)  mean_conf
+       1         0.900  0.333       1.000      0.768
+       2         0.833  0.107       1.000      0.594
+       3         0.793  0.027       1.000      0.448
+       4         0.687  0.000         nan      0.355
+       6         0.600  0.000         nan      0.212
+       8         0.513  0.000         nan      0.115
+
+== E4 transitive closure over is_a (tree depth 5, branching 3) + distractor attrs
+ distractor attrs/frame=  0: derived 1278 new facts, true 1278; precision=1.000 recall=1.000 (0.4s)
+ distractor attrs/frame=  8: derived 1278 new facts, true 1278; precision=1.000 recall=1.000 (1.1s)
+ distractor attrs/frame= 40: derived 1278 new facts, true 1278; precision=1.000 recall=1.000 (3.6s)
+
+== E5 abstraction: prototype = bundle(cases); typical() and classify()
+  p(noise)  cases  typical-acc  classify-acc(held-out)  mean-sim-to-instance
+     0.2      1       0.833                 1.000               0.522
+     0.2      3       0.875                 1.000               0.576
+     0.2      9       1.000                 1.000               0.625
+     0.2     27       1.000                 1.000               0.680
+     0.5      1       0.625                 0.850               0.225
+     0.5      3       0.688                 0.970               0.262
+     0.5      9       0.979                 0.990               0.303
+     0.5     27       1.000                 0.980               0.352
+
+== E6 composition: a conclusion whose premise is a conclusion, depth d
+  depth  raw sim(subject)  raw acc   cleanup-memory acc  (no path exclusion)
+      1            0.127    1.000         1.000        1.000
+      2            0.032    0.317         1.000        1.000
+      3            0.005    0.000         1.000        1.000
+      4            0.004    0.000         1.000        1.000
+      6           -0.002    0.000         1.000        1.000
+     10           -0.001    0.000         1.000        1.000
+
+== E7 ordinal inference on memory/world.py: predict UNMEASURED questions
+ 235 conclusions over 817 unmeasured points (abstained on 582: 0.71); truth scoring only (28s)
+  sandwich     N= 129 acc=1.000 mean_conf=0.970
+  extrapolate  N= 106 acc=0.764 mean_conf=0.861
+  extrapolation accuracy by chain depth (grid steps beyond last known):
+    depth 1: N=  55 acc=0.945 conf=0.900
+    depth 2: N=  17 acc=0.824 conf=0.873
+    depth 3: N=  10 acc=0.800 conf=0.847
+    depth 4: N=   6 acc=0.667 conf=0.821
+    depth 5: N=   5 acc=0.400 conf=0.797
+  by family:
+    bundle     N= 175 acc=0.880
+    nest       N=   9 acc=1.000
+    strand     N=  51 acc=0.922
+
+(total 85s)

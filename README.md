@@ -1,90 +1,73 @@
-# Glyphh
+# Glyphh Ada: the decision engine
 
-Glyphh is one thing: **Ada**. This is its developer surface: the Claude Code plugin, the SDKs, the `glyphh` command
-and the contract they share with Ada Cloud (Ada as an API that Glyphh runs).
+**A Glyphh Labs project. It's open source under Apache-2.0 and is no longer a hosted service.** Ada Cloud
+(`ada.glyphh.ai`, `api.glyphh.ai`, `platform.glyphh.ai`) is being shut down. The code is all here for you to read,
+run and build on. More about Glyphh: [glyphh.ai](https://glyphh.ai).
 
-| Folder | Install | What |
-|---|---|---|
-| [`plugins/glyphh`](plugins/glyphh) | `/plugin marketplace add glyphh-ai/glyphh`, then `/plugin install glyphh@glyphh` | The plugin: your Glyphh account in Claude Code, the Ada skill, the glyphh command's skill, the file ledger |
-| [`sdk/python`](sdk/python) | `pip install glyphh` | Ada for Python, `from glyphh import Ada`, and the `glyphh` command |
-| [`sdk/typescript`](sdk/typescript) | `npm i @glyphh-ai/glyphh` | Ada for TypeScript and JavaScript, `import { Ada } from "@glyphh-ai/glyphh"` |
-| [`contract`](contract) | | JSON Schema of Ada's answers (a decision, a job, usage, a query's answer, SDK 3.0's run result, a refusal) and the fixtures both SDKs are tested against, recorded from a real server |
-| [`benchmarks`](benchmarks) | | Ada against Claude on public data (Banking77, German Credit), with the results, the judges' prompts and the scripts |
+Ada is a classifier that learns from precedent. You describe your cases once as a JSON spec, load past cases with
+their outcomes, then ask about a new case. Ada answers from the cases most like it:
 
-Other plugins and skills for Claude live in [github.com/glyphh-ai/plugins](https://github.com/glyphh-ai/plugins).
+- **Precedent, not a language model.** Each case is encoded as a hyperdimensional vector, and an answer is read
+  from the precedents nearest to it. No LLM is in the path, it runs on a CPU, and the same case with the same
+  precedents gets the same answer.
+- **Receipts.** Every answer comes with the precedents it stands on, so each decision can be audited.
+- **Typed, calibrated answers.** An answer comes as a choice, a level, a yes or no, a number or a set of labels,
+  with probabilities, the expected cost of each choice, and an ask flag when a person should decide instead.
+- **Hands off what it's unsure of.** Cases Ada isn't sure about go to an LLM or a person. Their answers become new
+  precedents, one confirmed case at a time.
 
-**Ada Cloud is Ada as an API.** You describe your cases once as a JSON spec, load your history, and ask: every
-answer is typed (the spec's outcomes), with calibrated probabilities, the expected cost of each choice, whether a
-person should decide instead, and the precedents it stands on. No language model is in the path, the same question
-gets the same answer, and a model learns one confirmed case at a time. Models chain: a beam (`POST /v1/beam`) asks
-several models in a row, one model's outcome the next model's question. Glyphh runs it at `https://ada.glyphh.ai`:
-there is nothing to install or host. Claude reaches it through the Glyphh connector (`https://api.glyphh.ai/mcp`)
-and the Ada skill; your software through the SDKs with an API key; your terminal, scripts, CI and agents with a shell
-through the `glyphh` command.
+The benchmarks below are experiments, not validated production results.
 
-## The command
+## What is here
 
-```bash
-pipx install glyphh             # the Python package installs `glyphh`
-glyphh login                    # paste an API key (the platform's API Keys page): checked, then kept for this machine
-glyphh create tickets --spec @spec.json
-glyphh import tickets history.csv --mapping '{"Plan": "ticket.what.plan", "Result": "outcome"}'
-glyphh decide tickets '{"ticket": {"what": {"plan": "pro", "text": "charged twice"}}}'
-```
-
-Every Ada call is a command; every answer is the API's JSON on stdout, a refusal JSON on stderr with exit code 1.
-`GLYPHH_API_KEY` wins over the kept key, for CI. The full guide: [`sdk/python`](sdk/python#the-glyphh-command).
-
-- Platform (sign in, models, API keys, usage): https://platform.glyphh.ai
-- Pricing: https://glyphh.ai/pricing. Plans sell precedents held and reads a month; members, keys and models are
-  unlimited on each.
-
-| Plan | Price | Precedents | Reads a month | Calls a second | Reads past the month |
-|---|---|---|---|---|---|
-| Free | $0 | 1,000 | 5,000 | 5 | Refused until the month turns |
-| Basic | $20/month | 10,000 | 50,000 | 10 | $1 per 10,000 |
-| Pro | $99/month | 100,000 | 1,000,000 | 50 | $1 per 10,000 |
-| Team | $299/month | 1,000,000 | 5,000,000 | 200 | $1 per 10,000 |
-| Enterprise | By contract | By contract | By contract | By contract | By contract |
-
-## The API
-
-At `https://ada.glyphh.ai`, with `Authorization: Bearer glyphh_ak_…` (an API key: the platform's API Keys page, or
-Claude through the connector). A refusal is `{"error": {code, message, trace_id, ...}}`.
-
-| Route | Does |
+| Folder | What |
 |---|---|
-| `POST /v1/decide` `{model, data, output?, outputs?, include?, clearance?}` | The headline: `{outcome, probabilities, expected_cost, ask, receipts, model, version}` |
-| `POST /v1/beam` `{start, hops: [{model, role, fixed?, output?}], width?, values?, miss?, clearance?}` | A chain of models, one model's outcome the next model's question: `{outcome, p, ends, paths, lost, hops, ada}`; one read per hop |
-| `GET`, `POST /v1/models` `{name, spec}`; `GET`, `DELETE /v1/models/{name}?confirm={name}` | The org's models; make one from its spec; one; delete one |
-| `PUT /v1/models/{name}/spec`; `GET`, `PATCH …/settings` `{changes, note?, backtest?}` | A new version (`{version, active, job}`; a job when it re-encodes the stored cases); every lever |
-| `GET …/versions`; `POST …/versions/{n}/activate` | Every version, who made it and why; roll back |
-| `POST …/record`, `…/record_many` `{cases}` (1,000), `…/grade`; `DELETE …/precedents/{id}` | Cases in, one or many (`Idempotency-Key`); an outcome on one already in; forget one |
-| `POST …/query`, `…/probabilities`, `…/facts`, `…/decide` | The kernel's own answers |
-| `POST …/learn`, `…/calibrate`, `…/backtest` `{candidates, holdout?}` | Jobs: weights and temperature from the precedents; candidates scored on held-out cases |
-| `POST …/imports` `{format, mapping?, partial?, learn?}`; `PUT /v1/uploads/{link}` | An import (JSON Lines, CSV, a kernel SQLite store, a model's own export): the job and a one-hour upload link |
-| `POST …/export` `{format}`; `GET /v1/downloads/{link}` | Everything of a model, as a job whose done state carries a one-hour download link |
-| `GET /v1/jobs/{id}` | A job's state, percent, result or error |
-| `GET /v1/usage` | The plan, the month (UTC) and when it starts again, the models, the precedents held and the month's requests against the plan's (`over` past it on Basic, Pro and Team, metered), and the calls a second |
-| `POST /v1/runs` `{model, function, inputs, clearance?}` | SDK 3.0's call shape, answered at once as a `done` Result |
+| [`kernel`](kernel) | `glyphh_kernel` and `glyphh_spec`: the engine itself, Python whose one dependency is numpy (Postgres/pgvector storage optional), plus its lexicon and tests |
+| [`server`](server) | The Ada Cloud server (Python, Postgres + pgvector, Redis): accounts, orgs, API keys, the Ada API, jobs, the MCP connector |
+| [`platform`](platform) | The web app in front of it (Hono + React): sign-in, models, keys, the staff view, and the demos that ran on demo.glyphh.ai |
+| [`sdk/python`](sdk/python), [`sdk/typescript`](sdk/typescript) | The SDKs (`pip install glyphh`, `npm i @glyphh-ai/glyphh`) and the `glyphh` command |
+| [`contract`](contract) | JSON Schema of Ada's answers and the fixtures both SDKs are tested against |
+| [`plugins`](plugins) | Claude Code plugins: `glyphh` (the Ada skill, the connector, the command's skill) and `resume-screener` |
+| [`benchmarks`](benchmarks) | Ada against Claude on public data (Banking77, German Credit), plus earlier experiments in `benchmarks/research` |
+| [`demos/expenses`](demos/expenses) | The expense-approvals demo |
 
-The shapes are in [`contract/contract.json`](contract/contract.json) (version 5), with
-[`contract/fixtures.json`](contract/fixtures.json).
+Each folder brought its history with it: `server`, `platform`, `kernel` (from `ada-private`), `benchmarks/research`
+(from `benchmarks`), `demos/expenses` (from `ada-expenses-demo`) and `plugins/resume-screener` (from `plugins`). The
+old repos are archived and point here.
 
-## Develop
+## Run it yourself
+
+The kernel on its own, with no server:
 
 ```bash
-CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude plugin validate --strict plugins/glyphh
-CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude plugin test plugins/glyphh
-(cd sdk/typescript && npm ci && npm test)
-(cd sdk/python && python -m pip install '.[dev]' && python -m pytest -q)
-ADA_SERVER_IMAGE=<an image of glyphh-ai/server> sh sdk/integration/run.sh   # both SDKs against a real server, in Docker
+cd kernel
+python -m pip install -e '.[dev]'
+python -m pytest -q
 ```
 
-CI (`.github/workflows`): `plugins.yml` and `sdks.yml` check every pull request. Changes come in only by pull request,
-and only Glyphh maintainers release (the SDKs and the plugin): see [CONTRIBUTING.md](CONTRIBUTING.md).
+```python
+from glyphh_spec import Model, Spec
+model = Model(Spec.from_json(spec_json), path="tickets.db")
+model.record(data, outcomes={"team": "billing"})   # data in the spec's shape
+model.decide_all(new_case)                          # every output: outcome, probabilities, receipts
+```
+
+`kernel/README.md` covers the spec, typed outputs, calibration, the thread reads and the stores.
+
+The whole service, with Postgres and Redis:
+
+```bash
+cd server
+docker compose up --build              # the API; --profile ada adds the Ada workers
+docker compose --profile test run --rm --build test
+```
+
+The server's image installs the kernel from `glyphh-ai/ada-private`, at the commit `server/uv.lock` pins. That repo
+is now public and archived. The Dockerfile still reads it over SSH with a deploy key (the build secret
+`ada_deploy_key`). To build without a key, remove the `insteadOf` line and the key wrapper from `server/Dockerfile`,
+or point the dependency at `../kernel`. [`server/README.md`](server/README.md) has the settings, and
+[`platform/README.md`](platform/README.md) covers the web app.
 
 ## License
 
-By folder (`LICENSE`): `plugins/` under Glyphh's terms; `sdk/`, `contract/` and `benchmarks/` MIT. The benchmarks'
-data sets keep their own licences (CC BY 4.0).
+Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE). Copyright 2026 Chris Timmerman / Glyphh AI LLC.

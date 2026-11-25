@@ -1,0 +1,88 @@
+[
+ {
+  "cid": "c-a72d2e2aa3",
+  "q": [
+   "bundle",
+   "recall",
+   {
+    "k": "65"
+   }
+  ],
+  "value": "all",
+  "true": false
+ },
+ {
+  "cid": "c-49f68abf10",
+  "q": [
+   "nest",
+   "read",
+   {
+    "depth": "4"
+   }
+  ],
+  "value": "readable",
+  "true": false
+ },
+ {
+  "cid": "c-f69542c223",
+  "q": [
+   "situation",
+   "overlap_sim",
+   {
+    "n": "4",
+    "m": "2"
+   }
+  ],
+  "value": "0.7",
+  "true": false
+ },
+ {
+  "cid": "c-aeca3dc6ce",
+  "q": [
+   "situation",
+   "overlap_sim",
+   {
+    "n": "5",
+    "m": "4"
+   }
+  ],
+  "value": "0.6",
+  "true": true
+ },
+ {
+  "cid": "c-c02465da73",
+  "q": [
+   "space_encode",
+   "last_attr_differs_sims_higher",
+   {
+    "n": "3"
+   }
+  ],
+  "value": "yes",
+  "true": false
+ },
+ {
+  "cid": "c-742c927d14",
+  "q": [
+   "space_encode",
+   "last_attr_differs_sims_higher",
+   {
+    "n": "2"
+   }
+  ],
+  "value": "yes",
+  "true": true
+ },
+ {
+  "cid": "c-c9fd36c092",
+  "q": [
+   "space_encode",
+   "last_attr_differs_sims_higher",
+   {
+    "n": "4"
+   }
+  ],
+  "value": "yes",
+  "true": true
+ }
+]

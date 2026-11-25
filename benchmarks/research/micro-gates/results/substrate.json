@@ -1,0 +1,179 @@
+[
+ {
+  "session": 1,
+  "agent": "ada",
+  "right": 2,
+  "of": 20,
+  "tokens": 126989,
+  "usd": 0.3550558,
+  "seconds": 87.58321404457092,
+  "error": false,
+  "turns": 36,
+  "calls": {
+   "ada_models": 1,
+   "ada_make": 2,
+   "ada_record": 29,
+   "ada_note": 1
+  }
+ },
+ {
+  "session": 2,
+  "agent": "ada",
+  "right": 1,
+  "of": 20,
+  "tokens": 171400,
+  "usd": 0.4708668,
+  "seconds": 112.52549505233765,
+  "error": false,
+  "turns": 52,
+  "calls": {
+   "ada_models": 1,
+   "ada_ask": 22,
+   "ada_forget": 2,
+   "ada_make": 1,
+   "ada_note": 1,
+   "ada_record": 22
+  }
+ },
+ {
+  "session": 3,
+  "agent": "ada",
+  "right": 1,
+  "of": 20,
+  "tokens": 212484,
+  "usd": 0.7394566,
+  "seconds": 164.4032440185547,
+  "error": false,
+  "turns": 102,
+  "calls": {
+   "ada_models": 1,
+   "ada_ask": 60,
+   "ada_forget": 1,
+   "ada_make": 1,
+   "ada_record": 35,
+   "ada_note": 1
+  }
+ },
+ {
+  "session": 4,
+  "agent": "ada",
+  "right": 1,
+  "of": 20,
+  "tokens": 198277,
+  "usd": 0.7954676,
+  "seconds": 171.466646194458,
+  "error": false,
+  "turns": 120,
+  "calls": {
+   "ada_models": 1,
+   "ada_ask": 60,
+   "ada_forget": 1,
+   "ada_make": 1,
+   "ada_note": 1,
+   "ada_record": 54
+  }
+ },
+ {
+  "session": 5,
+  "agent": "ada",
+  "right": 3,
+  "of": 20,
+  "tokens": 199371,
+  "usd": 0.8118846,
+  "seconds": 174.76953411102295,
+  "error": false,
+  "turns": 125,
+  "calls": {
+   "ada_models": 1,
+   "ada_ask": 60,
+   "ada_forget": 1,
+   "ada_make": 1,
+   "ada_note": 1,
+   "ada_record": 59
+  }
+ },
+ {
+  "session": 6,
+  "agent": "ada",
+  "right": 6,
+  "of": 20,
+  "tokens": 290468,
+  "usd": 0.9173579999999999,
+  "seconds": 203.1157751083374,
+  "error": false,
+  "turns": 127,
+  "calls": {
+   "ada_models": 1,
+   "ada_ask": 60,
+   "ada_forget": 1,
+   "ada_note": 1,
+   "ada_make": 1,
+   "ada_record": 60
+  }
+ },
+ {
+  "session": 7,
+  "agent": "ada",
+  "right": 3,
+  "of": 20,
+  "tokens": 240996,
+  "usd": 0.8189800000000002,
+  "seconds": 176.80993509292603,
+  "error": false,
+  "turns": 126,
+  "calls": {
+   "ada_models": 1,
+   "ada_ask": 60,
+   "ada_forget": 1,
+   "ada_note": 1,
+   "ada_make": 1,
+   "ada_record": 60
+  }
+ },
+ {
+  "session": 8,
+  "agent": "ada",
+  "right": 11,
+  "of": 20,
+  "tokens": 124361,
+  "usd": 0.31589079999999997,
+  "seconds": 70.9475519657135,
+  "error": false,
+  "turns": 12,
+  "calls": {
+   "ada_models": 1,
+   "ada_note": 1,
+   "ada_record": 5
+  }
+ },
+ {
+  "session": 9,
+  "agent": "ada",
+  "right": 13,
+  "of": 20,
+  "tokens": 77732,
+  "usd": 0.22703,
+  "seconds": 56.12251901626587,
+  "error": false,
+  "turns": 4,
+  "calls": {
+   "ada_models": 1,
+   "ada_note": 1
+  }
+ },
+ {
+  "session": 10,
+  "agent": "ada",
+  "right": 11,
+  "of": 20,
+  "tokens": 76916,
+  "usd": 0.2148338,
+  "seconds": 53.054075956344604,
+  "error": false,
+  "turns": 4,
+  "calls": {
+   "ada_models": 1,
+   "ada_note": 1
+  }
+ }
+]

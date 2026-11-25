@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Teach a bot · Ada</title>
+  <meta name="description" content="Make up a rule, keep it to yourself, and watch a bot learn it from your answers.">
+  <link rel="icon" type="image/png" href="/glyphh-mascot-square-black.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="/bot/bot.css">
+  <link rel="stylesheet" href="/platform.css">
+</head>
+<body>
+  <header class="head">
+    <div class="brand">
+      <a href="/" aria-label="All demos"><img src="/glyphh-logo-text-white.png" alt="Glyphh" class="logo"></a>
+      <span class="divider"></span>
+      <span class="product">Teach a bot</span>
+      <span class="kicker">Learning by Ada</span>
+    </div>
+    <div class="status">
+      <button type="button" class="ghost" id="again" hidden>Start again</button>
+    </div>
+  </header>
+
+  <main>
+    <p class="promise" id="promise" hidden><b>Your rule stays with you.</b> The bot never sees your rule, only your answers.</p>
+
+    <section class="panel meet" id="start" hidden>
+      <img class="mascot" src="/bot/mascot.svg" alt="The bot: a Glyphh cat with a mohawk">
+      <h2 class="kicker">Meet the bot</h2>
+      <p class="say">It approves expenses. It knows nothing yet.</p>
+      <ol class="steps">
+        <li>Make up a rule. Keep it secret.</li>
+        <li>Answer its questions.</li>
+        <li>Watch it start deciding alone.</li>
+      </ol>
+      <button type="button" class="primary" id="go">Start</button>
+      <p class="sub">A rule like “nothing over $500” or “no receipt, no money”. The bot sees the department, category, amount, receipt and policy check.</p>
+    </section>
+
+    <section class="game" id="game" hidden>
+      <div class="panel">
+        <div class="panel-head"><h2 class="kicker" id="count"></h2><span class="sub" id="ms"></span></div>
+        <p class="say" id="what"></p>
+        <dl class="facts" id="facts"></dl>
+      </div>
+
+      <div class="panel" aria-live="polite">
+        <div class="panel-head who"><img class="mascot" src="/bot/mascot.svg" alt=""><h2 class="kicker" id="bot-title"></h2></div>
+        <div id="bot"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="done" hidden aria-live="polite">
+      <h2 class="kicker">The 40 are done</h2>
+      <div id="summary"></div>
+      <div class="row">
+        <button type="button" class="primary" id="another">Teach it another rule</button>
+        <a class="ghost" href="https://platform.glyphh.ai">Start free</a>
+        <a class="ghost" href="https://glyphh.ai/use-cases/claude-bots">What a Glyphh bot is</a>
+      </div>
+    </section>
+
+    <section class="panel" id="progress" hidden>
+      <div class="panel-head"><h2 class="kicker">How the bot is doing</h2><span class="sub" id="tally"></span></div>
+      <div class="strip" id="strip" role="img"></div>
+      <div class="legend">
+        <span><i class="cell asked">?</i>Asked you</span>
+        <span><i class="cell right">✓</i>Decided alone, right</span>
+        <span><i class="cell wrong">✕</i>Decided alone, wrong</span>
+        <span><i class="cell"></i>To come</span>
+      </div>
+      <div id="weights" hidden>
+        <h3 class="kicker dim">What your decisions turn on, as Ada has learned it</h3>
+        <div class="bars" id="bars"></div>
+        <p class="sub">Learned again every five answers. A long bar is something your answers follow; a short one, something they ignore.</p>
+      </div>
+    </section>
+
+    <p class="error" id="error" role="alert" hidden></p>
+    <p class="small" id="about" hidden>No language model runs on this page: the bot runs on Ada alone, a model of its own for each visitor, deleted when the 40 are done. In a Glyphh bot, Claude does the work and Ada models like this one decide when to ask you. A rule with rare exceptions takes more than 40 answers to learn.</p>
+  </main>
+
+  <script src="/bot/bot.js" type="module"></script>
+</body>
+</html>

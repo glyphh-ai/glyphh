@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="/glyphh-mascot-square-black.png" />
+    <link rel="shortcut icon" href="/glyphh-mascot-square-black.png" />
+    <link rel="apple-touch-icon" href="/glyphh-mascot-square-black.png" />
+    <title>Glyphh</title>
+    <script>
+      // Set the theme before the first paint, so a light theme never flashes dark.
+      // A new visitor gets high-visibility dark (dark-hc), as ThemeProvider does.
+      (function () {
+        var t = 'dark-hc';
+        try {
+          var kept = localStorage.getItem('glyphh.theme');
+          if (['light', 'dark', 'light-hc', 'dark-hc'].indexOf(kept) >= 0) t = kept;
+          if (kept === 'system') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        } catch (e) {}
+        document.documentElement.dataset.theme = t;
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,60 @@
+== veto_rule=trusted hostile=None root=/tmp/claude-501/kbcurve-nt8e95ti
+steps | world | reflex_rate | reflex_acc | answer_acc | measurements_per_ask | vetoed_or_contested
+1-80 | v1 | 0.362 | 1.0 | 0.975 | 2.6 | 0.087
+81-160 | v1 | 0.825 | 1.0 | 0.95 | 0.963 | 0.087
+161-240 | v1 | 0.925 | 1.0 | 0.963 | 0.463 | 0.075
+241-320 | v1 | 0.925 | 1.0 | 0.988 | 0.55 | 0.075
+321-400 | v1 | 0.963 | 1.0 | 0.975 | 0.438 | 0.037
+401-480 | v2 | 0.85 | 0.882 | 0.875 | 0.825 | 0.15
+481-560 | v2 | 0.875 | 0.943 | 0.938 | 0.7 | 0.125
+561-640 | v2 | 0.762 | 0.984 | 0.963 | 1.087 | 0.237
+641-720 | v2 | 0.863 | 1.0 | 0.963 | 0.787 | 0.138
+721-800 | v2 | 0.85 | 1.0 | 0.988 | 0.875 | 0.15
+{
+ "veto_rule": "trusted",
+ "hostile": null,
+ "steps": 800,
+ "drift": 400,
+ "questions": 37,
+ "changed_by_drift": 5,
+ "wrong_reflexes_after_drift_on_changed": 13,
+ "final_status_counts": {
+  "known": 33,
+  "vetoed": 4
+ },
+ "final_known_correct": 33,
+ "audit_bad_receipts": 0,
+ "claims": 144,
+ "wins": 351,
+ "vetoes": 87
+}
+== veto_rule=trusted hostile=courier root=/tmp/claude-501/kbcurve-mqmhwenz
+steps | world | reflex_rate | reflex_acc | answer_acc | measurements_per_ask | vetoed_or_contested
+1-80 | v1 | 0.2 | 1.0 | 0.95 | 2.938 | 0.062
+81-160 | v1 | 0.738 | 1.0 | 0.938 | 1.6 | 0.087
+161-240 | v1 | 0.85 | 1.0 | 0.963 | 0.762 | 0.113
+241-320 | v1 | 0.863 | 1.0 | 0.95 | 0.762 | 0.138
+321-400 | v1 | 0.912 | 1.0 | 0.988 | 0.613 | 0.087
+401-480 | v1 | 0.863 | 1.0 | 0.963 | 0.812 | 0.138
+481-560 | v1 | 0.9 | 1.0 | 0.988 | 0.625 | 0.1
+561-640 | v1 | 0.775 | 1.0 | 0.938 | 1.087 | 0.225
+641-720 | v1 | 0.887 | 1.0 | 0.938 | 0.65 | 0.113
+721-800 | v1 | 0.85 | 1.0 | 0.95 | 0.787 | 0.15
+{
+ "veto_rule": "trusted",
+ "hostile": "courier",
+ "steps": 800,
+ "drift": 800,
+ "questions": 37,
+ "changed_by_drift": 5,
+ "wrong_reflexes_after_drift_on_changed": 0,
+ "final_status_counts": {
+  "known": 32,
+  "vetoed": 5
+ },
+ "final_known_correct": 32,
+ "audit_bad_receipts": 0,
+ "claims": 173,
+ "wins": 352,
+ "vetoes": 203
+}

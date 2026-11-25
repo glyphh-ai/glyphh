@@ -1,0 +1,42 @@
+{
+ "step": {
+  "version": 1,
+  "name": "step",
+  "dimension": 1024,
+  "seed": 5,
+  "similarity_weight": 1.0,
+  "security_weight": 0.0,
+  "temporal_source": "auto",
+  "output": {
+   "report": []
+  },
+  "layers": [
+   {
+    "name": "m",
+    "similarity_weight": 1.0,
+    "security_weight": 0.0,
+    "segments": [
+     {
+      "name": "t",
+      "similarity_weight": 1.0,
+      "security_weight": 0.0,
+      "roles": [
+       {
+        "name": "state",
+        "similarity_weight": 1.0,
+        "security_weight": 0.0,
+        "key_part": false
+       },
+       {
+        "name": "action",
+        "similarity_weight": 1.0,
+        "security_weight": 0.0,
+        "key_part": false
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

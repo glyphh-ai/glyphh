@@ -11,6 +11,12 @@
       "source": "./plugins/glyphh",
       "description": "Glyphh for Claude: your Glyphh account and sign-in, the Ada skill that builds, loads, tunes and asks typed models in Ada Cloud through the Glyphh connector, the glyphh command, and the file ledger. Ada is in every plan.",
       "version": "2.0.0"
+    },
+    {
+      "name": "resume-screener",
+      "source": "./plugins/resume-screener",
+      "description": "Screens a job application with your own Ada models: first whether it comes from a real person (the email's timestamps, the files themselves, the application against the others seen, Greenhouse signals), then how well it fits the role.",
+      "version": "0.1.0"
     }
   ]
 }

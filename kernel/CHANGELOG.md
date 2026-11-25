@@ -1,0 +1,213 @@
+# Changelog
+
+Every release of Ada's kernel, newest first. Each says whether it **changes answers**.
+
+## The rule
+
+A release is **answer-changing** when the same spec, the same precedents and the same learned state can give a
+different answer after it than before: another outcome, other probabilities or expected costs, another `ask`, other
+receipts or fact trees, other glyphs (the encoding), or other weights and temperatures from `learn` and `calibrate`.
+Anything in the maths, the encoding, learning or calibration that moves even one answer counts, bug fixes included.
+
+A release is **compatible** when no answer can change: speed, memory, storage, packaging, a crash fixed (no answer
+was given before), and new things a spec must ask for (a new setting whose default keeps today's answers).
+
+The version says which:
+
+- **PATCH** (3.12.1 → 3.12.2): always compatible. A model made on 3.12.1 can be served by 3.12.2.
+- **MINOR** (3.12 → 3.13): every answer-changing release is at least a minor. A minor that changes no answer says
+  "compatible" here.
+- **MAJOR** (3 → 4): the store's layout changed (`glyphh_postgres.STORE_FORMAT`) or a spec stops parsing. A major
+  reads the stores of the major before it.
+
+`glyphh_kernel.__version__`, `pyproject.toml` and the newest heading here always agree (`test_versions.py`). Every
+release is tagged `v<version>` on `main`.
+
+Ada Cloud shows these releases to customers under names of its own (`ada-1-0`, `ada-1-1-beta`, ...); each name maps
+to one release here. The server's `src/glyphh_ada/ada_versions.json` holds that map and these notes in prose.
+
+## 3.18.0 — 2026-11-10 — compatible
+
+**The thread: `predict` and `lookback`.** A model's cases are a thread in the order of their times, and a case's
+outcome says how things stood at its own time. `Model.predict(data, steps, output)` answers what the output will be
+that many cases on, read from what followed the cases like this one; `Model.lookback` answers what it was that many
+cases back. `thread` names a role when the model holds several threads (one per account, ticker, machine). Each step
+answers its outcome, `p`, probabilities, and `gain`: the bits it says over the output's base rates. `halt` stops at
+the first step that says less than that many bits, so a loop acts on what was answered, records what happened and
+asks again. `chain=True` is the beam: one step at a time, the mass spreading again from wherever it stands, the
+`width` heaviest going on and the rest counted in `lost`. `before` reads nothing from a time on, for asking the past
+as it stood. `Model.learn_thread(output, steps, back)` learns the weights from what stood that many cases on (as
+`learn` does from a case's own outcome) and fits the temperature those reads use, kept apart from the output's own
+(`learned:<output>>`, `tau:<output>>`; `<` for back). The kernel's `Space` has the same reads without a spec
+(`predict`, `lookback`, `followed`, `calibrate_thread`). A thread read's pool is the 25 nearest precedents and every
+one tied with the last of them (to 1,000), so where many cases are the same situation all of them speak.
+
+- Compatible: nothing a model answers today changes and the store's layout is the same. The new reads are asked
+  for by name.
+- Measured (benchmarks/horizon), the last 40% of each series held out and each case asked as of its own time. A
+  12-state chain with a known table: Ada reads at the best possible accuracy at every lead, ahead and back (three
+  steps on 51.9% against 53.0% possible, five 38.4% against 38.6%), and its gain reaches zero at twelve steps, where
+  the chain's own does. Daily and hourly AAPL: direction ahead is not predictable at any lead (50.5% against 53.3%
+  for always-up, one day on); whether the next move is big is, a little, out to 60 days (0.11 bits over the base
+  rates at one day, 0.05 at 60); the direction of past days is readable for about three (80.7% two days back, 69.9%
+  three, nothing at ten). The beam matches each step read alone where situations repeat and adds nothing where every
+  case is its own situation (it cuts 99% of its mass).
+
+## 3.17.0 — 2026-11-04 — compatible
+
+**Beam search across models: `glyphh_spec.beam`.** One model's answer can be the next model's question. `beam(start,
+hops, width)` carries the `width` likeliest values through a chain of models (`Hop`: a model, how to ask it about a
+value, and optionally which output), each value's probability multiplied by the next model's probabilities and summed
+where paths meet, so the answer is the dot product of the chain, cut to the beam at each hop. It answers the `outcome`,
+its `p`, every end's probability (`ends`), each end's likeliest path (`paths`, with that path's own `trail_p`) and the
+mass that reached nothing (`lost`). `values`, with `miss`, lets a chain pass through a model that doesn't know: `miss`
+of every hop's mass spreads evenly over `values`, and a model with nothing to say spreads all of it.
+
+- Compatible: nothing a model answers changes, and nothing stored changes. It only reads through `probabilities`.
+
+## 3.16.0 — 2026-10-29 — compatible
+
+**Words read further: `settings.word_reach`.** 1 by default, the lexicon's reading before (a word and its own
+neighbours). At 2 or 3 a text role's word also reads with its plain form ("charged" with "charge", "cards" with
+"card", "stolen" with "steal"; a word the seed knows itself takes one only as a derivation, a verb form of a verb or
+a plural of a noun, so "news" never reads as "new") and with that many steps of neighbours' neighbours: mutual
+neighbours first, the strongest six of each word each step, a word met from two sides weighing more. The
+neighbourhood speaks as loud as the word itself (its L2 norm 1 beside the word's 1): at reach 1 a common word's
+forty neighbours, a fortieth each, are lost to its own symbol in the majority vote, which is why "angry" and
+"furious" read 0.07 apart there and 0.30 at reach 2, while unrelated words stay within ±0.03.
+
+- Compatible: `word_reach` 1 (the default) reads every word bit for bit as 3.15.0. A spec or setting that sets 2
+  or 3 does not parse on 3.15.0. Moving it re-reads every stored glyph, as `lexicon` does (`Space.relexicon`).
+- Banking77 (the 77-intent bank-message set; record, refresh, query), chosen on 1,000 messages held inside the
+  10,003: reach 1 88.0%, 2 89.2%, 3 89.0%; then the 3,080 test messages once each: reach 1 88.2%, 2 88.6%, 3 88.5%.
+  TypeSafe's Security Incidents workflow, whose alerts are mostly identifiers: the same at 1 and 2 (49.8% dev, 56.0%
+  test). So it is a lever to backtest on a model whose text is plain English, not a new default.
+
+## 3.15.0 — 2026-10-28 — compatible
+
+**Typed outputs and discriminated unions.** A named output's `kind` says what its answer is: `choice` (the
+default, as before), `score` (ordered `values`: a mistake costs the levels it is off, `decide` adds the expected
+`level`), `noul` (yes or no: recorded `true`/`false`, `decide` adds `p`, P(true)), `number` (`number: {min, max,
+step}`: recorded as a number and learned by its bin, `decide` adds the expected `value`) and `many` (any of its
+`values` at once: recorded as a list, each value a noul of its own stored as `<name>--<i>`, `decide` answers the
+list and each value's P(true)). `when: {"output", "in"}` makes an output a union's branch: `decide_all` decides the
+output it hangs on first and answers a branch not taken `{"outcome": null, "applies": false}`, and a record that
+grades a branch its own outcome leaves out is refused (`E_OUTPUT_WHEN`). docs/multi-output.md, Typed outputs.
+
+- Compatible: a spec that names no `kind` or `when` parses, stores and answers exactly as on 3.14.0. Nothing stored
+  changes: the encoding (3) and the store's layout (`STORE_FORMAT` 1) are 3.14.0's. A spec that uses them does not
+  parse on 3.14.0 or before.
+- TypeSafe's Security Incidents workflow (benchmarks `typesafe-workflows/typed_outputs.py`, the consensus action;
+  Jev 59.4% on dev, five folds, and 54.0% on test): flat choices 49.8% / 56.0%; nouls and scores as `score` 49.4% /
+  56.0%; nouls as `number`, learned from the consensus's own P(true), 50.6% / 52.0% (the expected `value` 45.2% /
+  56.0%); the containment questions as `when` branches of triage 49.8% / 56.0%. The kinds give each question its
+  true type and the union skips what the workflow never asks; none moves the score here.
+
+## 3.14.0 — 2026-10-25 — answer-changing
+
+**Time can weigh: calibrate fits a recency half-life.** With `settings.recency` (on by default), `calibrate` also
+tries half-lives of 1/16 to 2 times the span of the model's graded precedents, each held-out precedent asked at
+its own time. It keeps the half-life that best beats none, by at least 1% of the log-loss (or by cost with
+`calibrate_by: "cost"`), and keeps none otherwise. A read is then asked at the case's own time (`temporal_source`)
+or now, and each precedent's voice in the vote and the probabilities is halved per half-life of age. The
+half-life is kept in the store (`meta.half_lives`, per output; `Space.half_life()`). A model whose precedents span
+under a day never gets one. With `recency: false` every voice stays whole.
+
+**A lever, off by default: `settings.level_weights: "roles"`.** A segment then weighs its roles' weights summed,
+and a layer its segments' summed, so learned weights can quiet a whole segment of uninformative roles. The default
+stays `"spec"`, the weights as before. On German Credit `"roles"` decided worse (cost 125 against 99; learned from
+its own store, 115 against 102), so it is for a backtest on a model whose segments hold many quiet roles.
+
+- Changes answers only where `calibrate` fits a half-life: models whose graded precedents span at least a day and
+  whose answers drift with time. Nothing stored changes: the glyphs, the encoding (3) and the store's layout
+  (`STORE_FORMAT` 1) are 3.13.0's.
+- German Credit (the benchmark's `calibrate.py`): every answer is the same as 3.13.0's (`decide` with costs 70.5%,
+  cost 99; learned from its own store 69.0%, cost 102). Its cases carry no time, so no half-life is fitted.
+  Banking77 is the same too. Neither benchmark has time in it: recency is checked on a drifting store in
+  `test_versions.py`, not on a public benchmark.
+- New: `Space.half_life`, `Space.set_half_life`, `query(now=)`, `probabilities(now=)`, `calibrate(recency=)`.
+
+## 3.13.0 — 2026-10-23 — answer-changing
+
+**A pair value the model never learned no longer votes.** Once `learn` has found a pair of roles that tell more
+together than apart (`interactions`), a query whose pair value it never learned (never seen, or seen fewer than
+`rare` times) used to weigh that pair at its full weight, and the value matched nothing; now the pair weighs 0 for
+that query, so the two roles' own weights decide. On the compiled-reasoner experiment's held-out combinations of AND
+rules a learned model had fallen to 56.5% against plain kNN's 75.9% for this reason (research/compile, REPORT.md).
+
+- Changes answers only for models that learned pairs (`settings.interactions`, on by default), and only for queries
+  whose pair value is new to the model. Nothing stored changes: the glyphs, the encoding (3) and the store's layout
+  (`STORE_FORMAT` 1) are 3.12.2's.
+- German Credit (800 learned, 200 held out, the benchmark's `calibrate.py`): the learned vote 78.0% (3.12.2: 77.5%);
+  `decide` with costs 70.5%, cost 99 (70.0%, 100); asking where every answer costs over 0.5, 113 decided at 80.5%
+  (111 at 81.1%); learned from its own store as it filled 69.0%, cost 102 (69.5%, 101). Within noise either way.
+- New: `glyphh_kernel.__version__`, `glyphh_postgres.STORE_FORMAT`, this file.
+
+## 3.12.2 — 2026-10-22 — compatible
+
+A Postgres store already made opens with no DDL and no lock, so opening a model no longer waits out every write to
+it. Ada Cloud launched on this release.
+
+## 3.12.1 — 2026-10-21 — compatible
+
+`PostgresStore` indexes each partition's ids itself: looking a precedent up by id no longer scans the whole index.
+
+## 3.12.0 — 2026-10-21 — compatible
+
+The storage interface (`Store`, `SqliteStore`, `glyphh_postgres.PostgresStore`) with shortlisted reads on Postgres;
+on SQLite every answer is the same, guess for guess, on Banking77 and credit. Also: the lexicon setting is each
+model's own; LRU symbol caches; `forget`; `record_many`; `output.ask_below` (asked for by the spec); the lexicon and
+the Postgres store install with the kernel.
+
+## 3.11.0 — 2026-10-20 — compatible
+
+Named outputs: one model answers several questions about one case (`outputs`, `record(outcomes=)`, `grade`,
+`decide_all`). A spec without outputs reads exactly as before.
+
+## 3.10.1 — 2026-10-20 — compatible
+
+`learn` leaves roles that carry sets alone instead of crashing on them.
+
+## 3.10.0 — 2026-10-19 — compatible
+
+A store opened read-only: every read works, every write is refused before the file is touched.
+
+## 3.9.0 — 2026-10-17 — answer-changing
+
+Word evidence: what each word says of each outcome weighs on the vote (`word_evidence`, default 2; Banking77 83.4%
+to 88.0% inside its training set).
+
+## 3.8.0 — 2026-10-17 — answer-changing
+
+The lexicon (WordNet 3.0, Moby) ships with the kernel and every text role reads through it; learned word pairs (off
+by default); a store restated on open when the settings changed what a bag of words carries.
+
+## 3.7.0 — 2026-10-17 — answer-changing
+
+The levers are settings in the spec, changeable live; the learning constants become settings with the same defaults,
+and a change of a learning lever relearns.
+
+## 3.6.0 — 2026-10-17 — answer-changing
+
+Learned word weights; a weighted set.
+
+## 3.5.0 — 2026-10-17 — answer-changing
+
+Learned pairs of roles (interactions); the temperature fitted on cost; a store rewrite.
+
+## 3.4.0 — 2026-10-17 — answer-changing
+
+A subtree that weighs nothing is out of the mean, in the fact tree and the fast path.
+
+## 3.3.0 — 2026-10-17 — answer-changing
+
+A priced `ask` in `decide`; a model learns from its own store and refreshes as cases arrive.
+
+## 3.2.0 — 2026-10-17 — answer-changing
+
+Learned role and value weights, costs and `decide`; exact weighted scores in one pass.
+
+## Before 3.2.0
+
+The Glyphh spec, fact trees and calibrated probability (encoding 3), and the kernel as one file. Not released as
+versions.

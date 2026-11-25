@@ -1,0 +1,174 @@
+# bench/shortlist.py, 2026-10-21: pgvector 0.8.7 on Postgres 17 (Docker, 12 CPUs, 7.6 GB), kernel 3.12.0
+
+## credit and Banking77 (HNSW m 64, ef_construction 400; after the lexicon and leaf caches)
+schema bench_3090c480; pgvector 0.8.7
+credit: 800 precedents, 200 queries
+    S=25             recall 68.20% (min 33%), identical 3.5%, the SQL p50 1.0 ms
+    S=50             recall 85.23% (min 53%), identical 19.0%, the SQL p50 1.3 ms
+    S=50 hamming     recall 85.20% (min 53%), identical 19.0%, the SQL p50 3.5 ms
+    S=100            recall 96.00% (min 73%), identical 64.5%, the SQL p50 2.1 ms
+    S=100 hamming    recall 96.07% (min 73%), identical 64.5%, the SQL p50 3.6 ms
+    S=200            recall 99.63% (min 93%), identical 94.5%, the SQL p50 4.3 ms
+    S=400            recall 100.00% (min 100%), identical 100.0%, the SQL p50 5.8 ms
+    S=100    decide identical 75/200, outcome and ask identical 188/200, largest probability change 0.1068, query top identical 192/200
+    S=200    decide identical 164/200, outcome and ask identical 199/200, largest probability change 0.0495, query top identical 198/200
+    S=400    decide identical 195/200, outcome and ask identical 200/200, largest probability change 0.0267, query top identical 200/200
+    latency exact (load all)       p50 49.9 ms, p99 63.3 ms (n 100)
+    latency S=100                  p50 12.5 ms, p99 14.4 ms (n 100)
+banking77: 10003 recorded in 78.3s (record_many, batches of 1,000), learned in 89.3s
+    S=100    decide identical 491/500, outcome and ask identical 500/500, largest probability change 0.0389, query top identical 500/500
+    S=250    decide identical 500/500, outcome and ask identical 500/500, largest probability change 0.0000, query top identical 500/500
+    S=500    decide identical 500/500, outcome and ask identical 500/500, largest probability change 0.0000, query top identical 500/500
+    S=1000   decide identical 500/500, outcome and ask identical 500/500, largest probability change 0.0000, query top identical 500/500
+    S=2000   decide identical 500/500, outcome and ask identical 500/500, largest probability change 0.0000, query top identical 500/500
+    accuracy on the 500: {'exact': 0.888, 'S=100': 0.888, 'S=250': 0.888, 'S=500': 0.888, 'S=1000': 0.888, 'S=2000': 0.888}
+    S=100            recall 99.93% (min 80%), identical 99.4%, the SQL p50 2.3 ms
+    S=250            recall 100.00% (min 100%), identical 100.0%, the SQL p50 16.7 ms
+    S=500            recall 100.00% (min 100%), identical 100.0%, the SQL p50 18.6 ms
+    S=500 hamming    recall 100.00% (min 100%), identical 100.0%, the SQL p50 18.7 ms
+    S=1000           recall 100.00% (min 100%), identical 100.0%, the SQL p50 22.4 ms
+    S=1000 hamming   recall 100.00% (min 100%), identical 100.0%, the SQL p50 22.4 ms
+    S=2000           recall 100.00% (min 100%), identical 100.0%, the SQL p50 30.5 ms
+    latency exact (load all)       p50 334.3 ms, p99 424.3 ms (n 60)
+    latency S=500                  p50 38.6 ms, p99 88.5 ms (n 60)
+    latency S=1000                 p50 59.9 ms, p99 114.3 ms (n 60)
+
+## the same before the caches (HNSW m 16, ef_construction 64): latency only differs
+    latency exact (load all)       p50 60.2 ms, p99 76.5 ms (n 100)
+    latency S=100                  p50 16.9 ms, p99 19.1 ms (n 100)
+banking77: 10003 recorded in 11.6s (record_many, batches of 1,000), learned in 13.2s
+    latency exact (load all)       p50 1408.3 ms, p99 1565.9 ms (n 60)
+    latency S=500                  p50 99.2 ms, p99 161.4 ms (n 60)
+    latency S=1000                 p50 172.6 ms, p99 227.2 ms (n 60)
+
+## synthetic, HNSW m 16, ef_construction 64 (pgvector's defaults)
+schema bench_b875e4bb; pgvector 0.8.7
+synthetic 5000: 5000 recorded in 2s (2734/s, 8 workers), HNSW built in 1s, partition 10 MB of which index 4 MB
+  full queries:
+    S=250            recall 100.00% (min 100%), identical 100.0%, the SQL p50 10.8 ms
+    S=500            recall 100.00% (min 100%), identical 100.0%, the SQL p50 12.5 ms
+    S=1000           recall 100.00% (min 100%), identical 100.0%, the SQL p50 15.8 ms
+    S=2000           recall 100.00% (min 100%), identical 100.0%, the SQL p50 22.6 ms
+  partial queries:
+    S=250            recall 99.97% (min 93%), identical 99.5%, the SQL p50 10.7 ms
+    S=500            recall 100.00% (min 100%), identical 100.0%, the SQL p50 12.3 ms
+    S=1000           recall 100.00% (min 100%), identical 100.0%, the SQL p50 15.6 ms
+    S=2000           recall 100.00% (min 100%), identical 100.0%, the SQL p50 22.7 ms
+    latency exact (load all)       p50 280.1 ms, p99 311.2 ms (n 30)
+    latency S=500                  p50 53.6 ms, p99 98.0 ms (n 30)
+    latency S=1000                 p50 87.1 ms, p99 109.2 ms (n 30)
+    latency S=2000                 p50 140.6 ms, p99 171.7 ms (n 30)
+synthetic 20000: 20000 recorded in 3s (5835/s, 8 workers), HNSW built in 1s, partition 39 MB of which index 16 MB
+  full queries:
+    S=250            recall 100.00% (min 100%), identical 100.0%, the SQL p50 3.6 ms
+    S=500            recall 100.00% (min 100%), identical 100.0%, the SQL p50 6.3 ms
+    S=1000           recall 100.00% (min 100%), identical 100.0%, the SQL p50 12.1 ms
+    S=2000           recall 100.00% (min 100%), identical 100.0%, the SQL p50 58.0 ms
+  partial queries:
+    S=250            recall 78.80% (min 53%), identical 3.0%, the SQL p50 4.5 ms
+    S=500            recall 90.17% (min 67%), identical 22.0%, the SQL p50 8.2 ms
+    S=1000           recall 95.77% (min 67%), identical 49.5%, the SQL p50 15.2 ms
+    S=2000           recall 100.00% (min 100%), identical 100.0%, the SQL p50 57.8 ms
+    latency exact (load all)       p50 3039.3 ms, p99 3187.8 ms (n 30)
+    latency S=500                  p50 65.2 ms, p99 110.3 ms (n 30)
+    latency S=1000                 p50 110.1 ms, p99 145.1 ms (n 30)
+    latency S=2000                 p50 242.0 ms, p99 300.9 ms (n 30)
+synthetic 50000: 50000 recorded in 7s (7065/s, 8 workers), HNSW built in 1s, partition 98 MB of which index 40 MB
+  full queries:
+    S=250            recall 99.90% (min 93%), identical 98.5%, the SQL p50 3.6 ms
+    S=500            recall 99.97% (min 93%), identical 99.5%, the SQL p50 8.1 ms
+    S=1000           recall 100.00% (min 100%), identical 100.0%, the SQL p50 14.7 ms
+    S=2000           recall 100.00% (min 100%), identical 100.0%, the SQL p50 29.2 ms
+  partial queries:
+    S=250            recall 40.57% (min 13%), identical 0.0%, the SQL p50 5.2 ms
+    S=500            recall 57.73% (min 20%), identical 0.0%, the SQL p50 9.8 ms
+    S=1000           recall 74.93% (min 40%), identical 1.5%, the SQL p50 18.5 ms
+    S=2000           recall 79.07% (min 40%), identical 3.5%, the SQL p50 33.5 ms
+    latency exact (load all)       p50 12909.7 ms, p99 13416.3 ms (n 30)
+    latency S=500                  p50 142.8 ms, p99 359.3 ms (n 30)
+    latency S=1000                 p50 204.9 ms, p99 264.9 ms (n 30)
+    latency S=2000                 p50 394.6 ms, p99 504.3 ms (n 30)
+synthetic 100000: 100000 recorded in 13s (7740/s, 8 workers), HNSW built in 3s, partition 196 MB of which index 79 MB
+  full queries:
+    S=250            recall 97.33% (min 80%), identical 69.5%, the SQL p50 4.1 ms
+    S=500            recall 99.93% (min 93%), identical 99.0%, the SQL p50 7.7 ms
+    S=1000           recall 99.97% (min 93%), identical 99.5%, the SQL p50 17.0 ms
+    S=1000 hamming   recall 100.00% (min 100%), identical 100.0%, the SQL p50 78.8 ms
+    S=2000           recall 100.00% (min 100%), identical 100.0%, the SQL p50 30.5 ms
+  partial queries:
+    S=250            recall 20.57% (min 0%), identical 0.0%, the SQL p50 5.7 ms
+    S=500            recall 33.63% (min 7%), identical 0.0%, the SQL p50 10.8 ms
+    S=1000           recall 49.83% (min 13%), identical 0.0%, the SQL p50 20.4 ms
+    S=1000 hamming   recall 99.60% (min 93%), identical 94.0%, the SQL p50 77.7 ms
+    S=2000           recall 51.23% (min 20%), identical 0.0%, the SQL p50 32.8 ms
+    latency S=500                  p50 149.1 ms, p99 178.8 ms (n 100)
+    latency S=1000                 p50 249.8 ms, p99 294.4 ms (n 100)
+    latency S=2000                 p50 449.2 ms, p99 531.4 ms (n 100)
+synthetic 1000000: 1000000 recorded in 150s (6677/s, 8 workers), HNSW built in 65s, partition 1976 MB of which index 794 MB
+  full queries:
+    S=250            recall 79.37% (min 0%), identical 6.0%, the SQL p50 22.5 ms
+    S=500            recall 88.73% (min 0%), identical 24.5%, the SQL p50 22.0 ms
+    S=1000           recall 95.73% (min 0%), identical 59.5%, the SQL p50 29.0 ms
+    S=1000 hamming   recall 97.20% (min 87%), identical 68.0%, the SQL p50 704.8 ms
+    S=2000           recall 98.50% (min 73%), identical 80.0%, the SQL p50 52.6 ms
+  partial queries:
+    S=250            recall 3.07% (min 0%), identical 0.0%, the SQL p50 19.1 ms
+    S=500            recall 4.77% (min 0%), identical 0.0%, the SQL p50 22.0 ms
+    S=1000           recall 8.50% (min 0%), identical 0.0%, the SQL p50 35.5 ms
+    S=1000 hamming   recall 81.20% (min 53%), identical 2.0%, the SQL p50 713.7 ms
+    S=2000           recall 11.40% (min 0%), identical 0.0%, the SQL p50 55.3 ms
+    latency S=500                  p50 170.2 ms, p99 302.4 ms (n 100)
+    latency S=1000                 p50 300.7 ms, p99 396.6 ms (n 100)
+    latency S=2000                 p50 568.7 ms, p99 676.8 ms (n 100)
+
+## partial queries at 100k by the index's graph (60 queries, S 1,000)
+m 16 ef_construction 64: built in 3s
+  iterative_scan off:
+    S=1000           recall 49.33% (min 20%), identical 0.0%, the SQL p50 22.2 ms
+  iterative_scan strict_order:
+    S=1000           recall 49.33% (min 20%), identical 0.0%, the SQL p50 23.0 ms
+m 32 ef_construction 200: built in 11s
+  iterative_scan off:
+    S=1000           recall 88.56% (min 67%), identical 15.0%, the SQL p50 31.8 ms
+  iterative_scan strict_order:
+    S=1000           recall 88.56% (min 67%), identical 15.0%, the SQL p50 35.2 ms
+m 64 ef_construction 400: built in 39s
+  iterative_scan off:
+    S=1000           recall 99.67% (min 93%), identical 95.0%, the SQL p50 84.0 ms
+  iterative_scan strict_order:
+    S=1000           recall 99.78% (min 93%), identical 96.7%, the SQL p50 83.9 ms
+
+## synthetic, HNSW m 64, ef_construction 400 (the store's defaults)
+schema bench_734942a1; pgvector 0.8.7
+synthetic 100000: 100000 recorded in 13s (7807/s, 8 workers), HNSW built in 40s, partition 273 MB of which index 156 MB
+  full queries:
+    S=250            recall 97.30% (min 80%), identical 68.5%, the SQL p50 5.3 ms
+    S=500            recall 100.00% (min 100%), identical 100.0%, the SQL p50 10.9 ms
+    S=1000           recall 100.00% (min 100%), identical 100.0%, the SQL p50 77.5 ms
+    S=1000 hamming   recall 100.00% (min 100%), identical 100.0%, the SQL p50 77.6 ms
+    S=2000           recall 100.00% (min 100%), identical 100.0%, the SQL p50 91.4 ms
+  partial queries:
+    S=250            recall 78.27% (min 40%), identical 4.0%, the SQL p50 16.1 ms
+    S=500            recall 93.83% (min 67%), identical 34.0%, the SQL p50 28.5 ms
+    S=1000           recall 99.53% (min 93%), identical 91.5%, the SQL p50 77.5 ms
+    S=1000 hamming   recall 99.73% (min 93%), identical 96.0%, the SQL p50 77.4 ms
+    S=2000           recall 99.97% (min 93%), identical 99.0%, the SQL p50 91.7 ms
+    latency S=500                  p50 153.3 ms, p99 181.6 ms (n 100)
+    latency S=1000                 p50 304.1 ms, p99 350.0 ms (n 100)
+    latency S=2000                 p50 507.0 ms, p99 576.0 ms (n 100)
+synthetic 1000000: 1000000 recorded in 128s (7808/s, 8 workers), HNSW built in 1168s, partition 2744 MB of which index 1563 MB
+  full queries:
+    S=250            recall 81.80% (min 33%), identical 7.0%, the SQL p50 30.6 ms
+    S=500            recall 91.47% (min 67%), identical 31.0%, the SQL p50 26.5 ms
+    S=1000           recall 97.60% (min 80%), identical 71.0%, the SQL p50 33.2 ms
+    S=1000 hamming   recall 97.33% (min 87%), identical 68.0%, the SQL p50 696.2 ms
+    S=2000           recall 99.70% (min 93%), identical 95.5%, the SQL p50 46.1 ms
+  partial queries:
+    S=250            recall 12.20% (min 0%), identical 0.0%, the SQL p50 54.4 ms
+    S=500            recall 20.03% (min 0%), identical 0.0%, the SQL p50 86.9 ms
+    S=1000           recall 32.77% (min 7%), identical 0.0%, the SQL p50 156.2 ms
+    S=1000 hamming   recall 80.80% (min 47%), identical 2.0%, the SQL p50 686.2 ms
+    S=2000           recall 33.43% (min 7%), identical 0.0%, the SQL p50 168.1 ms
+    latency S=500                  p50 168.3 ms, p99 196.5 ms (n 100)
+    latency S=1000                 p50 283.9 ms, p99 315.3 ms (n 100)
+    latency S=2000                 p50 513.4 ms, p99 544.2 ms (n 100)

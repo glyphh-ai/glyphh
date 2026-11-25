@@ -1,0 +1,79 @@
+{
+  "question": "How much of this application was generated?",
+  "outcomes": ["some", "mostly", "fully"],
+  "seed": "generated",
+  "learn": true,
+  "case": {
+    "letter": {"s": {"letter_stock": "$item.writing.letter.stock", "letter_burst": "$item.writing.letter.burst",
+                     "letter_sentence": "$item.writing.letter.sentence",
+                     "letter_contractions": "$item.writing.letter.contractions",
+                     "letter_exclaims": "$item.writing.letter.exclaims", "letter_slips": "$item.writing.letter.slips",
+                     "letter_first": "$item.writing.letter.first", "letter_dashes": "$item.writing.letter.dashes",
+                     "letter_specifics": "$item.writing.letter.specifics"}},
+    "resume": {"s": {"resume_stock": "$item.writing.resume.stock", "resume_burst": "$item.writing.resume.burst",
+                     "resume_sentence": "$item.writing.resume.sentence",
+                     "resume_contractions": "$item.writing.resume.contractions",
+                     "resume_exclaims": "$item.writing.resume.exclaims", "resume_slips": "$item.writing.resume.slips",
+                     "resume_first": "$item.writing.resume.first", "resume_dashes": "$item.writing.resume.dashes",
+                     "resume_specifics": "$item.writing.resume.specifics"}},
+    "email": {"s": {"email_stock": "$item.writing.email.stock", "email_burst": "$item.writing.email.burst",
+                    "email_sentence": "$item.writing.email.sentence",
+                    "email_contractions": "$item.writing.email.contractions",
+                    "email_exclaims": "$item.writing.email.exclaims", "email_slips": "$item.writing.email.slips",
+                    "email_first": "$item.writing.email.first", "email_dashes": "$item.writing.email.dashes"}},
+    "apart": {"s": {"apart_stock": "$item.writing.apart.stock", "apart_burst": "$item.writing.apart.burst",
+                    "apart_contractions": "$item.writing.apart.contractions",
+                    "apart_slips": "$item.writing.apart.slips", "apart_sentence": "$item.writing.apart.sentence"}},
+    "whole": {"s": {"tells": "$item.signals.tells", "specifics": "$item.signals.specifics_per_k", "id": "$item.id"}}
+  },
+  "spec": {
+    "name": "made",
+    "layers": [
+      {"name": "letter", "similarity_weight": 1.0, "segments": [{"name": "s", "roles": [
+        {"name": "letter_stock", "numeric_config": {"min_value": 0, "max_value": 80, "bin_width": 4}},
+        {"name": "letter_burst", "numeric_config": {"min_value": 0, "max_value": 100, "bin_width": 10}},
+        {"name": "letter_sentence", "numeric_config": {"min_value": 0, "max_value": 60, "bin_width": 3}},
+        {"name": "letter_contractions", "numeric_config": {"min_value": 0, "max_value": 80, "bin_width": 4}},
+        {"name": "letter_exclaims", "numeric_config": {"min_value": 0, "max_value": 40, "bin_width": 2}},
+        {"name": "letter_slips", "numeric_config": {"min_value": 0, "max_value": 80, "bin_width": 4}},
+        {"name": "letter_first", "numeric_config": {"min_value": 0, "max_value": 120, "bin_width": 10}},
+        {"name": "letter_dashes", "numeric_config": {"min_value": 0, "max_value": 20, "bin_width": 1}},
+        {"name": "letter_specifics", "numeric_config": {"min_value": 0, "max_value": 100, "bin_width": 5}}
+      ]}]},
+      {"name": "resume", "similarity_weight": 1.0, "segments": [{"name": "s", "roles": [
+        {"name": "resume_stock", "numeric_config": {"min_value": 0, "max_value": 80, "bin_width": 4}},
+        {"name": "resume_burst", "numeric_config": {"min_value": 0, "max_value": 100, "bin_width": 10}},
+        {"name": "resume_sentence", "numeric_config": {"min_value": 0, "max_value": 60, "bin_width": 3}},
+        {"name": "resume_contractions", "numeric_config": {"min_value": 0, "max_value": 80, "bin_width": 4}},
+        {"name": "resume_exclaims", "numeric_config": {"min_value": 0, "max_value": 40, "bin_width": 2}},
+        {"name": "resume_slips", "numeric_config": {"min_value": 0, "max_value": 80, "bin_width": 4}},
+        {"name": "resume_first", "numeric_config": {"min_value": 0, "max_value": 120, "bin_width": 10}},
+        {"name": "resume_dashes", "numeric_config": {"min_value": 0, "max_value": 20, "bin_width": 1}},
+        {"name": "resume_specifics", "numeric_config": {"min_value": 0, "max_value": 100, "bin_width": 5}}
+      ]}]},
+      {"name": "email", "similarity_weight": 0.6, "segments": [{"name": "s", "roles": [
+        {"name": "email_stock", "numeric_config": {"min_value": 0, "max_value": 80, "bin_width": 4}},
+        {"name": "email_burst", "numeric_config": {"min_value": 0, "max_value": 100, "bin_width": 10}},
+        {"name": "email_sentence", "numeric_config": {"min_value": 0, "max_value": 60, "bin_width": 3}},
+        {"name": "email_contractions", "numeric_config": {"min_value": 0, "max_value": 80, "bin_width": 4}},
+        {"name": "email_exclaims", "numeric_config": {"min_value": 0, "max_value": 40, "bin_width": 2}},
+        {"name": "email_slips", "numeric_config": {"min_value": 0, "max_value": 80, "bin_width": 4}},
+        {"name": "email_first", "numeric_config": {"min_value": 0, "max_value": 120, "bin_width": 10}},
+        {"name": "email_dashes", "numeric_config": {"min_value": 0, "max_value": 20, "bin_width": 1}}
+      ]}]},
+      {"name": "apart", "similarity_weight": 1.0, "segments": [{"name": "s", "roles": [
+        {"name": "apart_stock", "numeric_config": {"min_value": 0, "max_value": 80, "bin_width": 4}},
+        {"name": "apart_burst", "numeric_config": {"min_value": 0, "max_value": 100, "bin_width": 10}},
+        {"name": "apart_contractions", "numeric_config": {"min_value": 0, "max_value": 80, "bin_width": 4}},
+        {"name": "apart_slips", "numeric_config": {"min_value": 0, "max_value": 80, "bin_width": 4}},
+        {"name": "apart_sentence", "numeric_config": {"min_value": 0, "max_value": 60, "bin_width": 3}}
+      ]}]},
+      {"name": "whole", "similarity_weight": 0.5, "segments": [{"name": "s", "roles": [
+        {"name": "tells"},
+        {"name": "specifics", "numeric_config": {"min_value": 0, "max_value": 100, "bin_width": 5}},
+        {"name": "id", "key_part": true, "similarity_weight": 0}
+      ]}]}
+    ],
+    "output": {"ask_below": 0.55}
+  }
+}

@@ -1,0 +1,15 @@
+
+## 1. Field decode accuracy from the glyph alone (vocab=200 words, 12 candidate roles)
+content_roles | envelope | from/to/act field acc | all 3 right | content exact | content recall | false content roles
+            1 |    plain | 1.000 | 1.000 | 1.000 | 1.000 | 0.00/msg
+            1 |    links | 1.000 | 1.000 | 1.000 | 1.000 | 0.00/msg
+            2 |    plain | 1.000 | 1.000 | 1.000 | 1.000 | 0.00/msg
+            2 |    links | 1.000 | 1.000 | 1.000 | 1.000 | 0.00/msg
+            3 |    plain | 1.000 | 1.000 | 1.000 | 1.000 | 0.00/msg
+            3 |    links | 1.000 | 1.000 | 1.000 | 1.000 | 0.00/msg
+            4 |    plain | 1.000 | 1.000 | 1.000 | 1.000 | 0.00/msg
+            4 |    links | 1.000 | 1.000 | 0.907 | 0.977 | 0.00/msg
+            6 |    plain | 1.000 | 1.000 | 0.887 | 0.980 | 0.00/msg
+            6 |    links | 1.000 | 1.000 | 0.120 | 0.744 | 0.00/msg
+            8 |    plain | 1.000 | 1.000 | 0.307 | 0.859 | 0.00/msg
+            8 |    links | 1.000 | 1.000 | 0.000 | 0.466 | 0.00/msg

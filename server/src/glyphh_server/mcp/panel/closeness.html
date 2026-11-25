@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Real or fake</title>
+<style>
+:root{color-scheme:light dark}
+body{margin:0;padding:16px;background:transparent;color:var(--color-text-primary,CanvasText);
+  font-family:var(--font-sans,system-ui,sans-serif);font-size:var(--font-text-md-size,14px);line-height:var(--font-text-md-line-height,1.45)}
+h1{margin:0 0 10px;font-size:var(--font-heading-sm-size,16px);font-weight:var(--font-weight-semibold,600)}
+h2{margin:0;font-size:var(--font-text-sm-size,12px);font-weight:var(--font-weight-semibold,600);
+  color:var(--color-text-secondary,GrayText);text-transform:uppercase;letter-spacing:.06em}
+.sub{color:var(--color-text-secondary,GrayText);font-size:var(--font-text-sm-size,12px)}
+.box{border:var(--border-width-regular,1px) solid var(--color-border-primary,rgba(128,128,128,.35));
+  border-radius:var(--border-radius-lg,12px);padding:12px 14px;display:flex;flex-direction:column;gap:10px;margin-bottom:10px}
+.head{display:flex;gap:8px;align-items:baseline;justify-content:space-between;flex-wrap:wrap}
+.reads{font-size:var(--font-heading-md-size,20px);font-weight:var(--font-weight-semibold,600)}
+.sides{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.side{display:flex;flex-direction:column;gap:4px;min-width:0}
+.num{font-size:var(--font-heading-md-size,20px);font-weight:var(--font-weight-semibold,600);font-variant-numeric:tabular-nums}
+.track{height:6px;border-radius:3px;background:var(--color-background-secondary,rgba(128,128,128,.18));overflow:hidden}
+.fill{height:100%;background:var(--color-text-primary,CanvasText)}
+ul{margin:0;padding-left:18px;font-size:var(--font-text-sm-size,12px);color:var(--color-text-secondary,GrayText)}
+li{overflow-wrap:anywhere}
+.chip{font-size:var(--font-text-sm-size,12px);padding:1px 8px;border-radius:999px;white-space:nowrap;
+  border:var(--border-width-regular,1px) solid var(--color-border-primary,rgba(128,128,128,.35))}
+.ask{border-color:var(--color-border-warning,#c98a00);color:var(--color-text-warning,inherit)}
+details{font-size:var(--font-text-sm-size,12px)} details details{margin-left:14px}
+summary{cursor:pointer;display:flex;gap:8px;justify-content:space-between;align-items:baseline}
+summary .key{font-family:var(--font-mono,ui-monospace,monospace)} summary .meta{color:var(--color-text-secondary,GrayText);white-space:nowrap}
+.leaf{margin:2px 0 6px 14px;color:var(--color-text-secondary,GrayText);overflow-wrap:anywhere}
+.bad{color:var(--color-text-danger,inherit)} .empty{color:var(--color-text-secondary,GrayText)} [hidden]{display:none!important}
+.note{font-size:var(--font-text-sm-size,12px);color:var(--color-text-secondary,GrayText);margin:0}
+</style></head>
+<body>
+<h1>Real or fake</h1>
+<p class="empty" id="waiting">Waiting for the check.</p>
+<div id="card"></div>
+<p class="note" id="note" hidden>How alike the words are to what your model holds, on Ada's scale from 0 (nothing shared) to 1 (the same). It is not proof that anyone is real or fake.</p>
+<p class="bad" id="error" hidden></p>
+<script type="module">__APP_JS__</script>
+<script type="module">
+// The Resume Screener's simple check, from screener_closeness (the plugin's check.py worked it out): for the resume,
+// and for the cover letter apart, how alike the nearest fake and the nearest real one are, with the nearest few; then
+// Ada's own decision, its confidence, and Ada's fact tree for it, drawn as Ada gave it: each key with its weight and
+// how alike this application and the precedent are there, and at a leaf what each of them had.
+const $ = (id) => document.getElementById(id);
+const app = new window.McpApp({ name: "glyphh-closeness", version: "1" }, {}, { autoResize: true });
+
+function theme(ctx) {
+  if (!ctx) return;
+  const root = document.documentElement;
+  for (const [k, v] of Object.entries(ctx.styles?.variables || {})) if (v) root.style.setProperty(k, v);
+  if (ctx.theme) root.style.colorScheme = ctx.theme;
+  const fonts = ctx.styles?.css?.fonts;
+  if (fonts && !$("host-fonts")) { const s = document.createElement("style"); s.id = "host-fonts"; s.textContent = fonts; document.head.append(s); }
+}
+
+function failed(message) { $("error").textContent = message; $("error").hidden = !message; }
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+const pct = (p) => `${Math.round(100 * (p || 0))}%`;
+const two = (n) => (n == null ? "none held" : n.toFixed(2));
+const said = (v) => (v == null ? "nothing" : Array.isArray(v) ? v.join(" ") : String(v));
+
+function side(title, s) {
+  const box = el("div", "side");
+  box.append(el("h2", "", title), el("div", "num", two(s.closeness)));
+  const track = el("div", "track"); const fill = el("div", "fill"); fill.style.width = pct(s.closeness); track.append(fill);
+  const list = el("ul");
+  for (const n of s.nearest || []) list.append(el("li", "", `${two(n.closeness)} · ${n.like}`));
+  box.append(track, list);
+  return box;
+}
+
+function part(title, p) {
+  const box = el("div", "box");
+  const head = el("div", "head");
+  head.append(el("h2", "", title), el("span", "reads", p.reads));
+  const sides = el("div", "sides");
+  sides.append(side("Closest fake", p.fake), side("Closest real", p.real));
+  box.append(head, sides);
+  return box;
+}
+
+// One node of Ada's fact tree: its key, its weight and how alike the two are there; a leaf says what each had.
+function node(f, depth) {
+  const box = el("details"); box.open = depth < 2;
+  const head = el("summary");
+  const meta = f.status && f.status !== "both" ? (f.status === "query_only" ? "only this application has it" : "only the precedent has it") : `${pct(f.score)} alike`;
+  head.append(el("span", "key", f.key || "the whole application"), el("span", "meta", `${meta} · weight ${Number(f.weight ?? 0).toFixed(2)}`));
+  box.append(head);
+  const kids = f.children || [];
+  for (const k of kids) box.append(node(k, depth + 1));
+  if (!kids.length) box.append(el("div", "leaf", `this application: ${said(f.query)}`), el("div", "leaf", `the precedent: ${said(f.record)}`));
+  return box;
+}
+
+function decision(d) {
+  const box = el("div", "box");
+  const head = el("div", "head");
+  head.append(el("h2", "", `Ada's decision on the ${d.on || "resume"}`));
+  const chips = el("div", "head");
+  chips.append(el("span", "chip", d.outcome ? `${d.outcome}${d.confidence != null ? ` · ${pct(d.confidence)}` : ""}` : "no answer"));
+  if (d.ask) chips.append(el("span", "chip ask", "Ada would ask a person first"));
+  head.append(chips);
+  box.append(head);
+  for (const f of d.facts || []) {
+    if (!f?.tree) continue;
+    box.append(el("p", "note", `Fact tree against the nearest precedent (${f.outcome ?? "no outcome"}, ${f.id ?? ""}):`), node(f.tree, 0));
+  }
+  return box;
+}
+
+function show(a) {
+  $("waiting").hidden = true; $("note").hidden = false;
+  const parts = [];
+  if (a.resume) parts.push(part("The resume", a.resume));
+  if (a.letter) parts.push(part("The cover letter", a.letter));
+  if (a.decision) parts.push(decision(a.decision));
+  if (!a.resume && !a.letter) parts.push(el("p", "empty", a.reads || "There was nothing to read."));
+  if (a.note) parts.push(el("p", "note", a.note));
+  $("card").replaceChildren(...parts);
+}
+
+app.ontoolresult = (result) => {
+  if (result?.isError) { failed(result.structuredContent?.error?.message || result.content?.[0]?.text || "The check could not be shown."); $("waiting").hidden = true; return; }
+  if (result?.structuredContent) show(result.structuredContent);
+};
+app.onhostcontextchanged = theme;
+app.connect().then(() => theme(app.getHostContext())).catch((e) => failed("The card could not connect: " + (e?.message || e)));
+</script>
+</body></html>

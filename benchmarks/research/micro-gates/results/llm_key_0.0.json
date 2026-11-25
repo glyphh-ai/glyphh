@@ -1,0 +1,792 @@
+{
+ "1": {
+  "length": 3,
+  "start": "neg",
+  "actions": [
+   "tir",
+   "miv",
+   "tir"
+  ],
+  "end": "vez"
+ },
+ "2": {
+  "length": 8,
+  "start": "tav",
+  "actions": [
+   "rir",
+   "gak",
+   "lis",
+   "lis",
+   "tir",
+   "gak",
+   "gak",
+   "gak"
+  ],
+  "end": "vez"
+ },
+ "3": {
+  "length": 16,
+  "start": "tor",
+  "actions": [
+   "miv",
+   "gak",
+   "rir",
+   "gak",
+   "rir",
+   "tir",
+   "tir",
+   "miv",
+   "rir",
+   "miv",
+   "rir",
+   "gak",
+   "tir",
+   "miv",
+   "mun",
+   "gak"
+  ],
+  "end": "dop"
+ },
+ "4": {
+  "length": 16,
+  "start": "dop",
+  "actions": [
+   "gak",
+   "gak",
+   "tir",
+   "rir",
+   "tir",
+   "rir",
+   "tir",
+   "miv",
+   "miv",
+   "mun",
+   "rir",
+   "tir",
+   "rir",
+   "rir",
+   "miv",
+   "lis"
+  ],
+  "end": "tor"
+ },
+ "5": {
+  "length": 8,
+  "start": "tar",
+  "actions": [
+   "lis",
+   "mun",
+   "gak",
+   "tir",
+   "gak",
+   "mun",
+   "gak",
+   "miv"
+  ],
+  "end": "tor"
+ },
+ "6": {
+  "length": 12,
+  "start": "tor",
+  "actions": [
+   "tir",
+   "miv",
+   "tir",
+   "lis",
+   "tir",
+   "miv",
+   "rir",
+   "gak",
+   "mun",
+   "tir",
+   "tir",
+   "miv"
+  ],
+  "end": "tav"
+ },
+ "7": {
+  "length": 16,
+  "start": "tor",
+  "actions": [
+   "tir",
+   "lis",
+   "miv",
+   "gak",
+   "miv",
+   "mun",
+   "miv",
+   "miv",
+   "mun",
+   "gak",
+   "gak",
+   "lis",
+   "miv",
+   "tir",
+   "gak",
+   "mun"
+  ],
+  "end": "bup"
+ },
+ "8": {
+  "length": 16,
+  "start": "tar",
+  "actions": [
+   "mun",
+   "miv",
+   "tir",
+   "lis",
+   "miv",
+   "miv",
+   "tir",
+   "tir",
+   "gak",
+   "tir",
+   "tir",
+   "lis",
+   "miv",
+   "miv",
+   "miv",
+   "gak"
+  ],
+  "end": "tar"
+ },
+ "9": {
+  "length": 12,
+  "start": "gor",
+  "actions": [
+   "mun",
+   "tir",
+   "miv",
+   "lis",
+   "tir",
+   "lis",
+   "miv",
+   "lis",
+   "rir",
+   "lis",
+   "gak",
+   "lis"
+  ],
+  "end": "neg"
+ },
+ "10": {
+  "length": 5,
+  "start": "bup",
+  "actions": [
+   "tir",
+   "miv",
+   "lis",
+   "rir",
+   "rir"
+  ],
+  "end": "gor"
+ },
+ "11": {
+  "length": 8,
+  "start": "dop",
+  "actions": [
+   "gak",
+   "gak",
+   "tir",
+   "mun",
+   "miv",
+   "rir",
+   "gak",
+   "tir"
+  ],
+  "end": "dop"
+ },
+ "12": {
+  "length": 5,
+  "start": "tor",
+  "actions": [
+   "rir",
+   "tir",
+   "rir",
+   "tir",
+   "gak"
+  ],
+  "end": "bup"
+ },
+ "13": {
+  "length": 5,
+  "start": "tav",
+  "actions": [
+   "gak",
+   "gak",
+   "tir",
+   "tir",
+   "gak"
+  ],
+  "end": "gor"
+ },
+ "14": {
+  "length": 16,
+  "start": "dut",
+  "actions": [
+   "mun",
+   "mun",
+   "tir",
+   "miv",
+   "miv",
+   "gak",
+   "mun",
+   "rir",
+   "mun",
+   "gak",
+   "lis",
+   "rir",
+   "lis",
+   "rir",
+   "mun",
+   "rir"
+  ],
+  "end": "dut"
+ },
+ "15": {
+  "length": 5,
+  "start": "tor",
+  "actions": [
+   "tir",
+   "lis",
+   "rir",
+   "rir",
+   "tir"
+  ],
+  "end": "gor"
+ },
+ "16": {
+  "length": 3,
+  "start": "dop",
+  "actions": [
+   "miv",
+   "miv",
+   "tir"
+  ],
+  "end": "bup"
+ },
+ "17": {
+  "length": 5,
+  "start": "pep",
+  "actions": [
+   "tir",
+   "gak",
+   "miv",
+   "mun",
+   "mun"
+  ],
+  "end": "bup"
+ },
+ "18": {
+  "length": 8,
+  "start": "tav",
+  "actions": [
+   "gak",
+   "tir",
+   "tir",
+   "mun",
+   "lis",
+   "miv",
+   "mun",
+   "mun"
+  ],
+  "end": "neg"
+ },
+ "19": {
+  "length": 12,
+  "start": "tor",
+  "actions": [
+   "miv",
+   "miv",
+   "rir",
+   "mun",
+   "rir",
+   "mun",
+   "tir",
+   "miv",
+   "miv",
+   "mun",
+   "miv",
+   "lis"
+  ],
+  "end": "dut"
+ },
+ "20": {
+  "length": 12,
+  "start": "vez",
+  "actions": [
+   "tir",
+   "miv",
+   "gak",
+   "lis",
+   "gak",
+   "tir",
+   "gak",
+   "miv",
+   "miv",
+   "miv",
+   "lis",
+   "miv"
+  ],
+  "end": "tar"
+ },
+ "21": {
+  "length": 12,
+  "start": "tar",
+  "actions": [
+   "mun",
+   "rir",
+   "rir",
+   "gak",
+   "lis",
+   "tir",
+   "lis",
+   "lis",
+   "miv",
+   "mun",
+   "tir",
+   "rir"
+  ],
+  "end": "vez"
+ },
+ "22": {
+  "length": 16,
+  "start": "gor",
+  "actions": [
+   "lis",
+   "mun",
+   "tir",
+   "lis",
+   "lis",
+   "rir",
+   "miv",
+   "miv",
+   "tir",
+   "mun",
+   "miv",
+   "miv",
+   "rir",
+   "rir",
+   "tir",
+   "rir"
+  ],
+  "end": "dut"
+ },
+ "23": {
+  "length": 3,
+  "start": "tar",
+  "actions": [
+   "mun",
+   "miv",
+   "miv"
+  ],
+  "end": "pep"
+ },
+ "24": {
+  "length": 12,
+  "start": "neg",
+  "actions": [
+   "tir",
+   "tir",
+   "tir",
+   "gak",
+   "tir",
+   "mun",
+   "tir",
+   "mun",
+   "lis",
+   "lis",
+   "rir",
+   "miv"
+  ],
+  "end": "tav"
+ },
+ "25": {
+  "length": 12,
+  "start": "pep",
+  "actions": [
+   "lis",
+   "rir",
+   "rir",
+   "rir",
+   "miv",
+   "gak",
+   "miv",
+   "rir",
+   "mun",
+   "lis",
+   "gak",
+   "mun"
+  ],
+  "end": "bup"
+ },
+ "26": {
+  "length": 3,
+  "start": "tor",
+  "actions": [
+   "mun",
+   "gak",
+   "miv"
+  ],
+  "end": "tav"
+ },
+ "27": {
+  "length": 3,
+  "start": "bup",
+  "actions": [
+   "lis",
+   "gak",
+   "miv"
+  ],
+  "end": "neg"
+ },
+ "28": {
+  "length": 8,
+  "start": "tor",
+  "actions": [
+   "miv",
+   "gak",
+   "rir",
+   "mun",
+   "rir",
+   "miv",
+   "rir",
+   "lis"
+  ],
+  "end": "vez"
+ },
+ "29": {
+  "length": 16,
+  "start": "tor",
+  "actions": [
+   "tir",
+   "rir",
+   "tir",
+   "tir",
+   "gak",
+   "gak",
+   "tir",
+   "rir",
+   "mun",
+   "miv",
+   "mun",
+   "gak",
+   "lis",
+   "miv",
+   "lis",
+   "gak"
+  ],
+  "end": "dop"
+ },
+ "30": {
+  "length": 8,
+  "start": "gor",
+  "actions": [
+   "miv",
+   "rir",
+   "rir",
+   "mun",
+   "miv",
+   "rir",
+   "rir",
+   "rir"
+  ],
+  "end": "bup"
+ },
+ "31": {
+  "length": 5,
+  "start": "tor",
+  "actions": [
+   "lis",
+   "mun",
+   "tir",
+   "tir",
+   "gak"
+  ],
+  "end": "dut"
+ },
+ "32": {
+  "length": 16,
+  "start": "dut",
+  "actions": [
+   "miv",
+   "rir",
+   "tir",
+   "miv",
+   "mun",
+   "lis",
+   "gak",
+   "tir",
+   "lis",
+   "mun",
+   "rir",
+   "gak",
+   "lis",
+   "tir",
+   "rir",
+   "rir"
+  ],
+  "end": "tar"
+ },
+ "33": {
+  "length": 8,
+  "start": "neg",
+  "actions": [
+   "miv",
+   "gak",
+   "lis",
+   "lis",
+   "mun",
+   "tir",
+   "gak",
+   "gak"
+  ],
+  "end": "vez"
+ },
+ "34": {
+  "length": 12,
+  "start": "bup",
+  "actions": [
+   "miv",
+   "rir",
+   "tir",
+   "miv",
+   "gak",
+   "rir",
+   "mun",
+   "rir",
+   "rir",
+   "rir",
+   "gak",
+   "miv"
+  ],
+  "end": "tav"
+ },
+ "35": {
+  "length": 12,
+  "start": "tar",
+  "actions": [
+   "miv",
+   "rir",
+   "tir",
+   "lis",
+   "mun",
+   "tir",
+   "rir",
+   "rir",
+   "gak",
+   "rir",
+   "lis",
+   "rir"
+  ],
+  "end": "dop"
+ },
+ "36": {
+  "length": 8,
+  "start": "gor",
+  "actions": [
+   "lis",
+   "miv",
+   "gak",
+   "tir",
+   "lis",
+   "gak",
+   "gak",
+   "lis"
+  ],
+  "end": "bup"
+ },
+ "37": {
+  "length": 3,
+  "start": "gor",
+  "actions": [
+   "rir",
+   "lis",
+   "rir"
+  ],
+  "end": "dop"
+ },
+ "38": {
+  "length": 16,
+  "start": "vez",
+  "actions": [
+   "miv",
+   "tir",
+   "rir",
+   "lis",
+   "tir",
+   "lis",
+   "gak",
+   "rir",
+   "rir",
+   "rir",
+   "mun",
+   "rir",
+   "tir",
+   "tir",
+   "mun",
+   "rir"
+  ],
+  "end": "pep"
+ },
+ "39": {
+  "length": 3,
+  "start": "tor",
+  "actions": [
+   "mun",
+   "lis",
+   "miv"
+  ],
+  "end": "vez"
+ },
+ "40": {
+  "length": 8,
+  "start": "tor",
+  "actions": [
+   "rir",
+   "rir",
+   "rir",
+   "miv",
+   "lis",
+   "rir",
+   "tir",
+   "tir"
+  ],
+  "end": "neg"
+ },
+ "41": {
+  "length": 3,
+  "start": "pep",
+  "actions": [
+   "rir",
+   "tir",
+   "gak"
+  ],
+  "end": "pep"
+ },
+ "42": {
+  "length": 3,
+  "start": "pep",
+  "actions": [
+   "tir",
+   "mun",
+   "gak"
+  ],
+  "end": "gor"
+ },
+ "43": {
+  "length": 5,
+  "start": "dut",
+  "actions": [
+   "gak",
+   "lis",
+   "gak",
+   "mun",
+   "lis"
+  ],
+  "end": "dop"
+ },
+ "44": {
+  "length": 12,
+  "start": "pep",
+  "actions": [
+   "mun",
+   "lis",
+   "mun",
+   "tir",
+   "miv",
+   "miv",
+   "lis",
+   "miv",
+   "lis",
+   "miv",
+   "lis",
+   "rir"
+  ],
+  "end": "neg"
+ },
+ "45": {
+  "length": 8,
+  "start": "dop",
+  "actions": [
+   "lis",
+   "mun",
+   "mun",
+   "rir",
+   "gak",
+   "tir",
+   "rir",
+   "miv"
+  ],
+  "end": "tar"
+ },
+ "46": {
+  "length": 5,
+  "start": "vez",
+  "actions": [
+   "mun",
+   "gak",
+   "lis",
+   "gak",
+   "lis"
+  ],
+  "end": "tav"
+ },
+ "47": {
+  "length": 5,
+  "start": "tor",
+  "actions": [
+   "rir",
+   "rir",
+   "tir",
+   "mun",
+   "gak"
+  ],
+  "end": "gor"
+ },
+ "48": {
+  "length": 5,
+  "start": "dut",
+  "actions": [
+   "rir",
+   "mun",
+   "miv",
+   "lis",
+   "tir"
+  ],
+  "end": "neg"
+ },
+ "49": {
+  "length": 16,
+  "start": "tor",
+  "actions": [
+   "mun",
+   "miv",
+   "rir",
+   "mun",
+   "rir",
+   "gak",
+   "rir",
+   "mun",
+   "miv",
+   "gak",
+   "rir",
+   "miv",
+   "gak",
+   "tir",
+   "mun",
+   "tir"
+  ],
+  "end": "neg"
+ },
+ "50": {
+  "length": 3,
+  "start": "pep",
+  "actions": [
+   "gak",
+   "rir",
+   "mun"
+  ],
+  "end": "tor"
+ }
+}

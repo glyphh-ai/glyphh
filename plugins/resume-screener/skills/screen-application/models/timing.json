@@ -1,0 +1,28 @@
+{
+  "question": "Is anything about this email's timestamps a concern?",
+  "outcomes": ["fine", "suspect"],
+  "seed": null,
+  "learn": false,
+  "case": {"t": {"s": {"flags": "$item.timing.flags", "dated": "$item.timing.dated", "order": "$item.timing.order",
+                       "hops": "$item.timing.hops", "first_gap": "$item.timing.first_gap",
+                       "longest_gap": "$item.timing.longest_gap", "total": "$item.timing.total",
+                       "local_hour": "$item.timing.local_hour", "zone": "$item.timing.zone",
+                       "burst": "$item.timing.burst", "id": "$item.id"}}},
+  "spec": {
+    "name": "timing",
+    "layers": [{"name": "t", "segments": [{"name": "s", "roles": [
+      {"name": "flags", "similarity_weight": 1.0},
+      {"name": "dated", "similarity_weight": 0.5},
+      {"name": "order", "similarity_weight": 0.8},
+      {"name": "hops", "similarity_weight": 0.3, "numeric_config": {"min_value": 0, "max_value": 20, "bin_width": 1}},
+      {"name": "first_gap", "similarity_weight": 0.8, "numeric_config": {"min_value": -600, "max_value": 3600, "bin_width": 60}},
+      {"name": "longest_gap", "similarity_weight": 0.6, "numeric_config": {"min_value": 0, "max_value": 7200, "bin_width": 120}},
+      {"name": "total", "similarity_weight": 0.4, "numeric_config": {"min_value": 0, "max_value": 7200, "bin_width": 120}},
+      {"name": "local_hour", "similarity_weight": 0.5, "numeric_config": {"min_value": 0, "max_value": 23, "bin_width": 1}},
+      {"name": "zone", "similarity_weight": 0.2},
+      {"name": "burst", "similarity_weight": 0.8, "numeric_config": {"min_value": 0, "max_value": 20, "bin_width": 1}},
+      {"name": "id", "key_part": true, "similarity_weight": 0}
+    ]}]}],
+    "output": {"ask_below": 0.7}
+  }
+}

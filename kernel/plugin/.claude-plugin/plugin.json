@@ -1,0 +1,8 @@
+{
+  "name": "ada",
+  "description": "The Ada algebra of thought in Claude Code: the kernel, plus hooks that bring graded precedent into the agent loop. State injected at session start, relevant precedent injected per prompt, and a stop gate that asks for graded outcomes to be recorded.",
+  "version": "3.0.1",
+  "author": {
+    "name": "glyphh.ai"
+  }
+}

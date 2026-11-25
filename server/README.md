@@ -1,0 +1,92 @@
+# server
+
+The Glyphh server, https://api.glyphh.ai. Glyphh is one thing, Ada: this server is Ada Cloud (Ada models as an API,
+at https://ada.glyphh.ai; off unless `GLYPHH_ADA_CLOUD` is on), the Glyphh connector (`/mcp`, OAuth 2.1), accounts
+and orgs with invites and single sign-on, installs signed in by device flow, plans and billing on Stripe, and
+Glyphh's staff view. It renders nothing: every browser step lands on the platform, `glyphh-ai/platform`.
+
+- [`docs/architecture.md`](docs/architecture.md): the contract. The system, the API, the settings, the data model,
+  and what is not built yet.
+- [`docs/pricing.md`](docs/pricing.md): the plans and what each includes.
+
+## Run it
+
+    docker compose up --build
+
+Every build needs read access to the private `glyphh-ai/ada-private` repo, Ada Cloud's kernel (pinned in
+`uv.lock`): point `ADA_DEPLOY_KEY_FILE` at an SSH key that can read it (default `~/.ssh/glyphh_ada_deploy_key`;
+CI uses the `ADA_DEPLOY_KEY` secret, a read-only deploy key). Ada Cloud itself is off unless `GLYPHH_ADA_CLOUD=on`;
+its workers run with `docker compose --profile ada up` ([Ada Cloud](docs/architecture.md#ada-cloud-built-off-glyphh_ada_cloud)).
+
+Compose runs Postgres, Redis and the server; the API is on http://localhost:8080 (`/v1/health`, `/openapi.json`, the
+docs at `/docs`). Before the server starts, the image runs the schema step, `python -m glyphh_server.db.schema`
+([starting up](docs/architecture.md#starting-up-and-migrations)), which also runs the migrations a database has not
+had.
+
+Production keeps its data, so a schema change is two edits: change `src/glyphh_server/db/schema.sql` (always the
+latest shape, which a new database is made from) and add `src/glyphh_server/db/migrations/NNNN_name.sql`, the next
+number, which brings an existing database to it, run once and recorded in `schema_migrations`.
+`tests/db/test_migrations.py` fails unless the baseline (`tests/db/baseline.sql`, production's shape when it began
+keeping its data, never edited) plus every migration makes exactly what `schema.sql` makes. A dev database can still
+be made again with `docker compose down -v`, or any database by hand with
+`GLYPHH_RESET_DATABASE=1 python -m glyphh_server.db.reset`; nothing resets on deploy.
+
+Settings come from the environment (prefix `GLYPHH_`, or `.env`, never committed): the
+[settings table](docs/architecture.md#settings). `GLYPHH_SECRET_KEY` (32+ characters) is required. Make one with:
+
+    python -c "import base64,os; print(base64.b64encode(os.urandom(32)).decode())"
+
+To try billing against Stripe's test mode, make the products once
+([pricing.md](docs/pricing.md#setting-up)) and forward its events with
+`stripe listen --forward-to localhost:8080/v1/stripe/webhook`, setting the webhook secret it prints.
+
+## Layout
+
+`src/glyphh_server/`, built database first, then the service functions, then thin routes:
+
+- `models/`: the tables mapped for queries, one per module (`db/schema.sql` is the schema;
+  `tests/db/test_schema_sql.py` fails when they disagree)
+- `db/`: the engine, `schema.sql`, `migrations/` and the schema step, the by-hand reset, the seeds, the drift check, tenancy (row-level security keyed
+  on the org) and `signals.py`, the Redis client for live signals
+- `ops/`: the service functions, one per capability; `ops/auth/` signing in and tokens, `ops/billing/` Stripe,
+  `ops/connector/` the connector's OAuth 2.1 authorization server
+- `api/`: the routes, every one with an OpenAPI operation id; `*_pages.py` the browser steps, `oauth.py` and
+  `oauth_meta.py` OAuth's endpoints (refusals in OAuth's own shape), `mcp.py` `/mcp`
+- `mcp/`: the connector's MCP server: the protocol, the tools (`mcp/tools/`) and the panels (`mcp/panel/`: the
+  account panel and the decision card)
+- `llm/`: the Glyphh-hosted models' registry, meter and ledger (off unless `GLYPHH_LLM` is on)
+- `admin/`: what the staff view reads
+- `obs/`: JSON logs, each line with its trace id, the request metrics and the ops events
+
+`src/glyphh_ada/` is Ada Cloud: its API (`api/`), the workers and what they run.
+
+## Test it
+
+    docker compose --profile test run --rm --build test
+
+The suite runs against a real Postgres (its own `glyphh_test` database, fresh each run) and a real Redis, and fails
+under 100% line and branch coverage. Google, GitHub, Stripe and Cloudflare are faked at the HTTP layer.
+`tests/test_code_shape.py` keeps files under 200 lines, functions under 40
+and classes under 120. Lint with `uv run ruff check . && uv run ruff format --check .`.
+
+`tests/ada/` runs Ada Cloud with real workers (threads, and processes where a worker is killed): pgvector in the
+suite's database, the published SDK (PyPI `glyphh`, pinned in `pyproject.toml`) called as a customer's code would
+(`tests/ada/test_sdk.py`), the contract (`tests/ada/contract.json` and `fixtures.json`, from `glyphh-ai/glyphh`
+`contract/`), and the two-org isolation test.
+`scripts/ada-load.py` measures reads a second and latency against a server and its workers on a private network;
+`scripts/ada-import.py` a 1M-row import end to end, and `scripts/ada-backtest-bench.py` the backtest against the
+credit and Banking77 benchmarks (their own data and split, from a checkout given with `--code`).
+
+## Builds
+
+Every push and pull request runs lint and the suite in Docker (`.github/workflows/ci.yml`). Every merge to main
+publishes the image to `ghcr.io/glyphh-ai/server`, tagged with the commit and `main`, and deploys it to Fly
+(`fly.toml`, the app `glyphh-ai-server`).
+
+## Docs
+
+    uv sync --group docs
+    uv run mkdocs serve
+
+Then open http://127.0.0.1:8000/architecture/. Diagrams are Mermaid blocks, each with its rendered image in
+`docs/img/`.

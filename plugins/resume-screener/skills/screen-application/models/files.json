@@ -1,0 +1,34 @@
+{
+  "question": "Is anything about this application's files a concern?",
+  "outcomes": ["fine", "suspect"],
+  "seed": null,
+  "learn": false,
+  "case": {"f": {"s": {"flags": "$item.file.flags", "hidden": "$item.file.hidden", "white": "$item.file.white",
+                       "tiny": "$item.file.tiny", "unseen": "$item.file.unseen", "tracked": "$item.file.tracked",
+                       "pasted": "$item.file.pasted", "author": "$item.file.author", "tool": "$item.file.tool",
+                       "made_with": "$item.file.made_with", "same_tool": "$item.file.same_tool",
+                       "edited": "$item.file.edited", "saves": "$item.file.saves", "fonts": "$item.file.fonts",
+                       "kind": "$item.file.kind", "id": "$item.id"}}},
+  "spec": {
+    "name": "files",
+    "layers": [{"name": "f", "segments": [{"name": "s", "roles": [
+      {"name": "flags", "similarity_weight": 1.0},
+      {"name": "hidden", "similarity_weight": 1.0, "numeric_config": {"min_value": 0, "max_value": 1000, "bin_width": 50}},
+      {"name": "white", "similarity_weight": 1.0, "numeric_config": {"min_value": 0, "max_value": 1000, "bin_width": 50}},
+      {"name": "tiny", "similarity_weight": 1.0, "numeric_config": {"min_value": 0, "max_value": 1000, "bin_width": 50}},
+      {"name": "unseen", "similarity_weight": 0.8, "numeric_config": {"min_value": 0, "max_value": 1000, "bin_width": 50}},
+      {"name": "pasted", "similarity_weight": 0.8},
+      {"name": "tracked", "similarity_weight": 0.6, "numeric_config": {"min_value": 0, "max_value": 1000, "bin_width": 50}},
+      {"name": "author", "similarity_weight": 0.5},
+      {"name": "tool", "similarity_weight": 0.4},
+      {"name": "made_with", "similarity_weight": 0.3},
+      {"name": "same_tool", "similarity_weight": 0.3},
+      {"name": "edited", "similarity_weight": 0.3},
+      {"name": "saves", "similarity_weight": 0.2, "numeric_config": {"min_value": 0, "max_value": 50, "bin_width": 5}},
+      {"name": "fonts", "similarity_weight": 0.2, "numeric_config": {"min_value": 0, "max_value": 20, "bin_width": 2}},
+      {"name": "kind", "similarity_weight": 0.2},
+      {"name": "id", "key_part": true, "similarity_weight": 0}
+    ]}]}],
+    "output": {"ask_below": 0.7}
+  }
+}

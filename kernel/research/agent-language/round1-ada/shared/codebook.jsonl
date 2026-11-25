@@ -1,0 +1,1501 @@
+{"kind": "role", "name": "capital", "by": "shared"}
+{"kind": "word", "name": "paris", "by": "shared"}
+{"kind": "role", "name": "currency", "by": "shared"}
+{"kind": "word", "name": "euro", "by": "shared"}
+{"kind": "role", "name": "language", "by": "shared"}
+{"kind": "word", "name": "french", "by": "shared"}
+{"kind": "word", "name": "france", "by": "shared"}
+{"kind": "word", "name": "japan", "by": "shared"}
+{"kind": "word", "name": "japanese", "by": "shared"}
+{"kind": "word", "name": "mexico", "by": "shared"}
+{"kind": "word", "name": "mexico_city", "by": "shared"}
+{"kind": "word", "name": "peso", "by": "shared"}
+{"kind": "word", "name": "spanish", "by": "shared"}
+{"kind": "word", "name": "tokyo", "by": "shared"}
+{"kind": "word", "name": "yen", "by": "shared"}
+{"kind": "role", "name": "anthem", "by": "shared"}
+{"kind": "word", "name": "atlantis", "by": "shared"}
+{"kind": "word", "name": "currency", "by": "shared"}
+{"kind": "word", "name": "capital", "by": "shared"}
+{"kind": "word", "name": "language", "by": "shared"}
+{"kind": "role", "name": "content", "by": "lexicon"}
+{"kind": "word", "name": "v1_ready", "by": "lexicon"}
+{"kind": "word", "name": "status", "by": "lexicon"}
+{"kind": "word", "name": "language_py", "by": "lexicon"}
+{"kind": "word", "name": "lexicon", "by": "lexicon"}
+{"kind": "word", "name": "language_api", "by": "lexicon"}
+{"kind": "word", "name": "knowledge_py", "by": "shared"}
+{"kind": "word", "name": "memory", "by": "shared"}
+{"kind": "word", "name": "knowledge_api", "by": "shared"}
+{"kind": "word", "name": "judge", "by": "shared"}
+{"kind": "word", "name": "calibrated", "by": "shared"}
+{"kind": "word", "name": "relational", "by": "shared"}
+{"kind": "word", "name": "algebraic", "by": "shared"}
+{"kind": "word", "name": "cleanup_hop", "by": "shared"}
+{"kind": "word", "name": "holistic", "by": "shared"}
+{"kind": "word", "name": "certain", "by": "shared"}
+{"kind": "word", "name": "likely", "by": "shared"}
+{"kind": "word", "name": "plausible", "by": "shared"}
+{"kind": "word", "name": "doubtful", "by": "shared"}
+{"kind": "role", "name": "claim", "by": "shared"}
+{"kind": "role", "name": "rule", "by": "shared"}
+{"kind": "nest", "name": "content", "by": "shared"}
+{"kind": "word", "name": "reason_py", "by": "shared"}
+{"kind": "word", "name": "reasoner", "by": "shared"}
+{"kind": "word", "name": "reason_api", "by": "shared"}
+{"kind": "word", "name": "example", "by": "shared"}
+{"kind": "word", "name": "transitive_relation", "by": "shared"}
+{"kind": "word", "name": "object", "by": "shared"}
+{"kind": "word", "name": "all", "by": "shared"}
+{"kind": "role", "name": "proto", "by": "lexicon"}
+{"kind": "word", "name": "proto_v1", "by": "lexicon"}
+{"kind": "nest", "name": "reply_to", "by": "lexicon"}
+{"kind": "role", "name": "thread", "by": "lexicon"}
+{"kind": "nest", "name": "thread", "by": "lexicon"}
+{"kind": "word", "name": "contains", "by": "lexicon"}
+{"kind": "word", "name": "courier", "by": "reasoner"}
+{"kind": "word", "name": "orchestrator", "by": "reasoner"}
+{"kind": "word", "name": "correct", "by": "reasoner"}
+{"kind": "word", "name": "measure", "by": "reasoner"}
+{"kind": "word", "name": "world_measurements", "by": "reasoner"}
+{"kind": "word", "name": "told", "by": "reasoner"}
+{"kind": "word", "name": "chunk", "by": "lexicon"}
+{"kind": "word", "name": "added", "by": "lexicon"}
+{"kind": "role", "name": "k", "by": "reasoner"}
+{"kind": "word", "name": "17", "by": "reasoner"}
+{"kind": "word", "name": "recall", "by": "reasoner"}
+{"kind": "word", "name": "bundle", "by": "reasoner"}
+{"kind": "concept", "name": "c:e680340b51", "meaning": {"subject": "bundle", "relation": "recall", "object": "all", "k": "17"}, "atomic": false, "by": "reasoner"}
+{"kind": "word", "name": "9", "by": "reasoner"}
+{"kind": "concept", "name": "c:b5b4182bb2", "meaning": {"subject": "bundle", "relation": "recall", "object": "all", "k": "9"}, "atomic": false, "by": "reasoner"}
+{"kind": "word", "name": "33", "by": "reasoner"}
+{"kind": "concept", "name": "c:50670844d7", "meaning": {"subject": "bundle", "relation": "recall", "object": "all", "k": "33"}, "atomic": false, "by": "reasoner"}
+{"kind": "nest", "name": "#1", "by": "reasoner"}
+{"kind": "nest", "name": "#2", "by": "reasoner"}
+{"kind": "concept", "name": "c:246ff7a3f1", "meaning": ["c:b5b4182bb2", "c:50670844d7"], "atomic": false, "by": "reasoner"}
+{"kind": "nest", "name": "claim", "by": "reasoner"}
+{"kind": "nest", "name": "because", "by": "reasoner"}
+{"kind": "word", "name": "sandwich", "by": "reasoner"}
+{"kind": "word", "name": "claims_py_measure", "by": "lexicon"}
+{"kind": "word", "name": "lexicon_claims", "by": "lexicon"}
+{"kind": "word", "name": "13", "by": "lexicon"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "memory"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "memory"}
+{"kind": "sel", "name": "all", "role": "object", "by": "memory"}
+{"kind": "sel", "name": "17", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "9", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "33", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "proto_v1", "role": "proto", "by": "memory"}
+{"kind": "sel", "name": "lexicon", "role": "from", "by": "memory"}
+{"kind": "sel", "name": "reasoner", "role": "to", "by": "memory"}
+{"kind": "sel", "name": "answer", "role": "act", "by": "memory"}
+{"kind": "sel", "name": "reasoner", "role": "from", "by": "memory"}
+{"kind": "sel", "name": "all", "role": "to", "by": "memory"}
+{"kind": "sel", "name": "tell", "role": "act", "by": "memory"}
+{"kind": "sel", "name": "propose", "role": "act", "by": "memory"}
+{"kind": "sel", "name": "memory", "role": "from", "by": "memory"}
+{"kind": "sel", "name": "transitive_relation", "role": "subject", "by": "memory"}
+{"kind": "sel", "name": "example", "role": "relation", "by": "memory"}
+{"kind": "word", "name": "derived_from", "by": "memory"}
+{"kind": "sel", "name": "derived_from", "role": "object", "by": "memory"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "memory"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "memory"}
+{"kind": "sel", "name": "all", "role": "object", "by": "memory"}
+{"kind": "sel", "name": "17", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "9", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "33", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "memory", "role": "subject", "by": "memory"}
+{"kind": "word", "name": "graded", "by": "memory"}
+{"kind": "sel", "name": "graded", "role": "relation", "by": "memory"}
+{"kind": "word", "name": "32_claims", "by": "memory"}
+{"kind": "sel", "name": "32_claims", "role": "object", "by": "memory"}
+{"kind": "word", "name": "reproduce", "by": "memory"}
+{"kind": "sel", "name": "reproduce", "role": "how", "by": "memory"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "lexicon"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "lexicon"}
+{"kind": "sel", "name": "all", "role": "object", "by": "lexicon"}
+{"kind": "sel", "name": "17", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "9", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "33", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "reasoner"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "reasoner"}
+{"kind": "sel", "name": "all", "role": "object", "by": "reasoner"}
+{"kind": "sel", "name": "17", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "9", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "33", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "contains", "role": "object", "by": "reasoner"}
+{"kind": "sel", "name": "measure", "role": "how", "by": "reasoner"}
+{"kind": "sel", "name": "reasoner", "role": "subject", "by": "reasoner"}
+{"kind": "sel", "name": "world_measurements", "role": "object", "by": "reasoner"}
+{"kind": "sel", "name": "told", "role": "relation", "by": "reasoner"}
+{"kind": "sel", "name": "chunk", "role": "object", "by": "reasoner"}
+{"kind": "sel", "name": "added", "role": "relation", "by": "reasoner"}
+{"kind": "sel", "name": "language_py", "role": "subject", "by": "reasoner"}
+{"kind": "sel", "name": "sandwich", "role": "rule", "by": "reasoner"}
+{"kind": "sel", "name": "plausible", "role": "confidence", "by": "reasoner"}
+{"kind": "sel", "name": "c:246ff7a3f1", "role": "because", "by": "reasoner"}
+{"kind": "sel", "name": "c:e680340b51", "role": "claim", "by": "reasoner"}
+{"kind": "sel", "name": "claims_py_measure", "role": "means", "by": "reasoner"}
+{"kind": "sel", "name": "grade", "role": "goal", "by": "reasoner"}
+{"kind": "sel", "name": "13", "role": "value", "by": "reasoner"}
+{"kind": "sel", "name": "lexicon_claims", "role": "subject", "by": "reasoner"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "courier"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "courier"}
+{"kind": "sel", "name": "all", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "17", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "9", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "33", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "courier", "role": "from", "by": "courier"}
+{"kind": "word", "name": "protocol_py", "by": "courier"}
+{"kind": "sel", "name": "protocol_py", "role": "subject", "by": "courier"}
+{"kind": "sel", "name": "status", "role": "relation", "by": "courier"}
+{"kind": "word", "name": "live", "by": "courier"}
+{"kind": "sel", "name": "live", "role": "object", "by": "courier"}
+{"kind": "word", "name": "say_py", "by": "courier"}
+{"kind": "sel", "name": "say_py", "role": "how", "by": "courier"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "reasoner"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "reasoner"}
+{"kind": "sel", "name": "all", "role": "object", "by": "reasoner"}
+{"kind": "sel", "name": "17", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "9", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "33", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "reasoner"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "reasoner"}
+{"kind": "sel", "name": "all", "role": "object", "by": "reasoner"}
+{"kind": "sel", "name": "17", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "9", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "33", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "sandwich", "role": "subject", "by": "reasoner"}
+{"kind": "word", "name": "reliability", "by": "reasoner"}
+{"kind": "sel", "name": "reliability", "role": "relation", "by": "reasoner"}
+{"kind": "word", "name": "12_of_12", "by": "reasoner"}
+{"kind": "sel", "name": "12_of_12", "role": "object", "by": "reasoner"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "lexicon"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "lexicon"}
+{"kind": "sel", "name": "all", "role": "object", "by": "lexicon"}
+{"kind": "sel", "name": "17", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "9", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "33", "role": "k", "by": "lexicon"}
+{"kind": "word", "name": "typed_reading", "by": "lexicon"}
+{"kind": "sel", "name": "typed_reading", "role": "subject", "by": "lexicon"}
+{"kind": "word", "name": "beats_untyped", "by": "lexicon"}
+{"kind": "sel", "name": "beats_untyped", "role": "relation", "by": "lexicon"}
+{"kind": "word", "name": "yes", "by": "lexicon"}
+{"kind": "sel", "name": "yes", "role": "object", "by": "lexicon"}
+{"kind": "concept", "name": "c:a432b43511", "meaning": {"subject": "typed_reading", "relation": "beats_untyped", "object": "yes"}, "atomic": false, "by": "lexicon"}
+{"kind": "word", "name": "learns", "by": "lexicon"}
+{"kind": "sel", "name": "learns", "role": "relation", "by": "lexicon"}
+{"kind": "word", "name": "slot_types", "by": "lexicon"}
+{"kind": "sel", "name": "slot_types", "role": "object", "by": "lexicon"}
+{"kind": "sel", "name": "c:a432b43511", "role": "because", "by": "lexicon"}
+{"kind": "concept", "name": "c:e918e7c04a", "meaning": {"subject": "language_py", "relation": "learns", "object": "slot_types", "because": "c:a432b43511"}, "atomic": false, "by": "lexicon"}
+{"kind": "sel", "name": "c:e918e7c04a", "role": "content", "by": "lexicon"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "reasoner"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "reasoner"}
+{"kind": "sel", "name": "all", "role": "object", "by": "reasoner"}
+{"kind": "sel", "name": "17", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "9", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "33", "role": "k", "by": "reasoner"}
+{"kind": "word", "name": "envelope", "by": "reasoner"}
+{"kind": "sel", "name": "envelope", "role": "subject", "by": "reasoner"}
+{"kind": "word", "name": "max_readable_depth", "by": "reasoner"}
+{"kind": "sel", "name": "max_readable_depth", "role": "relation", "by": "reasoner"}
+{"kind": "sel", "name": "?", "role": "object", "by": "reasoner"}
+{"kind": "sel", "name": "ask", "role": "act", "by": "reasoner"}
+{"kind": "sel", "name": "object", "role": "want", "by": "reasoner"}
+{"kind": "concept", "name": "c:fce44e0b39", "meaning": {"subject": "envelope", "relation": "max_readable_depth", "object": "?", "act": "ask", "want": "object"}, "atomic": false, "by": "reasoner"}
+{"kind": "sel", "name": "courier", "role": "to", "by": "reasoner"}
+{"kind": "sel", "name": "c:fce44e0b39", "role": "content", "by": "reasoner"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "reasoner"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "reasoner"}
+{"kind": "sel", "name": "all", "role": "object", "by": "reasoner"}
+{"kind": "sel", "name": "17", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "9", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "33", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "lexicon"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "lexicon"}
+{"kind": "sel", "name": "all", "role": "object", "by": "lexicon"}
+{"kind": "sel", "name": "17", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "9", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "33", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "reasoner"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "reasoner"}
+{"kind": "sel", "name": "all", "role": "object", "by": "reasoner"}
+{"kind": "sel", "name": "17", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "9", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "33", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "word", "name": "is_a", "by": "shared"}
+{"kind": "sel", "name": "is_a", "role": "relation", "by": "shared"}
+{"kind": "word", "name": "cat", "by": "shared"}
+{"kind": "sel", "name": "cat", "role": "subject", "by": "shared"}
+{"kind": "word", "name": "mammal", "by": "shared"}
+{"kind": "sel", "name": "mammal", "role": "object", "by": "shared"}
+{"kind": "word", "name": "eats", "by": "shared"}
+{"kind": "sel", "name": "eats", "role": "relation", "by": "shared"}
+{"kind": "word", "name": "fish", "by": "shared"}
+{"kind": "sel", "name": "fish", "role": "object", "by": "shared"}
+{"kind": "word", "name": "3", "by": "shared"}
+{"kind": "sel", "name": "3", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "lexicon"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "lexicon"}
+{"kind": "sel", "name": "all", "role": "object", "by": "lexicon"}
+{"kind": "sel", "name": "17", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "9", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "33", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "lexicon"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "lexicon"}
+{"kind": "sel", "name": "all", "role": "object", "by": "lexicon"}
+{"kind": "sel", "name": "17", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "9", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "33", "role": "k", "by": "lexicon"}
+{"kind": "word", "name": "concept_facts", "by": "lexicon"}
+{"kind": "sel", "name": "concept_facts", "role": "subject", "by": "lexicon"}
+{"kind": "word", "name": "in_kb", "by": "lexicon"}
+{"kind": "sel", "name": "in_kb", "role": "object", "by": "lexicon"}
+{"kind": "word", "name": "concepts_py", "by": "lexicon"}
+{"kind": "sel", "name": "concepts_py", "role": "how", "by": "lexicon"}
+{"kind": "concept", "name": "c:7159193b4b", "meaning": {"subject": "concept_facts", "relation": "status", "object": "in_kb", "how": "concepts_py"}, "atomic": false, "by": "lexicon"}
+{"kind": "sel", "name": "c:7159193b4b", "role": "content", "by": "lexicon"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "reasoner"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "reasoner"}
+{"kind": "sel", "name": "all", "role": "object", "by": "reasoner"}
+{"kind": "sel", "name": "17", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "9", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "33", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "grader"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "grader"}
+{"kind": "sel", "name": "all", "role": "object", "by": "grader"}
+{"kind": "sel", "name": "17", "role": "k", "by": "grader"}
+{"kind": "sel", "name": "9", "role": "k", "by": "grader"}
+{"kind": "sel", "name": "33", "role": "k", "by": "grader"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "grader"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "grader"}
+{"kind": "sel", "name": "all", "role": "object", "by": "grader"}
+{"kind": "sel", "name": "17", "role": "k", "by": "grader"}
+{"kind": "sel", "name": "9", "role": "k", "by": "grader"}
+{"kind": "sel", "name": "33", "role": "k", "by": "grader"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "grader"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "grader"}
+{"kind": "sel", "name": "all", "role": "object", "by": "grader"}
+{"kind": "sel", "name": "17", "role": "k", "by": "grader"}
+{"kind": "sel", "name": "9", "role": "k", "by": "grader"}
+{"kind": "sel", "name": "33", "role": "k", "by": "grader"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "reasoner"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "reasoner"}
+{"kind": "sel", "name": "all", "role": "object", "by": "reasoner"}
+{"kind": "sel", "name": "17", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "9", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "33", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "reasoner"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "reasoner"}
+{"kind": "sel", "name": "all", "role": "object", "by": "reasoner"}
+{"kind": "sel", "name": "17", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "9", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "33", "role": "k", "by": "reasoner"}
+{"kind": "word", "name": "high", "by": "reasoner"}
+{"kind": "sel", "name": "high", "role": "object", "by": "reasoner"}
+{"kind": "concept", "name": "c:da846e8d8d", "meaning": {"subject": "sandwich", "relation": "reliability", "object": "high"}, "atomic": false, "by": "reasoner"}
+{"kind": "sel", "name": "likely", "role": "confidence", "by": "reasoner"}
+{"kind": "concept", "name": "c:e3fbe82559", "meaning": {"claim": "c:e680340b51", "because": "c:246ff7a3f1", "rule": "sandwich", "confidence": "likely"}, "atomic": false, "by": "reasoner"}
+{"kind": "word", "name": "strand", "by": "reasoner"}
+{"kind": "sel", "name": "strand", "role": "subject", "by": "reasoner"}
+{"kind": "role", "name": "age", "by": "reasoner"}
+{"kind": "sel", "name": "3", "role": "age", "by": "reasoner"}
+{"kind": "concept", "name": "c:c481beabac", "meaning": {"subject": "strand", "relation": "recall", "object": "yes", "age": "3"}, "atomic": false, "by": "reasoner"}
+{"kind": "word", "name": "2", "by": "reasoner"}
+{"kind": "sel", "name": "2", "role": "age", "by": "reasoner"}
+{"kind": "concept", "name": "c:fa59c485e7", "meaning": {"subject": "strand", "relation": "recall", "object": "yes", "age": "2"}, "atomic": false, "by": "reasoner"}
+{"kind": "word", "name": "4", "by": "reasoner"}
+{"kind": "sel", "name": "4", "role": "age", "by": "reasoner"}
+{"kind": "concept", "name": "c:1902a6deec", "meaning": {"subject": "strand", "relation": "recall", "object": "yes", "age": "4"}, "atomic": false, "by": "reasoner"}
+{"kind": "concept", "name": "c:cf54ea2147", "meaning": ["c:fa59c485e7", "c:1902a6deec"], "atomic": false, "by": "reasoner"}
+{"kind": "sel", "name": "c:c481beabac", "role": "claim", "by": "reasoner"}
+{"kind": "sel", "name": "c:cf54ea2147", "role": "because", "by": "reasoner"}
+{"kind": "concept", "name": "c:e6a2321b0f", "meaning": {"claim": "c:c481beabac", "because": "c:cf54ea2147", "rule": "sandwich", "confidence": "likely"}, "atomic": false, "by": "reasoner"}
+{"kind": "concept", "name": "c:511225b391", "meaning": ["c:e3fbe82559", "c:e6a2321b0f"], "atomic": false, "by": "reasoner"}
+{"kind": "sel", "name": "c:da846e8d8d", "role": "claim", "by": "reasoner"}
+{"kind": "sel", "name": "c:511225b391", "role": "because", "by": "reasoner"}
+{"kind": "word", "name": "graded_by_peers", "by": "reasoner"}
+{"kind": "sel", "name": "graded_by_peers", "role": "rule", "by": "reasoner"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "courier"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "courier"}
+{"kind": "sel", "name": "all", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "17", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "9", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "33", "role": "k", "by": "courier"}
+{"kind": "word", "name": "1", "by": "courier"}
+{"kind": "sel", "name": "1", "role": "object", "by": "courier"}
+{"kind": "word", "name": "anonymous", "by": "courier"}
+{"kind": "sel", "name": "anonymous", "role": "condition", "by": "courier"}
+{"kind": "concept", "name": "c:848765dd61", "meaning": {"subject": "envelope", "relation": "max_readable_depth", "object": "1", "condition": "anonymous"}, "atomic": false, "by": "courier"}
+{"kind": "sel", "name": "c:848765dd61", "role": "content", "by": "courier"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "reasoner"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "reasoner"}
+{"kind": "sel", "name": "all", "role": "object", "by": "reasoner"}
+{"kind": "sel", "name": "17", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "9", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "33", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "c:e3fbe82559", "role": "content", "by": "reasoner"}
+{"kind": "sel", "name": "c:da846e8d8d", "role": "content", "by": "reasoner"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "lexicon"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "lexicon"}
+{"kind": "sel", "name": "all", "role": "object", "by": "lexicon"}
+{"kind": "sel", "name": "17", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "9", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "33", "role": "k", "by": "lexicon"}
+{"kind": "word", "name": "envelope_content", "by": "lexicon"}
+{"kind": "sel", "name": "envelope_content", "role": "subject", "by": "lexicon"}
+{"kind": "word", "name": "read_exact_up_to", "by": "lexicon"}
+{"kind": "sel", "name": "read_exact_up_to", "role": "relation", "by": "lexicon"}
+{"kind": "word", "name": "24_slots", "by": "lexicon"}
+{"kind": "sel", "name": "24_slots", "role": "object", "by": "lexicon"}
+{"kind": "word", "name": "content_is_concept", "by": "lexicon"}
+{"kind": "sel", "name": "content_is_concept", "role": "condition", "by": "lexicon"}
+{"kind": "word", "name": "chunk_whole", "by": "lexicon"}
+{"kind": "sel", "name": "chunk_whole", "role": "how", "by": "lexicon"}
+{"kind": "word", "name": "slots", "by": "lexicon"}
+{"kind": "sel", "name": "slots", "role": "unit", "by": "lexicon"}
+{"kind": "concept", "name": "c:ae3d5dd11e", "meaning": {"subject": "envelope_content", "relation": "read_exact_up_to", "object": "24_slots", "condition": "content_is_concept", "how": "chunk_whole", "unit": "slots"}, "atomic": false, "by": "lexicon"}
+{"kind": "sel", "name": "c:ae3d5dd11e", "role": "content", "by": "lexicon"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "reasoner"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "reasoner"}
+{"kind": "sel", "name": "all", "role": "object", "by": "reasoner"}
+{"kind": "sel", "name": "17", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "9", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "33", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "reader_check"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "reader_check"}
+{"kind": "sel", "name": "all", "role": "object", "by": "reader_check"}
+{"kind": "sel", "name": "17", "role": "k", "by": "reader_check"}
+{"kind": "sel", "name": "9", "role": "k", "by": "reader_check"}
+{"kind": "sel", "name": "33", "role": "k", "by": "reader_check"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "reasoner"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "reasoner"}
+{"kind": "sel", "name": "all", "role": "object", "by": "reasoner"}
+{"kind": "sel", "name": "17", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "9", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "33", "role": "k", "by": "reasoner"}
+{"kind": "sel", "name": "done", "role": "object", "by": "reasoner"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "lexicon"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "lexicon"}
+{"kind": "sel", "name": "all", "role": "object", "by": "lexicon"}
+{"kind": "sel", "name": "17", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "9", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "33", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "lexicon"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "lexicon"}
+{"kind": "sel", "name": "all", "role": "object", "by": "lexicon"}
+{"kind": "sel", "name": "17", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "9", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "33", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "courier"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "courier"}
+{"kind": "sel", "name": "all", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "17", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "9", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "33", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "courier"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "courier"}
+{"kind": "sel", "name": "all", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "17", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "9", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "33", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "courier"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "courier"}
+{"kind": "sel", "name": "all", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "17", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "9", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "33", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "courier"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "courier"}
+{"kind": "sel", "name": "all", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "17", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "9", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "33", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "courier", "role": "subject", "by": "courier"}
+{"kind": "word", "name": "59_claims", "by": "courier"}
+{"kind": "sel", "name": "59_claims", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "lexicon"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "lexicon"}
+{"kind": "sel", "name": "all", "role": "object", "by": "lexicon"}
+{"kind": "sel", "name": "17", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "9", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "33", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "lexicon"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "lexicon"}
+{"kind": "sel", "name": "all", "role": "object", "by": "lexicon"}
+{"kind": "sel", "name": "17", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "9", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "33", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "lexicon"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "lexicon"}
+{"kind": "sel", "name": "all", "role": "object", "by": "lexicon"}
+{"kind": "sel", "name": "17", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "9", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "33", "role": "k", "by": "lexicon"}
+{"kind": "word", "name": "part_of_closure", "by": "lexicon"}
+{"kind": "sel", "name": "part_of_closure", "role": "subject", "by": "lexicon"}
+{"kind": "word", "name": "reproduced", "by": "lexicon"}
+{"kind": "sel", "name": "reproduced", "role": "relation", "by": "lexicon"}
+{"kind": "word", "name": "demo_closure_py", "by": "lexicon"}
+{"kind": "sel", "name": "demo_closure_py", "role": "how", "by": "lexicon"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "lexicon"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "lexicon"}
+{"kind": "sel", "name": "all", "role": "object", "by": "lexicon"}
+{"kind": "sel", "name": "17", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "9", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "33", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "memory"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "memory"}
+{"kind": "sel", "name": "all", "role": "object", "by": "memory"}
+{"kind": "sel", "name": "17", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "9", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "33", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "memory"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "memory"}
+{"kind": "sel", "name": "all", "role": "object", "by": "memory"}
+{"kind": "sel", "name": "17", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "9", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "33", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "memory"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "memory"}
+{"kind": "sel", "name": "all", "role": "object", "by": "memory"}
+{"kind": "sel", "name": "17", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "9", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "33", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "memory"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "memory"}
+{"kind": "sel", "name": "all", "role": "object", "by": "memory"}
+{"kind": "sel", "name": "17", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "9", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "33", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "memory"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "memory"}
+{"kind": "sel", "name": "all", "role": "object", "by": "memory"}
+{"kind": "sel", "name": "17", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "9", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "33", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "memory"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "memory"}
+{"kind": "sel", "name": "all", "role": "object", "by": "memory"}
+{"kind": "sel", "name": "17", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "9", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "33", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "memory"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "memory"}
+{"kind": "sel", "name": "all", "role": "object", "by": "memory"}
+{"kind": "sel", "name": "17", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "9", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "33", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "memory"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "memory"}
+{"kind": "sel", "name": "all", "role": "object", "by": "memory"}
+{"kind": "sel", "name": "17", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "9", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "33", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "memory"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "memory"}
+{"kind": "sel", "name": "all", "role": "object", "by": "memory"}
+{"kind": "sel", "name": "17", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "9", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "33", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "memory"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "memory"}
+{"kind": "sel", "name": "all", "role": "object", "by": "memory"}
+{"kind": "sel", "name": "17", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "9", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "33", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "memory"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "memory"}
+{"kind": "sel", "name": "all", "role": "object", "by": "memory"}
+{"kind": "sel", "name": "17", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "9", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "33", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "courier"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "courier"}
+{"kind": "sel", "name": "all", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "17", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "9", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "33", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "lexicon", "role": "to", "by": "courier"}
+{"kind": "sel", "name": "agree", "role": "act", "by": "courier"}
+{"kind": "sel", "name": "chunk_whole", "role": "subject", "by": "courier"}
+{"kind": "word", "name": "used_by", "by": "courier"}
+{"kind": "sel", "name": "used_by", "role": "relation", "by": "courier"}
+{"kind": "word", "name": "protocol_send", "by": "courier"}
+{"kind": "sel", "name": "protocol_send", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "memory"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "memory"}
+{"kind": "sel", "name": "all", "role": "object", "by": "memory"}
+{"kind": "sel", "name": "17", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "9", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "33", "role": "k", "by": "memory"}
+{"kind": "word", "name": "48_claims", "by": "memory"}
+{"kind": "sel", "name": "48_claims", "role": "object", "by": "memory"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "lexicon"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "lexicon"}
+{"kind": "sel", "name": "all", "role": "object", "by": "lexicon"}
+{"kind": "sel", "name": "17", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "9", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "33", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "courier"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "courier"}
+{"kind": "sel", "name": "all", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "17", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "9", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "33", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "courier"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "courier"}
+{"kind": "sel", "name": "all", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "17", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "9", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "33", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "courier"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "courier"}
+{"kind": "sel", "name": "all", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "17", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "9", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "33", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "courier"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "courier"}
+{"kind": "sel", "name": "all", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "17", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "9", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "33", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "courier"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "courier"}
+{"kind": "sel", "name": "all", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "17", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "9", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "33", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "courier"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "courier"}
+{"kind": "sel", "name": "all", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "17", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "9", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "33", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "courier"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "courier"}
+{"kind": "sel", "name": "all", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "17", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "9", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "33", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "courier"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "courier"}
+{"kind": "sel", "name": "all", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "17", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "9", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "33", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "courier"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "courier"}
+{"kind": "sel", "name": "all", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "17", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "9", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "33", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "memory", "role": "to", "by": "courier"}
+{"kind": "sel", "name": "disagree", "role": "act", "by": "courier"}
+{"kind": "word", "name": "refuted", "by": "courier"}
+{"kind": "sel", "name": "refuted", "role": "relation", "by": "courier"}
+{"kind": "word", "name": "4_claims", "by": "courier"}
+{"kind": "sel", "name": "4_claims", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "courier"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "courier"}
+{"kind": "sel", "name": "all", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "17", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "9", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "33", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "lexicon"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "lexicon"}
+{"kind": "sel", "name": "all", "role": "object", "by": "lexicon"}
+{"kind": "sel", "name": "17", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "9", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "33", "role": "k", "by": "lexicon"}
+{"kind": "word", "name": "lx_decode", "by": "lexicon"}
+{"kind": "sel", "name": "lx_decode", "role": "subject", "by": "lexicon"}
+{"kind": "word", "name": "fixed", "by": "lexicon"}
+{"kind": "sel", "name": "fixed", "role": "relation", "by": "lexicon"}
+{"kind": "word", "name": "concept_misread", "by": "lexicon"}
+{"kind": "sel", "name": "concept_misread", "role": "object", "by": "lexicon"}
+{"kind": "word", "name": "fidelity_check", "by": "lexicon"}
+{"kind": "sel", "name": "fidelity_check", "role": "how", "by": "lexicon"}
+{"kind": "concept", "name": "c:07405aeaaf", "meaning": {"subject": "lx_decode", "relation": "fixed", "object": "concept_misread", "how": "fidelity_check"}, "atomic": false, "by": "lexicon"}
+{"kind": "sel", "name": "c:07405aeaaf", "role": "content", "by": "lexicon"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "lexicon"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "lexicon"}
+{"kind": "sel", "name": "all", "role": "object", "by": "lexicon"}
+{"kind": "sel", "name": "17", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "9", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "33", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "lexicon"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "lexicon"}
+{"kind": "sel", "name": "all", "role": "object", "by": "lexicon"}
+{"kind": "sel", "name": "17", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "9", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "33", "role": "k", "by": "lexicon"}
+{"kind": "sel", "name": "done", "role": "act", "by": "lexicon"}
+{"kind": "sel", "name": "lexicon", "role": "subject", "by": "lexicon"}
+{"kind": "word", "name": "language_py_v1_stable", "by": "lexicon"}
+{"kind": "sel", "name": "language_py_v1_stable", "role": "result", "by": "lexicon"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "memory"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "memory"}
+{"kind": "sel", "name": "all", "role": "object", "by": "memory"}
+{"kind": "sel", "name": "17", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "9", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "33", "role": "k", "by": "memory"}
+{"kind": "word", "name": "canary_test", "by": "memory"}
+{"kind": "sel", "name": "canary_test", "role": "subject", "by": "memory"}
+{"kind": "word", "name": "caught", "by": "memory"}
+{"kind": "sel", "name": "caught", "role": "relation", "by": "memory"}
+{"kind": "word", "name": "8_of_8", "by": "memory"}
+{"kind": "sel", "name": "8_of_8", "role": "object", "by": "memory"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "memory"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "memory"}
+{"kind": "sel", "name": "all", "role": "object", "by": "memory"}
+{"kind": "sel", "name": "17", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "9", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "33", "role": "k", "by": "memory"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "courier"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "courier"}
+{"kind": "sel", "name": "all", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "17", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "9", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "33", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "courier"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "courier"}
+{"kind": "sel", "name": "all", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "17", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "9", "role": "k", "by": "courier"}
+{"kind": "sel", "name": "33", "role": "k", "by": "courier"}
+{"kind": "word", "name": "c-ab427eeaa9", "by": "courier"}
+{"kind": "sel", "name": "c-ab427eeaa9", "role": "subject", "by": "courier"}
+{"kind": "word", "name": "refuted_by", "by": "courier"}
+{"kind": "sel", "name": "refuted_by", "role": "relation", "by": "courier"}
+{"kind": "sel", "name": "courier", "role": "object", "by": "courier"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "bundle", "role": "subject", "by": "shared"}
+{"kind": "sel", "name": "recall", "role": "relation", "by": "shared"}
+{"kind": "sel", "name": "all", "role": "object", "by": "shared"}
+{"kind": "sel", "name": "17", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "9", "role": "k", "by": "shared"}
+{"kind": "sel", "name": "33", "role": "k", "by": "shared"}
