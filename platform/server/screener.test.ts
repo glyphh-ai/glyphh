@@ -7,11 +7,13 @@ import { SCREENER_LIMITS, SCREENER_PREFIX, createScreener, isScreenerPath, plugi
 const config: DemoConfig = { host: 'demo.test', key: 'glyphh_ak_demo', adaUrl: 'https://ada.test', dailyCalls: 1000 };
 const PDF = new Uint8Array([...Buffer.from('%PDF-1.4 a resume')]);
 const DOCX = new Uint8Array([...Buffer.from('PK\u0003\u0004 a letter')]);
-const VERDICT = {
-  applicant: 'Ann Lee - data analyst',
-  person: { verdict: 'unsure', signals: [{ signal: 'timing', title: 'Email timestamps', says: 'not checked', by: 'rule', found: ['there was nothing to check'] }], ask: [] },
-  fit: { outcome: 'strong', confidence: 0.9, ask: false, found: [] },
-  made: { outcome: 'some', confidence: 0.6, ask: false, found: [] },
+const ANSWER = {
+  resume: {
+    fake: { closeness: 0.91, nearest: [{ closeness: 0.91, like: 'Keisha Dubois - backend engineer' }] },
+    real: { closeness: 0.62, nearest: [{ closeness: 0.62, like: 'FINANCE' }] },
+    reads: 'reads like the fakes',
+  },
+  decision: { outcome: 'fake', confidence: 0.87, ask: false, on: 'resume', facts: [{ outcome: 'fake', tree: { key: '', weight: 1, score: 0.4, children: [] } }] },
 };
 
 function setup(cfg: Partial<DemoConfig> & { screenerDaily?: number } = {}, screen?: (r: ScreenRequest) => Promise<unknown>) {
@@ -20,54 +22,43 @@ function setup(cfg: Partial<DemoConfig> & { screenerDaily?: number } = {}, scree
   const app = createScreener({
     config: { ...config, ...cfg },
     now: () => clock.now,
-    screen: screen ?? (async (r) => (seen.push(r), VERDICT)),
+    screen: screen ?? (async (r) => (seen.push(r), ANSWER)),
   });
   const send = (form: FormData, headers: Record<string, string> = {}) =>
     app.request('https://demo.test/api/screener/screen', { method: 'POST', body: form, headers: { 'sec-fetch-site': 'same-origin', ...headers } });
   return { app, seen, clock, send };
 }
 
-function form({ email = 'Hello, my resume is attached.', role = '', files = [['resume.pdf', PDF]] as [string, Uint8Array][] } = {}) {
+function form({ resume = ['resume.pdf', PDF] as [string, Uint8Array] | null, letter = null as [string, Uint8Array] | null } = {}) {
   const f = new FormData();
-  f.set('email', email);
-  f.set('role', role);
-  for (const [name, bytes] of files) f.append('file', new File([bytes], name));
+  if (resume) f.set('resume', new File([resume[1]], resume[0]));
+  if (letter) f.set('letter', new File([letter[1]], letter[0]));
   return f;
 }
 
-describe('screening', () => {
-  it('hands the email, the role and the files to the plugin’s code and answers its verdict unchanged', async () => {
+describe('the check', () => {
+  it('hands the resume and the cover letter to the plugin’s code, each as what it is, and answers its answer unchanged', async () => {
     const { send, seen } = setup();
-    const res = await send(form({ role: ' Data Analyst ', files: [['letter.docx', DOCX], ['cv.pdf', PDF]] }));
+    const res = await send(form({ letter: ['letter.docx', DOCX] }));
     expect(res.status).toBe(200);
     expect(res.headers.get('cache-control')).toBe('no-store');
-    expect(await res.json()).toEqual(VERDICT);
+    expect(await res.json()).toEqual(ANSWER);
     expect(seen).toEqual([
-      {
-        email: 'Hello, my resume is attached.',
-        role: 'Data Analyst',
-        files: [
-          { name: 'letter.docx', base64: Buffer.from(DOCX).toString('base64') },
-          { name: 'cv.pdf', base64: Buffer.from(PDF).toString('base64') },
-        ],
-      },
+      { resume: { name: 'resume.pdf', base64: Buffer.from(PDF).toString('base64') }, letter: { name: 'letter.docx', base64: Buffer.from(DOCX).toString('base64') } },
     ]);
   });
 
-  it('screens an email alone, and files alone; an empty file field is no file', async () => {
+  it('takes either one alone; an empty file field is no file', async () => {
     const { send, seen } = setup();
-    expect((await send(form({ files: [['', new Uint8Array()]] }))).status).toBe(200);
-    expect((await send(form({ email: '' }))).status).toBe(200);
-    expect(seen.map((r) => r.files.length)).toEqual([0, 1]);
+    expect((await send(form({ letter: ['', new Uint8Array()] }))).status).toBe(200);
+    expect((await send(form({ resume: null, letter: ['l.pdf', PDF] }))).status).toBe(200);
+    expect(seen.map((r) => Object.keys(r))).toEqual([['resume'], ['letter']]);
   });
 
   it.each([
-    ['nothing at all', form({ email: ' ', files: [] }), 400, 'Paste the email or attach a file.'],
-    ['a file that is neither PDF nor Word', form({ files: [['resume.pdf', new Uint8Array([1, 2, 3, 4, 5])]] }), 400, 'The files must be PDF or Word (DOCX).'],
-    ['three files', form({ files: [['a.pdf', PDF], ['b.pdf', PDF], ['c.pdf', PDF]] }), 400, 'Attach the resume and the cover letter: two files at most.'],
-    ['a file too big', form({ files: [['big.pdf', new Uint8Array(SCREENER_LIMITS.fileBytes + 1).fill(37)]] }), 413, 'A file is too big: 3 MB at most.'],
-    ['an email too long', form({ email: 'x'.repeat(SCREENER_LIMITS.emailChars + 1) }), 413, 'That is too much to screen here.'],
-    ['a role too long', form({ role: 'x'.repeat(SCREENER_LIMITS.roleChars + 1) }), 413, 'That is too much to screen here.'],
+    ['nothing at all', form({ resume: null }), 400, 'Attach a resume, a cover letter, or both.'],
+    ['a file that is neither PDF nor Word', form({ resume: ['resume.pdf', new Uint8Array([1, 2, 3, 4, 5])] }), 400, 'The files must be PDF or Word (DOCX).'],
+    ['a file too big', form({ resume: ['big.pdf', new Uint8Array(SCREENER_LIMITS.fileBytes + 1).fill(37)] }), 413, 'A file is too big: 3 MB at most.'],
   ])('refuses %s before the plugin’s code is run', async (_what, sent, status, message) => {
     const { send, seen } = setup();
     const res = await send(sent);
@@ -103,7 +94,7 @@ describe('screening', () => {
     expect(await res.json()).toEqual({ error: 'The demo is not set up yet.' });
   });
 
-  it('lets a visitor screen a few a minute, by their address, and says when to come back', async () => {
+  it('lets a visitor check a few a minute, by their address, and says when to come back', async () => {
     const { send, clock } = setup();
     const from = (ip: string) => send(form(), { 'fly-client-ip': ip });
     for (let i = 0; i < SCREENER_LIMITS.perMinute; i++) expect((await from('1.1.1.1')).status).toBe(200);
@@ -117,7 +108,7 @@ describe('screening', () => {
     expect((await from('1.1.1.1')).status).toBe(200);
   });
 
-  it('stops for the day when the whole page has screened its share', async () => {
+  it('stops for the day when the whole page has had its share', async () => {
     const { send } = setup({ screenerDaily: 2 });
     const from = (n: number) => send(form(), { 'fly-client-ip': `5.5.5.${n}` });
     expect((await from(1)).status).toBe(200);
@@ -139,21 +130,16 @@ describe('screening', () => {
     expect((await app.request('https://demo.test/api/screener/screen', { method: 'POST', body: form(), headers: { 'sec-fetch-site': 'same-origin' } })).status).toBe(502);
     quiet.mockRestore();
   });
-
-  it('passes the plugin’s refusal through', async () => {
-    const { send } = setup({}, async () => ({ refused: { why: 'the sender’s domain did not vouch for it' } }));
-    expect(await (await send(form())).json()).toEqual({ refused: { why: 'the sender’s domain did not vouch for it' } });
-  });
 });
 
 describe('the plugin’s code as a process', () => {
-  // A stand-in for run.py, run by node: it answers what it was given, so the test sees exactly what is handed over.
+  // A stand-in for check.py, run by node: it answers what it was given, so the test sees exactly what is handed over.
   const scripts = mkdtempSync(join(tmpdir(), 'screener-'));
-  const stand = (body: string) => writeFileSync(join(scripts, 'run.py'), body);
-  const request: ScreenRequest = { email: 'Hello', role: 'Analyst', files: [{ name: 'cv.pdf', base64: 'JVBERi0=' }] };
+  const stand = (body: string) => writeFileSync(join(scripts, 'check.py'), body);
+  const request: ScreenRequest = { resume: { name: 'cv.pdf', base64: 'JVBERi0=' } };
   const run = (timeoutMs = 5000) => pluginScreen({ ...config, scripts }, timeoutMs, process.execPath)(request);
 
-  it('gives the request on standard input, the demo’s key and model names by argument and environment, and reads the verdict', async () => {
+  it('gives the request on standard input, the demo’s key and model names by argument and environment, and reads the answer', async () => {
     stand(`let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.stringify({got:JSON.parse(s),args:process.argv.slice(2),key:process.env.GLYPHH_API_KEY,url:process.env.GLYPHH_ADA_URL,home:process.env.HOME??null})))`);
     expect(await run()).toEqual({ got: request, args: ['--stdin', '--prefix', SCREENER_PREFIX], key: 'glyphh_ak_demo', url: 'https://ada.test', home: null });
   });
@@ -186,20 +172,23 @@ describe('the page', () => {
     expect(res.headers.get('content-type')).toContain(type);
   });
 
-  it('says the upload is not stored, what decides, and that nothing is proven on real people', async () => {
+  it('is one thing in and one thing out: two files, and nothing of email, role or fit', async () => {
+    const html = await (await page().request('https://demo.test/screener/')).text();
+    expect(html.match(/type="file"/g)).toHaveLength(2);
+    expect(html).toContain('name="resume"');
+    expect(html).toContain('name="letter"');
+    expect(html).not.toMatch(/textarea|name="email"|name="role"|timestamps|Greenhouse/);
+  });
+
+  it('says the upload is not stored, what the model is, and that it is no proof', async () => {
     const html = await (await page().request('https://demo.test/screener/')).text();
     expect(html).toContain('Nothing you upload is stored.');
     expect(html).toContain('read in memory');
-    expect(html).toContain('every example is a generated, fictional application');
-    expect(html).toContain('It is not proven to tell a real person from a fake one.');
-    expect(html).toContain('No language model runs on this page');
-  });
-
-  it('links the plugin in the open repository and takes the email, the role and two files', async () => {
-    const html = await (await page().request('https://demo.test/screener/')).text();
+    expect(html).toContain('generated, fictional applications');
+    expect(html).toContain('never a name');
+    expect(html).toContain('It is not proof that anyone is real or fake.');
+    expect(html).toContain('docs/closeness-model.md');
     expect(html).toContain('https://github.com/glyphh-ai/plugins/tree/main/plugins/resume-screener');
-    expect(html.match(/type="file"/g)).toHaveLength(2);
-    expect(html).toContain('<textarea id="email" name="email"');
   });
 
   it('wears the platform’s look: its stylesheet last, the logo as its image, labels never darker than #999', async () => {
@@ -214,10 +203,13 @@ describe('the page', () => {
     expect(Math.min(...greys)).toBeGreaterThanOrEqual(0x99);
   });
 
-  it('holds no key and draws only what the server answered', async () => {
+  it('holds no key, draws the two numbers, Ada’s confidence and Ada’s fact tree, and builds nothing from markup', async () => {
     const js = await (await page().request('https://demo.test/screener/screener.js')).text();
     expect(js).not.toMatch(/glyphh_ak_|authorization/i);
     expect(js).toContain("fetch('/api/screener/screen', { method: 'POST', body: new FormData($('form')) })");
+    expect(js).toContain("side('Closest fake', p.fake), side('Closest real', p.real)");
+    expect(js).toContain('node(f.tree, 0)');
+    expect(js).toContain('d.confidence');
     expect(js).not.toContain('innerHTML');
   });
 

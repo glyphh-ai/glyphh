@@ -3,33 +3,28 @@ import { Hono, type Context } from 'hono';
 import { Window, type DemoConfig } from './demo.js';
 
 /**
- * demo.glyphh.ai/screener: the Resume Screener, on the page. A visitor pastes an application's email (with its
- * headers when they have them), attaches the cover letter and the resume, and sees the verdict: is this a real
- * person, signal by signal, then the fit, then how it was written.
+ * demo.glyphh.ai/screener: one thing in, one thing out. A visitor gives a resume and a cover letter (either may be
+ * missing) and sees how close they are to real people's and to fakes: the two closeness numbers, the nearest few on
+ * each side, and Ada's own decision with its confidence and its fact tree.
  *
- * One source. The reading, the checks, the order of the steps and the verdict's rule are not written here: this runs
- * the Resume Screener plugin's own `run.py` (github.com/glyphh-ai/plugins, plugins/resume-screener, at the commit
- * demo/screener/plugin.ref names; the image fetches it, see the Dockerfile). The models that decide are Ada models in
- * the demo's own org, named `demo-screener-...`, made and seeded by the plugin's own `seed.py` from the plugin's own
- * examples.
+ * One source. The reading and the asking are not written here: this runs the Resume Screener plugin's own `check.py`
+ * (github.com/glyphh-ai/plugins, plugins/resume-screener, at the commit demo/screener/plugin.ref names; the image
+ * fetches it, see the Dockerfile). The model that answers is the Ada model `demo-screener-closeness` in the demo's
+ * own org, made and seeded by the plugin's own `seed.py`.
  *
  * Nothing is stored. The upload is read into memory, handed to the plugin's code on its standard input, and dropped
- * when the answer is sent: no file is written, and the application is never recorded in a model (`run.py` records
- * only with `--keep`, which is never passed here).
+ * when the answer is sent: no file is written, and nothing is recorded in a model (`check.py` only asks).
  */
 
 export const SCREENER_PREFIX = 'demo-screener-';
 
 export const SCREENER_LIMITS = {
-  /** Screenings per visitor (their address). Each is about ten Ada calls. */
+  /** Checks per visitor (their address). Each is a handful of Ada calls. */
   perMinute: 3,
   perDay: 20,
-  /** The email's characters, a file's bytes, how many files, and the whole request's bytes. */
-  emailChars: 100_000,
+  /** A file's bytes, and the whole request's bytes. */
   fileBytes: 3 * 1024 * 1024,
-  files: 2,
   bodyBytes: 7 * 1024 * 1024,
-  roleChars: 120,
   /** How long the plugin's code may take. */
   timeoutMs: 60_000,
 };
@@ -37,8 +32,9 @@ export const SCREENER_LIMITS = {
 const MINUTE = 60 * 1000;
 const DAY = 24 * 60 * MINUTE;
 
-export type ScreenRequest = { email: string; role: string; files: { name: string; base64: string }[] };
-/** The plugin's code: one request in, its verdict (or `{refused}`) out. */
+type Sent = { name: string; base64: string };
+export type ScreenRequest = { resume?: Sent; letter?: Sent };
+/** The plugin's code: one request in, its answer out. */
 export type Screen = (request: ScreenRequest) => Promise<unknown>;
 
 export type ScreenerConfig = DemoConfig & {
@@ -58,12 +54,12 @@ class Refusal extends Error {
   }
 }
 
-/** The plugin's run.py as a child process: the request on its standard input, the verdict on its standard output. */
+/** The plugin's check.py as a child process: the request on its standard input, the answer on its standard output. */
 export function pluginScreen(config: ScreenerConfig, timeoutMs = SCREENER_LIMITS.timeoutMs, python = 'python3'): Screen {
   const scripts = config.scripts ?? '/opt/screener/scripts';
   return (request) =>
     new Promise((resolve, reject) => {
-      const child = spawn(python, [`${scripts}/run.py`, '--stdin', '--prefix', SCREENER_PREFIX], {
+      const child = spawn(python, [`${scripts}/check.py`, '--stdin', '--prefix', SCREENER_PREFIX], {
         env: { PATH: process.env.PATH, GLYPHH_API_KEY: config.key, GLYPHH_ADA_URL: config.adaUrl, PYTHONDONTWRITEBYTECODE: '1' },
         stdio: ['pipe', 'pipe', 'pipe'],
       });
@@ -107,23 +103,19 @@ export function createScreener({ config, screen = pluginScreen(config), now = Da
     } catch {
       throw new Refusal(400, 'The demo could not read that.');
     }
-    const one = (v: unknown) => (typeof v === 'string' ? v : '');
-    const email = one(form.email);
-    const role = one(form.role).trim();
-    const sent = [form.file ?? []].flat().filter((f): f is File => f instanceof File && f.size > 0);
-    if (email.length > SCREENER_LIMITS.emailChars || role.length > SCREENER_LIMITS.roleChars) throw new Refusal(413, 'That is too much to screen here.');
-    if (sent.length > SCREENER_LIMITS.files) throw new Refusal(400, 'Attach the resume and the cover letter: two files at most.');
-    const files = [];
-    for (const file of sent) {
+    const request: ScreenRequest = {};
+    for (const part of ['resume', 'letter'] as const) {
+      const file = [form[part] ?? []].flat().find((f): f is File => f instanceof File && f.size > 0);
+      if (!file) continue;
       if (file.size > SCREENER_LIMITS.fileBytes) throw new Refusal(413, 'A file is too big: 3 MB at most.');
       const bytes = Buffer.from(await file.arrayBuffer());
       const pdf = bytes.subarray(0, 5).toString('latin1') === '%PDF-';
       const docx = bytes.subarray(0, 2).toString('latin1') === 'PK';
       if (!pdf && !docx) throw new Refusal(400, 'The files must be PDF or Word (DOCX).');
-      files.push({ name: file.name.slice(0, 120) || (pdf ? 'file.pdf' : 'file.docx'), base64: bytes.toString('base64') });
+      request[part] = { name: file.name.slice(0, 120) || (pdf ? 'file.pdf' : 'file.docx'), base64: bytes.toString('base64') };
     }
-    if (!email.trim() && !files.length) throw new Refusal(400, 'Paste the email or attach a file.');
-    return { email, role, files };
+    if (!request.resume && !request.letter) throw new Refusal(400, 'Attach a resume, a cover letter, or both.');
+    return request;
   }
 
   app.use('/api/screener/*', async (c, next) => {

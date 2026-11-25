@@ -3,10 +3,10 @@
 export const DEMOS = [
   {
     href: '/screener/',
-    title: 'Resume Screener',
-    blurb: 'Paste a job application and see whether it looks like a real person’s, signal by signal, then how well it fits the role. The open-source Claude plugin, on a page.',
+    title: 'Real or fake',
+    blurb: 'Give a resume and a cover letter and see how close they are to real people’s and to fakes, with Ada’s confidence and its fact tree. The open-source Claude plugin, on a page.',
     tags: ['hiring', 'screening', 'plugin'],
-    model: 'demo-screener-*',
+    model: 'demo-screener-closeness',
   },
   {
     href: '/bot/',

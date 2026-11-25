@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Resume Screener · Ada</title>
-  <meta name="description" content="Paste a job application and see whether it looks like a real person's, signal by signal, decided by Ada models.">
+  <title>Real or fake · Ada</title>
+  <meta name="description" content="Give a resume and a cover letter and see how close they are to real people's and to fakes, decided by an Ada model.">
   <link rel="icon" type="image/png" href="/glyphh-mascot-square-black.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
@@ -16,7 +16,7 @@
     <div class="brand">
       <a href="/" aria-label="All demos"><img src="/glyphh-logo-text-white.png" alt="Glyphh" class="logo"></a>
       <span class="divider"></span>
-      <span class="product">Resume Screener</span>
+      <span class="product">Real or fake</span>
       <span class="kicker">Decided by Ada</span>
     </div>
     <div class="status">
@@ -25,63 +25,41 @@
   </header>
 
   <main>
-    <p class="promise"><b>Nothing you upload is stored.</b> The email and the files are read in memory, checked, and dropped when the verdict is shown. They are not kept, and they are not added to any model.</p>
+    <p class="promise"><b>Nothing you upload is stored.</b> The files are read in memory, compared, and dropped when the answer is shown. They are not kept, and they are not added to the model.</p>
 
     <div class="cols">
       <form class="panel" id="form">
-        <h2 class="kicker">The application</h2>
+        <h2 class="kicker">A resume and a cover letter</h2>
+        <p class="hint">Either one, or both. PDF or Word.</p>
         <label class="field">
-          <span class="label">The email</span>
-          <textarea id="email" name="email" rows="11" maxlength="100000" spellcheck="false" placeholder="Paste the email. With its headers above it when you have them (in Gmail: Show original), so the timestamps can be checked."></textarea>
+          <span class="label">Resume</span>
+          <input id="resume" name="resume" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
         </label>
         <label class="field">
-          <span class="label">The role applied for (when the subject does not say)</span>
-          <input id="role" name="role" type="text" maxlength="120" placeholder="Backend Engineer">
+          <span class="label">Cover letter</span>
+          <input id="letter" name="letter" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
         </label>
-        <div class="files">
-          <label class="field">
-            <span class="label">Cover letter (PDF or Word)</span>
-            <input id="letter" name="file" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
-          </label>
-          <label class="field">
-            <span class="label">Resume (PDF or Word)</span>
-            <input id="resume" name="file" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
-          </label>
-        </div>
         <div class="row">
-          <button type="submit" class="primary" id="go">Screen it</button>
-          <span class="sub" id="busy" hidden>Reading, checking, asking Ada…</span>
+          <button type="submit" class="primary" id="go">Check it</button>
+          <span class="sub" id="busy" hidden>Reading, asking Ada…</span>
         </div>
         <p class="error" id="error" role="alert" hidden></p>
       </form>
 
       <section class="panel" id="result" aria-live="polite">
-        <h2 class="kicker">The verdict</h2>
-        <p class="hint" id="empty">Is this a real person? Each signal is checked on its own, and its own Ada model decides. The fit for the role comes second.</p>
-        <div id="verdict" hidden>
-          <div class="person">
-            <span class="label">Is this a real person?</span>
-            <span class="big" id="person"></span>
-          </div>
-          <p class="who" id="who"></p>
-          <div id="signals"></div>
-          <div class="second">
-            <span class="label">Fit for the role</span>
-            <span class="chip" id="fit"></span>
-            <ul class="found" id="fit-found"></ul>
-          </div>
-          <p class="sub" id="made"></p>
-        </div>
+        <h2 class="kicker">How close it is</h2>
+        <p class="hint" id="empty">Two numbers: how alike the nearest fake is, and how alike the nearest real one is, from 0 (nothing shared) to 1 (the same). Then Ada's own decision, its confidence, and its fact tree.</p>
+        <div id="answer" hidden></div>
       </section>
     </div>
 
     <section class="panel notes">
       <h2 class="kicker">What this is, and is not</h2>
       <ul class="plain">
-        <li>This page runs the same code as the <a href="https://github.com/glyphh-ai/plugins/tree/main/plugins/resume-screener" rel="noopener">Resume Screener plugin</a> for Claude: it reads the email and the files, checks the timestamps, the files themselves and the writing, and compares the application with the examples held.</li>
-        <li>Ada models decide. The fit, the writing and the comparison start from examples: every example is a generated, fictional application. The timestamp and file models start with nothing, so here a rule answers for them and says so.</li>
-        <li>It has been checked on generated applications and on cases made for the purpose only. It is not proven to tell a real person from a fake one. <a href="https://github.com/glyphh-ai/plugins/blob/main/plugins/resume-screener/docs/checks.md" rel="noopener">What was checked</a>.</li>
-        <li>A verdict is a screening, never a judgement of the person. No language model runs on this page.</li>
+        <li>One Ada model holds two sets of resumes read the same way, section by section, words only: fakes and real ones. <a href="https://github.com/glyphh-ai/plugins/blob/main/plugins/resume-screener/docs/closeness-model.md" rel="noopener">The whole model, every role and weight</a>.</li>
+        <li>The fakes are generated, fictional applications: a program wrote each one. The nearest fake is named by its made-up name and role. A real one is only ever shown by its source and category, never a name.</li>
+        <li>It says how alike the words are to what the model holds. It is not proof that anyone is real or fake. <a href="https://github.com/glyphh-ai/plugins/blob/main/plugins/resume-screener/docs/checks.md" rel="noopener">What was checked, and what it showed</a>.</li>
+        <li>This page runs the same code as the <a href="https://github.com/glyphh-ai/plugins/tree/main/plugins/resume-screener" rel="noopener">Resume Screener plugin</a> for Claude. No language model runs on this page.</li>
       </ul>
     </section>
   </main>
