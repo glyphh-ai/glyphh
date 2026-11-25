@@ -1,0 +1,66 @@
+/* Shared by the settings pages: the page title, small forms and notes. */
+
+.title {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.lede {
+  margin-top: var(--space-2);
+  font-size: var(--text-md);
+  color: var(--text-secondary);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.formRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.formRow > :first-child {
+  flex: 1 1 260px;
+}
+
+/* A switch with its name and a line under it: the switch keeps its own size. */
+.switchRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  cursor: pointer;
+}
+
+.switchRow > :first-child {
+  margin-top: 2px;
+}
+
+.switchTitle {
+  display: block;
+  font-size: var(--text-md);
+  font-weight: 500;
+}
+
+/* The form's buttons, each its own size. */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.note {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
