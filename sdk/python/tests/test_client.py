@@ -568,7 +568,7 @@ def test_the_docs_tell_the_cloud_story():
         text = path.read_text()
         for gone in ("rrotor", "self-host", "Self-host", "install.sh", "runtime key", "model.py", "glyphh.app", "licence key", "license key", "glyphh bot", "glyphh.bots", "HostedBots", "Runtime", "glyphh-memory", "Pipedream"):
             assert gone not in text, (path.name, gone)
-    assert "github.com/glyphh-ai/plugins" in (ROOT / "README.md").read_text()
+    assert "Labs project" in (ROOT / "README.md").read_text() and "Apache-2.0" in (ROOT / "README.md").read_text()
     assert "GLYPHH_API_KEY" in (ROOT / "sdk/python/README.md").read_text()
     assert glyphh.__version__ == "4.0.0"
     for doc in ("sdk/python/README.md", "sdk/typescript/README.md", "plugins/glyphh/skills/ada/SKILL.md"):
