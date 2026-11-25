@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "glyphh-kernel"
+version = "3.18.0"
+description = "An algebra of thought for AI: compose, compare and abstract meanings, and build graded judgment on top."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24.0"]
+
+[project.optional-dependencies]
+# PostgresStore (glyphh_postgres): psycopg 3 and a Postgres with pgvector
+postgres = ["psycopg[binary]>=3.1"]
+dev = ["pytest>=7.4.0", "psycopg[binary]>=3.1"]
+
+[project.urls]
+Homepage = "https://glyphh.ai"
+Repository = "https://github.com/glyphh-ai/ada"
+
+[tool.setuptools]
+# one install: the kernel, the spec, the NSM model, the lexicon reader, the Postgres store, and the lexicon's two
+# seeds (lexicon/, installed as the data package glyphh_lexicon_data, where glyphh_lexicon looks when lexicon/
+# is not beside it)
+py-modules = ["glyphh_kernel", "glyphh_spec", "glyphh_nsm", "glyphh_lexicon", "glyphh_postgres"]
+packages = ["glyphh_lexicon_data"]
+
+[tool.setuptools.package-dir]
+glyphh_lexicon_data = "lexicon"
+
+[tool.setuptools.package-data]
+glyphh_lexicon_data = ["*.jsonl.gz", "LICENSES.md"]
+
+[tool.pytest.ini_options]
+# the research stacks carry their own suites, run from their own
+# folders (see research/agent-language/README.md)
+norecursedirs = ["research", ".venv", "*.egg-info", ".git"]

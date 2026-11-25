@@ -1,0 +1,2652 @@
+"""
+Ada kernel — the AI-native kernel. Single file, numpy + stdlib only.
+
+This is software whose user is a model. There is no UI, no service, no
+config. If you are an agent reading this: call spec() — or read SPEC
+below — before using the kernel. The file carries its own manual so
+the guidance can never be separated from the code.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import math
+import os
+import re
+import sqlite3
+import time
+import uuid
+from collections import Counter, OrderedDict
+from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, NamedTuple, Protocol, runtime_checkable
+
+import numpy as np
+from collections.abc import Callable
+
+__version__ = "3.18.0"  # this release: pyproject.toml and CHANGELOG.md say the same (test_versions.py)
+DIM = 4096  # default dimensionality; ~1e-3 cross-talk between random symbols
+TAU = 0.12  # default softmax temperature (fit on Kubernetes issues; calibrate())
+POOL = 25  # nearest precedents a probability is spread over
+TAUS = (0.01, 0.015, 0.02, 0.03, 0.05, 0.08, 0.12, 0.2, 0.3, 0.5, 0.7, 1.0, 1.5)
+DAY = 86_400.0
+# recency (calibrate(recency=True)): the half-lives tried, as shares of the time the graded precedents span; a store
+# spanning under RECENCY_SPAN seconds has no time to weigh, and a half-life must beat none by RECENCY_GAIN of its
+# log-loss (or cost less) to be kept, so a store whose answers do not drift keeps every precedent's full voice
+HALF_LIVES = (1 / 16, 1 / 8, 1 / 4, 1 / 2, 1.0, 2.0)
+RECENCY_SPAN = DAY
+RECENCY_GAIN = 0.01
+HALF_LIVES_KEY = "half_lives"  # the store's meta: {output: seconds}
+ENCODING = 3  # bump when encode() changes; stores re-encode on open
+DEFAULT = "default"  # the output a precedent's own `outcome` is: every read without output= reads it
+AHEAD, BACK = ">", "<"  # after an output's name: the temperature its thread reads use (predict, lookback)
+TIES = 1000  # a thread read's pool is the POOL nearest and the precedents tied with the last of them, to this many
+SHORTLIST = 1000  # candidates a store that can shortlist hands a read, re-ranked exactly (Space.candidates)
+EXACT_BELOW = 1000  # a store holding fewer precedents than this is read whole, exactly, never shortlisted (read
+# whole per request, 800 precedents take 50 ms, 5,000 take 280 ms and 20,000 3 s: bench/shortlist.py)
+_OUTPUT = re.compile(r"^[A-Za-z_][A-Za-z0-9_\-]{0,63}$")
+
+
+def _output_name(output: str | None) -> str:
+    """An output's name, checked: None is the default output."""
+    if output is None:
+        return DEFAULT
+    if not isinstance(output, str) or not _OUTPUT.match(output):
+        raise ValueError(f"an output is named by letters, digits, _ and - (64 at most), not {output!r}")
+    return output
+
+
+def _named_outcomes(outcomes: Any) -> dict[str, str]:
+    """A record's named outcomes, checked: {output: non-empty string}."""
+    if outcomes is None:
+        return {}
+    if not isinstance(outcomes, dict):
+        raise ValueError("outcomes is an object of output: outcome")
+    out: dict[str, str] = {}
+    for name, value in outcomes.items():
+        if not isinstance(value, str) or not value:
+            raise ValueError(f"outcomes[{name!r}] is a non-empty string")
+        out[_output_name(name)] = value
+    return out
+
+SPEC = """\
+Ada kernel — substrate guidance for the agent using it
+
+WHAT THIS IS. Your state and execution layer beyond the context
+window. Contexts are mortal; the SQLite files a Space writes are not.
+Record graded experience as you work; the next context (yours or
+another agent's) reopens the files and inherits ground truth instead
+of prose about it.
+
+THE FIVE PRIMITIVES. All glyphs are bipolar +/-1 vectors of one fixed
+dimension (default 4096); every operation returns the type it takes,
+so composites nest indefinitely.
+  symbol(key, seed=42, dim)  deterministic glyph: same inputs -> the
+      identical vector on any machine, forever. Shared seed = shared
+      vocabulary between agents; different seeds are mutual noise.
+  bind(a, b)     associate (elementwise multiply). Self-inverse; the
+      result resembles neither input. Use for role-filler pairs.
+  bundle(parts, weights=None)  superpose (majority vote); resembles
+      ALL inputs. Order-free: the same parts in any order give the same
+      glyph. weights (one per part, >= 0) give each part its voice in
+      the vote; the result is a glyph, so weighted bundles nest and
+      weights live at every level. Capacity is finite: past a few dozen
+      parts detail fades and gist survives — that is abstraction; keep
+      receipts for the detail.
+  roll(v, k)     rotate: order, position, depth. Undo with roll(v,-k).
+  sim(a, b)      cosine in [-1, 1]. Random glyphs sit near 0. For
+      situations, sim tracks the FRACTION OF SHARED ATTRIBUTE PAIRS,
+      whichever attributes they are (measured, 4 attributes: sharing
+      1/2/3 -> 0.14/0.28/0.44; 2 attributes sharing 1 -> 0.25), even
+      when the shared attributes are decision-irrelevant.
+
+DATA. encode(data, weights) is one glyph for any JSON-shaped value:
+  an object is a weighted bundle of bind(attr:key, child), an array a
+  set of its items, a scalar the symbol of its text; nested children
+  roll once so paths stay apart. weights mirror the data —
+  {"risk": 1.0, "plan": {"*": 0.5, "step": 2}}: a number weighs a key,
+  an object weighs inside it with its own weight under "*"; unlisted
+  keys weigh 1.0. explain(query, record, weights) -> Fact: the fact
+  tree — per key, its score (exact weighted sim of that subtree), its
+  weight, its share of the parent (shares sum to the parent's score),
+  and the glyph sim beside it. root.score is the weighted sim. A key on
+  one side only scores 0 at full weight: weigh it 0 if its absence
+  should not count. Weights are how you say which attributes decide;
+  that is rule 2, made explicit.
+
+THE TWO CONSTRUCTS.
+  Strand: ordered meaning. append() glyphs; state(decay) folds the
+      sequence into one glyph where recent items dominate and order
+      matters. Detail recoverable a few steps back; the KIND of
+      trajectory recognizable much longer.
+  Space(dim, k, min_sim, seed, decay, author, path): graded precedent.
+      record(situation, outcome=None, events=None, ts=None) — one write,
+      permanent, time-stamped. With no outcome the row is memory: it
+      shows in facts() but never votes and never takes a probability. A situation is an object; values may
+      nest (see DATA). Every read below takes weights=: weighted, it
+      ranks and gates on the EXACT weighted sim (the fact-tree score),
+      so min_sim means 'the weighted share of attributes that must
+      agree' and a weight can raise a match, not only lower it.
+      query(...) -> Answer(sufficient, confidence, support, count,
+      top, outcomes, receipts); only precedents clearing min_sim vote.
+      answers(...) -> [Evidence] for EVERY outcome with qualifying
+      precedent: the read for situations with more than one true
+      outcome. evidence(situation, outcome) grades one candidate.
+      matches(situation, outcome) — max sim among precedents with THAT
+      outcome: the veto primitive, undilutable by consensus.
+      facts(situation, weights=None, top=k) -> [FactTree]: every
+      precedent scored exactly, the best `top` explained as fact trees
+      (events as the key "~events"), each with its glyph sim and its
+      citation, and probability: P(that outcome | situation), a
+      softmax at temperature tau over the POOL (25) nearest. The read
+      to show WHY, not just what.
+      probabilities(situation, weights=None) -> {outcome: P}.
+      calibrate(sample=100, weights=None) fits tau by holding out the
+      newest precedents one at a time; saved in the file. Until then
+      tau is TAU (0.12). Calibrated, "act at P >= 0.9" means right
+      about 9 times in 10 — on the Kubernetes test it took confident
+      answers from 87% to 94% right.
+      record_many([{situation, outcome, ...}]) is one write for many;
+      forget(rid) deletes one precedent.
+      refresh() pulls rows other agents wrote to a shared WAL file;
+      merge(other_path) unions another Space file by id, authors kept.
+      Space(store=...) keeps precedents elsewhere than a file (a Store:
+      SqliteStore is the file; glyphh_postgres.PostgresStore is Postgres,
+      whose shortlist a Space opened with load=False reads, re-ranked
+      exactly).
+      Space(path=..., readonly=True) opens the file read-only (a
+      follower's copy, a read-only disk): every read works, every write
+      (record, merge, calibrate, set_meta, rewrite) raises ReadOnlyError
+      (code E_READ_ONLY) before touching the file, and nothing is ever
+      created beside it.
+
+THE CONTRACT: NOTHING UNGRADED. Route every domain decision through
+decide(wins, vetoes, situation, events) -> Decision. It is:
+  a = wins.query(situation, events)
+  if a.sufficient and a.confidence >= 0.5 and a.count >= 3:
+      if not vetoed(a.top):               # see rule 3
+          act(a.top)                      # reflex: free, cited
+      else: consult fallback              # vetoed
+  else: consult fallback                  # insufficient precedent
+  success = the WORLD grades the action   # never self-graded
+  (wins if success else vetoes).record(situation, action, events)
+Fallback chain by cost: reflex (free) -> consultant (paid) -> human
+(last resort; the answer is itself a grade). Consult rate should fall
+over the Space's life — that curve is the product metric.
+
+RULES THAT DECIDE WHETHER IT WORKS.
+  1. Trust needs three gates: sufficient (similarity), confidence
+     (consensus), count (population). A consensus of one is
+     confidence 1.0 and means almost nothing — gate count >= 3.
+  2. Attribute hygiene: encode ONLY decision-relevant attributes;
+     incidental ones (ids, regions, timestamps) poison neighborhoods.
+     Size min_sim as the attribute-overlap fraction that should count
+     as 'the same kind of situation'.
+  3. Vetoes suppress, they don't erase, and the newest evidence wins:
+     a reflex is blocked while a recorded failure sits as close as the
+     wins recommending it AND is newer than the newest such win. A
+     later reproduction lifts an older veto; a later failure
+     re-imposes it. After drift, expect a few wrong firings while
+     failures arrive. Use matches(), never a consensus vote, for
+     vetoes. decide(min_veto_count=2) demands corroborated failures:
+     harder to sabotage, slower to stop.
+  4. One question, several true answers: when a situation genuinely
+     has many outcomes (a file imports five modules), confidence
+     splits across them and no single one clears 0.5. That is not
+     disagreement. Read answers() and gate each outcome on its own
+     count instead of on its share.
+  5. Precedent never overrides a proof: auth, money conservation,
+     state-machine legality stay hand-written.
+
+MORE THAN ONE AGENT. Private kernel per agent; one shared kernel per
+team, author= set so receipts show who grounded what. Share a file
+live (WAL + refresh) or ship and merge(). Verify before you trust:
+replay incoming receipts against your own world before merging.
+Meaning is operational at every scale: a concept is meaningful exactly
+to the degree its glyph's neighborhood predicts the world; a
+teammate's precedent is trustworthy exactly to the degree its
+receipts replay.
+
+STORES OUTLIVE ENCODINGS. Every file records the encoding it was
+written under. Opening (or merging) a file from an older encoding
+re-encodes its glyphs from the stored situations and events, so old
+precedent keeps matching fresh queries. Events are stored with each
+precedent, so re-encoding is lossless (rows written before events
+were stored re-encode without their trajectory).
+"""
+
+
+class ReadOnlyError(Exception):
+    """A write asked of a store opened read-only (Space(path,
+    readonly=True)). Raised before the file is touched. `code` is
+    "E_READ_ONLY"; `operation` names the write refused; `path` is the
+    store's."""
+
+    code = "E_READ_ONLY"
+
+    def __init__(self, operation: str, path: str | None = None):
+        where = f" ({path})" if path else ""
+        super().__init__(f"E_READ_ONLY: {operation} writes, and the store is open read-only{where}")
+        self.operation = operation
+        self.path = path
+
+
+def spec() -> str:
+    """The substrate guidance. An agent that imports this kernel cold
+    should read spec() before recording or querying anything."""
+    return SPEC
+
+
+def reencode_store(
+    path: str, dim: int = DIM, k: int = 15, min_sim: float = 0.10, seed: int = 42, decay: float = 0.7
+) -> int:
+    """Re-encode every precedent's glyph from its stored situation and
+    events, under the current encoding, and stamp the file with it.
+    Opening a Space does this automatically for files from an older
+    encoding; call it directly to force a rebuild (e.g. after changing
+    seed or decay). Returns rows re-encoded.
+
+    Rows recorded before events were persisted re-encode without their
+    trajectory component. A store that cannot be written (the file or
+    its folder read-only) raises ReadOnlyError before it is opened."""
+    p = Path(path).expanduser()
+    if (p.parent.is_dir() and not os.access(p.parent, os.W_OK)) or (p.exists() and not os.access(p, os.W_OK)):
+        raise ReadOnlyError("reencode_store", str(p))
+    db = sqlite3.connect(str(p))
+    _ensure_schema(db)
+    space = Space(dim=dim, k=k, min_sim=min_sim, seed=seed, decay=decay)
+    n = _reencode_rows(db, space)
+    db.commit()
+    db.close()
+    return n
+
+
+# ── primitives ──────────────────────────────────────────────────────
+
+
+def symbol(key: str, seed: int = 42, dim: int = DIM) -> np.ndarray:
+    """Deterministic bipolar (+1/-1) symbol for a key.
+
+    Same (key, seed, dim) -> identical vector, on any machine, forever.
+    Shared seeds are shared vocabulary; different seeds are mutually
+    random noise. This is how two agents agree on meaning.
+    """
+    at = (key, seed, dim)
+    cached = _SYMBOLS.get(at)
+    if cached is None:
+        digest = hashlib.sha256(f"{seed}:{key}".encode()).digest()
+        rng = np.random.RandomState(np.frombuffer(digest[:4], dtype=np.uint32))
+        cached = rng.randint(0, 2, dim, dtype=np.int8) * 2 - 1
+        _SYMBOLS[at] = cached
+        while len(_SYMBOLS) > SYMBOL_CACHE:
+            _SYMBOLS.popitem(last=False)  # the least recently used
+    else:
+        _SYMBOLS.move_to_end(at)
+    return cached.copy()
+
+
+# the symbols a process keeps, least recently used out first: a worker serving every org's values stays bounded
+# (4 KB a symbol at the default dim, so about 128 MB). A symbol is a pure function of its key: the bound changes
+# speed, never an answer.
+SYMBOL_CACHE = int(os.environ.get("GLYPHH_SYMBOL_CACHE") or 32768)
+_SYMBOLS: OrderedDict[tuple[str, int, int], np.ndarray] = OrderedDict()
+
+
+def _leaf_glyph(key: str, value: Any, seed: int, dim: int, lexicon: bool) -> np.ndarray:
+    """A leaf value's glyph (key: its JSON), kept in a bounded cache: a worker re-ranking a model's shortlists
+    meets the same precedents' values again and again. Like a symbol, a pure function of its key."""
+    at = (key, seed, dim, lexicon)
+    held = _LEAVES.get(at)
+    if held is None:
+        held = _encode(value, None, seed, dim, lexicon)
+        _LEAVES[at] = held
+        while len(_LEAVES) > LEAF_CACHE:
+            _LEAVES.popitem(last=False)
+    else:
+        _LEAVES.move_to_end(at)
+    return held
+
+
+LEAF_CACHE = int(os.environ.get("GLYPHH_LEAF_CACHE") or 32768)  # leaf glyphs kept (int8: 128 MB at dim 4096)
+_LEAVES: OrderedDict[tuple[str, int, int, bool], np.ndarray] = OrderedDict()
+
+
+def bind(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """Associate two glyphs (elementwise multiply). Self-inverse:
+    bind(bind(a, b), b) == a. The result resembles neither input."""
+    return (a * b).astype(np.int8)
+
+
+def _tiebreak(parts: Sequence[np.ndarray]) -> np.ndarray:
+    """Tie-break vector for a majority vote: a pseudo-random glyph
+    seeded by the hash of the parts as a SET (their bytes, sorted).
+
+    Why this shape. A shared global tie-break vector injects a common
+    component into every even-count bundle, so unrelated small
+    situations look alike. Deriving it from one part (encoding 1 used
+    roll(parts[0])) made similarity depend on which attribute differed:
+    changing the attribute that sorts first cost twice as much as
+    changing the one that sorts last (0.26 vs 0.50 at two attributes).
+    A hash of the whole multiset is deterministic, different for every
+    distinct input, uncorrelated with any single part, and independent
+    of part order — so tied positions carry no bias at all."""
+    h = hashlib.sha256()
+    for b in sorted(np.ascontiguousarray(p).tobytes() for p in parts):
+        h.update(b)
+    rng = np.random.RandomState(np.frombuffer(h.digest()[:4], dtype=np.uint32))
+    return rng.randint(0, 2, len(parts[0]), dtype=np.int8) * 2 - 1
+
+
+def bundle(parts: Sequence[np.ndarray], weights: Sequence[float] | None = None) -> np.ndarray:
+    """Superpose glyphs (majority vote). The result resembles ALL
+    inputs. Capacity is finite: past a few dozen items, individual
+    contributions fade — detail dies, gist survives. That is
+    abstraction, not failure; keep receipts if you need the detail.
+
+    weights: one per part, finite and >= 0; a part's weight is its
+    voice in the vote (0 drops it). The result is still a glyph, so a
+    weighted bundle nests inside another — weights live at every level.
+    The weighted vote sums in a canonical order (parts by their bytes),
+    so it stays order-free and is bit-identical across machines."""
+    if not parts:
+        raise ValueError("cannot bundle nothing")
+    if weights is None:
+        total = np.sum(np.stack(parts).astype(np.int32), axis=0)
+        signs = np.sign(total)
+        ties = signs == 0
+        if ties.any():
+            signs[ties] = _tiebreak(parts)[ties]
+        return signs.astype(np.int8)
+    if len(weights) != len(parts):
+        raise ValueError(f"{len(parts)} parts but {len(weights)} weights")
+    pairs = [(np.ascontiguousarray(p), _check_weight(w)) for p, w in zip(parts, weights)]
+    pairs = sorted(((p, w) for p, w in pairs if w > 0), key=lambda pw: (pw[0].tobytes(), pw[1]))
+    if not pairs:
+        raise ValueError("cannot bundle when every weight is 0")
+    acc = np.zeros(len(pairs[0][0]), dtype=np.float64)
+    for p, w in pairs:
+        acc += w * p.astype(np.float64)
+    signs = np.sign(acc)
+    ties = signs == 0
+    if ties.any():
+        signs[ties] = _tiebreak([p for p, _ in pairs])[ties]
+    return signs.astype(np.int8)
+
+
+def _check_weight(w: Any) -> float:
+    if isinstance(w, bool) or not isinstance(w, (int, float)):
+        raise TypeError("weight must be a number")
+    if not np.isfinite(w) or w < 0:
+        raise ValueError(f"weight must be finite and >= 0, got {_text(w)}")
+    return float(w)
+
+
+def roll(v: np.ndarray, k: int = 1) -> np.ndarray:
+    """Rotate a glyph. Encodes order/position/depth: roll(v, 1) is
+    'v, one step ago'. Orthogonal to v; invert with roll(v, -k)."""
+    return np.roll(v, k)
+
+
+def sim(a: np.ndarray, b: np.ndarray) -> float:
+    """Cosine similarity for bipolar glyphs, in [-1, 1]. Two random
+    symbols sit near 0. For situation glyphs, sim approximately tracks
+    the FRACTION OF SHARED ATTRIBUTE PAIRS — two 4-attribute
+    situations sharing 3 attributes measure ~0.44, not ~0."""
+    return float(np.dot(a.astype(np.float32), b.astype(np.float32))) / len(a)
+
+
+# ── data: structure in, glyph out; weighted sim, fact trees back ────
+#
+# Any JSON-shaped value encodes. An object is a weighted bundle of
+# bind(attr:key, child); an array is a bundle of its items (a set:
+# order belongs in a Strand); a scalar is the symbol of its text. A
+# nested object or array is rolled once before it binds, so
+# {"a": {"b": x}} and {"b": {"a": x}} stay apart. A flat object of
+# strings encodes exactly as a Space situation always has.
+#
+# Weights mirror the data: {"risk": 1.0, "plan": {"*": 0.5, "step": 2}}.
+# A number weighs that key; an object weighs inside it, its own weight
+# under "*". Unlisted keys weigh 1.0; weights for absent keys are
+# ignored.
+
+
+def _text(v: Any) -> str:
+    """A scalar's text, the same in every language: strings as they
+    are, true/false/null, numbers as JavaScript prints them."""
+    if isinstance(v, str):
+        return v
+    if v is None:
+        return "null"
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if isinstance(v, int) and abs(v) < 10**21:
+        return str(v)
+    if isinstance(v, (int, float)):
+        return _js_number(float(v))
+    raise TypeError(f"cannot encode a {type(v).__name__}: {v!r}")
+
+
+def _js_number(x: float) -> str:
+    """Number.prototype.toString for a double: shortest round-trip
+    digits, exponent outside [1e-7, 1e21)."""
+    if x != x:
+        return "NaN"
+    if x in (float("inf"), float("-inf")):
+        return "Infinity" if x > 0 else "-Infinity"
+    if x == 0:
+        return "0"
+    sign = "-" if x < 0 else ""
+    mantissa, _, exp = repr(abs(x)).partition("e")
+    whole, _, frac = mantissa.partition(".")
+    digits = (whole + frac).lstrip("0")
+    point = len(whole) + (int(exp) if exp else 0)  # digits are 0.d * 10^point
+    point -= len(whole + frac) - len((whole + frac).lstrip("0"))
+    digits = digits.rstrip("0") or "0"
+    k = len(digits)
+    if k <= point <= 21:
+        return sign + digits + "0" * (point - k)
+    if 0 < point <= 21:
+        return sign + digits[:point] + "." + digits[point:]
+    if -6 < point <= 0:
+        return sign + "0." + "0" * -point + digits
+    e = point - 1
+    e_text = ("+" if e >= 0 else "-") + str(abs(e))
+    if k == 1:
+        return f"{sign}{digits}e{e_text}"
+    return f"{sign}{digits[0]}.{digits[1:]}e{e_text}"
+
+
+def _weight(w: Any) -> tuple[float, dict[str, Any] | None]:
+    """(own weight, weights inside) for one entry of a weights tree."""
+    if w is None:
+        return 1.0, None
+    if isinstance(w, dict):
+        return _check_weight(w.get("*", 1.0)), w
+    return _check_weight(w), None
+
+
+def _keyed(
+    data: dict[str, Any], weights: dict[str, Any] | None, seed: int, dim: int, lexicon: bool = True
+) -> tuple[list[np.ndarray], list[float]]:
+    """bind(attr:key, child) for every key, code-point order, with
+    each key's weight. lexicon: read a weighted set's words through the
+    lexicon (a model's own setting, never the process's)."""
+    parts, ws = [], []
+    for key in sorted(data):
+        if not isinstance(key, str):
+            raise TypeError(f"object keys must be strings, got {key!r}")
+        own, inner = _weight(weights.get(key) if weights else None)
+        value = data[key]
+        if own == 0 or _weighs_nothing(value, inner):
+            continue  # it would carry no voice in the vote
+        child = _encode(value, inner, seed, dim, lexicon)
+        if isinstance(value, (dict, list, tuple)):
+            child = roll(child, 1)
+        parts.append(bind(symbol(f"attr:{key}", seed, dim), child))
+        ws.append(own)
+    return parts, ws
+
+
+def _word_glyph(item: Any, seed: int, dim: int, lexicon: bool = True) -> np.ndarray:
+    """A weighted set's item: a word, read through the lexicon when the kernel ships one and the reader asks for
+    it (lexicon); else its symbol."""
+    if isinstance(item, str) and lexicon:
+        try:
+            from glyphh_lexicon import LEXICON
+        except ImportError:  # the kernel without its lexicon module: words are symbols
+            return symbol(f"val:{item}", seed, dim)
+        return LEXICON.glyph(item, seed, dim, reach=_reach(lexicon))
+    return symbol(f"val:{_text(item)}", seed, dim)
+
+
+def _reach(lexicon: Any) -> int:
+    """A reading of words as a number: 0 no lexicon, 1 a word and its neighbours (the lexicon as before 3.16.0),
+    2 or 3 that many steps out (Settings.word_reach). True is 1."""
+    if not lexicon:
+        return 0
+    return 1 if lexicon is True else max(1, min(3, int(lexicon)))
+
+
+def _weighted_set(data: Any) -> bool:
+    """A list of [scalar, weight] pairs: a set whose items weigh differently (a bag of words whose words were
+    learned, for one). A plain set is a list of scalars; a list of pairs of anything else is a set of pairs."""
+    return all(
+        isinstance(x, (list, tuple))
+        and len(x) == 2
+        and isinstance(x[0], (str, int, float))
+        and not isinstance(x[0], bool)
+        and isinstance(x[1], (int, float))
+        and not isinstance(x[1], bool)
+        and 0 <= x[1] <= 1
+        for x in data
+    )
+
+
+def _encode(data: Any, weights: dict[str, Any] | None, seed: int, dim: int, lexicon: bool = True) -> np.ndarray:
+    if isinstance(data, dict):
+        if not data:
+            raise ValueError("cannot encode an empty object")
+        parts, ws = _keyed(data, weights, seed, dim, lexicon)
+        if not parts:
+            raise ValueError("cannot bundle when every weight is 0")
+        return bundle(parts, ws)
+    if isinstance(data, (list, tuple)):
+        if not data:
+            raise ValueError("cannot encode an empty array")
+        if _weighted_set(data):  # [[item, weight], ...]: each item's voice in the vote is its weight; a word read
+            parts = [_word_glyph(item, seed, dim, lexicon) for item, _ in data]  # through the lexicon (glyphh_lexicon.py)
+            weights = [float(w) for _, w in data]
+            return bundle(parts, weights) if sum(weights) > 0 else bundle(parts)
+        return bundle([_encode(x, None, seed, dim, lexicon) for x in data])
+    return symbol(f"val:{_text(data)}", seed, dim)
+
+
+def encode(
+    data: Any, weights: dict[str, Any] | None = None, seed: int = 42, dim: int = DIM, lexicon: bool = True
+) -> np.ndarray:
+    """One glyph for any JSON-shaped value — objects nest, arrays are
+    sets, scalars are symbols — with weights at every level (see the
+    note above). The glyph is what sim() compares; explain() gives the
+    exact weighted sim of two values as a fact tree. lexicon=False reads
+    a weighted set's words as bare symbols (a model's `lexicon` setting)."""
+    return _encode(data, weights, seed, dim, lexicon)
+
+
+_ABSENT = object()
+
+
+def _2(x: float) -> str:
+    return f"{round(x, 2) + 0.0:.2f}"  # no "-0.00"
+
+
+def _4(x: float) -> float:
+    return round(x, 4) + 0.0  # no -0.0
+
+
+@dataclass
+class Fact:
+    """One node of a fact tree: how one part of a query compares with
+    the same part of a record.
+
+    score: the exact weighted sim of this subtree — the weighted mean of
+        the children's scores, or the substrate sim at a leaf.
+    share: weight * score / the siblings' total weight; the shares of a
+        node's children sum to its score, so the tree adds up.
+    sim: the substrate sim of the two encoded subtrees — what a glyph
+        sees of this node, noise and all.
+    status: 'both', 'query_only' or 'record_only'."""
+
+    key: str
+    weight: float
+    score: float
+    share: float
+    sim: float
+    status: str
+    query: Any
+    record: Any
+    children: list[Fact]
+
+    def to_json(self) -> dict[str, Any]:
+        out: dict[str, Any] = {
+            "key": self.key,
+            "weight": self.weight,
+            "score": _4(self.score),
+            "share": _4(self.share),
+            "sim": _4(self.sim),
+            "status": self.status,
+        }
+        if not self.children:
+            if self.query is not _ABSENT:
+                out["query"] = self.query
+            if self.record is not _ABSENT:
+                out["record"] = self.record
+        else:
+            out["children"] = [c.to_json() for c in self.children]
+        return out
+
+    def to_text(self, depth: int = 0) -> str:
+        pad = "  " * depth
+        if self.children:
+            head = f"{pad}{self.key or '.'}"
+        elif self.status == "both":
+            head = f"{pad}{self.key} = {json.dumps(self.record, ensure_ascii=False)}"
+            if self.query != self.record:
+                head += f" (query {json.dumps(self.query, ensure_ascii=False)})"
+        else:
+            missing = "record" if self.status == "query_only" else "query"
+            head = f"{pad}{self.key}: not in the {missing}"
+        line = f"{head}  score {_2(self.score)} × w {self.weight:g} → {_2(self.share)}"
+        return "\n".join([line] + [c.to_text(depth + 1) for c in self.children])
+
+
+def _tally(children: list[Fact]) -> float:
+    """Each child's share of its parent; returns the parent's score."""
+    total = sum(c.weight for c in children)
+    for c in children:
+        c.share = c.weight * c.score / total if total else 0.0
+    return sum(c.share for c in children)
+
+
+def _weighs_nothing(data: Any, weights: dict[str, Any] | None) -> bool:
+    """True when every key of an object weighs 0 here, all the way down."""
+    if not isinstance(data, dict) or not weights:
+        return False
+    for k, v in data.items():
+        own, inner = _weight(weights.get(k))
+        if own > 0 and not _weighs_nothing(v, inner):
+            return False
+    return True
+
+
+def _side_by_side(
+    q: Any, r: Any, weights: dict[str, Any] | None, seed: int, dim: int, lexicon: bool = True
+) -> float:
+    """The glyph sim of two subtrees under the same weights; 0 when either
+    side weighs nothing there (there is no glyph to compare)."""
+    if _weighs_nothing(q, weights) or _weighs_nothing(r, weights):
+        return 0.0
+    return sim(_encode(q, weights, seed, dim, lexicon), _encode(r, weights, seed, dim, lexicon))
+
+
+def _explain(
+    key: str,
+    weight: float,
+    q: Any,
+    r: Any,
+    weights: dict[str, Any] | None,
+    seed: int,
+    dim: int,
+    glyphs: bool = True,
+    lexicon: bool = True,
+) -> Fact:
+    """glyphs=False skips the glyph sim at inner nodes: the score is
+    the same, only the side-by-side sim is left 0 (scoring every row
+    of a store needs the score alone)."""
+    if q is _ABSENT or r is _ABSENT:
+        side = r if q is _ABSENT else q
+        own = 0.0 if _weighs_nothing(side, weights) else weight  # nothing weighed under it: nothing missing
+        return Fact(key, own, 0.0, 0.0, 0.0, "record_only" if q is _ABSENT else "query_only", q, r, [])
+    if _weighs_nothing(q, weights) or _weighs_nothing(r, weights):
+        return Fact(key, 0.0, 0.0, 0.0, 0.0, "both", q, r, [])  # nothing to compare on one side: out of the mean
+    if not (isinstance(q, dict) and isinstance(r, dict)):
+        leaf = _side_by_side(q, r, weights, seed, dim, lexicon)
+        return Fact(key, weight, leaf, 0.0, leaf, "both", q, r, [])
+    children = []
+    for k in sorted(set(q) | set(r)):
+        own, inner = _weight(weights.get(k) if weights else None)
+        children.append(_explain(k, own, q.get(k, _ABSENT), r.get(k, _ABSENT), inner, seed, dim, glyphs, lexicon))
+    glyph_sim = _side_by_side(q, r, weights, seed, dim, lexicon) if glyphs else 0.0
+    return Fact(key, weight, _tally(children), 0.0, glyph_sim, "both", q, r, children)
+
+
+def explain(
+    query: Any,
+    record: Any,
+    weights: dict[str, Any] | None = None,
+    seed: int = 42,
+    dim: int = DIM,
+    lexicon: bool = True,
+) -> Fact:
+    """The fact tree for one query against one record: per key, how
+    close, with what weight, and its share of the whole. root.score is
+    the weighted sim. A key on one side only scores 0 at full weight,
+    so give it weight 0 if its absence shouldn't count."""
+    root = _explain("", 1.0, query, record, weights, seed, dim, True, lexicon)
+    root.share = root.score
+    return root
+
+
+# ── Strand: ordered meaning ─────────────────────────────────────────
+
+
+class Strand:
+    """A sequence of glyphs whose ORDER is part of the meaning.
+
+    state() folds the sequence into one glyph: each codon is rotated
+    by its age and decayed, so recent items dominate and order is
+    preserved — two strands with the same items in different order
+    have different states. Detail survives ~3 steps; the gist of
+    'what kind of trajectory is this' survives far longer.
+    """
+
+    def __init__(self, codons: list[np.ndarray] | None = None):
+        self.codons: list[np.ndarray] = list(codons or [])
+
+    def append(self, codon: np.ndarray) -> Strand:
+        self.codons.append(codon)
+        return self
+
+    def state(self, decay: float = 0.7) -> np.ndarray:
+        if not self.codons:
+            raise ValueError("empty strand has no state")
+        acc = np.zeros(len(self.codons[0]), dtype=np.float64)
+        rolled = []
+        for age, codon in enumerate(reversed(self.codons)):
+            shifted = roll(codon, age)
+            rolled.append(shifted)
+            acc += (decay**age) * shifted.astype(np.float64)
+        signs = np.sign(acc)
+        ties = signs == 0
+        if ties.any():
+            signs[ties] = _tiebreak(rolled)[ties]
+        return signs.astype(np.int8)
+
+    def __len__(self) -> int:
+        return len(self.codons)
+
+
+# ── Space: graded precedent ─────────────────────────────────────────
+
+
+@dataclass
+class Answer:
+    """What a Space says. Trust `top` only when `sufficient` is True
+    AND `confidence` clears your threshold AND `count` is more than a
+    couple — a consensus of one is not consensus. receipts = the
+    precedents behind the answer: (id, similarity, outcome, hash)."""
+
+    sufficient: bool
+    confidence: float  # consensus among qualifying precedents
+    support: float  # how CLOSE they are (mean similarity)
+    count: int  # how many precedents cleared min_sim
+    top: str | None  # leading outcome, None if insufficient
+    outcomes: dict[str, float]  # similarity-weighted distribution
+    receipts: list[tuple[str, float, str | None, str, str]]  # +author
+
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "sufficient": self.sufficient,
+            "confidence": round(self.confidence, 4),
+            "support": round(self.support, 4),
+            "count": self.count,
+            "top": self.top,
+            "outcomes": {k: round(v, 4) for k, v in self.outcomes.items()},
+            "receipts": [
+                {"id": i, "sim": round(s, 4), "outcome": o, "hash": h, "author": a} for i, s, o, h, a in self.receipts
+            ],
+        }
+
+
+@dataclass
+class Evidence:
+    """How well one outcome is supported in one situation, judged on
+    its own — not as a share of a vote. `count` precedents with this
+    outcome clear min_sim, at mean similarity `support` (nearest:
+    `nearest`); the newest of them was recorded at `latest` (epoch
+    seconds, 0.0 for rows written before time-stamping)."""
+
+    outcome: str
+    count: int
+    support: float
+    nearest: float
+    latest: float
+    authors: list[str]
+
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "outcome": self.outcome,
+            "count": self.count,
+            "support": round(self.support, 4),
+            "nearest": round(self.nearest, 4),
+            "latest": self.latest,
+            "authors": self.authors,
+        }
+
+
+@dataclass
+class FactTree:
+    """One precedent explained against a situation (Space.facts()).
+    score = root.score, the exact weighted sim; sim = the glyph sim
+    that found it; probability = P(this precedent's outcome | the
+    situation), calibrated (see Space.calibrate()); the rest cites the
+    precedent."""
+
+    id: str
+    outcome: str | None
+    author: str
+    ts: float
+    hash: str
+    sim: float
+    root: Fact
+    probability: float = 0.0
+
+    @property
+    def score(self) -> float:
+        return self.root.score
+
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "outcome": self.outcome,
+            "probability": _4(self.probability),
+            "score": _4(self.score),
+            "sim": _4(self.sim),
+            "author": self.author,
+            "ts": self.ts,
+            "hash": self.hash,
+            "tree": self.root.to_json(),
+        }
+
+    def to_text(self) -> str:
+        return (
+            f"{self.outcome or '(memory)'}  p {_2(self.probability)}  score "
+            f"{_2(self.score)}  (sim "
+            f"{_2(self.sim)}, {self.id} by {self.author})\n" + self.root.to_text(1)
+        )
+
+
+class Space:
+    """Precedent memory: record graded experience, answer by similarity.
+
+    The contract that makes this safe for a machine caller:
+      - record() is one write, permanent, no training run
+      - query() returns calibrated confidence over the precedents that
+        clear min_sim — rows below the bar carry no vote
+      - every answer cites the precedents it stands on
+      - with nothing above min_sim the Space says 'insufficient'
+        instead of guessing
+
+    Encode ONLY decision-relevant attributes: sim tracks attribute
+    overlap, so incidental attributes (region, timestamps, ids) make
+    unrelated situations look alike and poison neighborhoods. Set
+    min_sim to the overlap fraction that should count as 'the same
+    kind of situation' — with a 4-attribute situation, requiring 3
+    shared attributes means min_sim ~0.4 (sharing 2 measures ~0.28),
+    and the default 0.10 only excludes near-strangers.
+    """
+
+    def __init__(
+        self,
+        dim: int = DIM,
+        k: int = 15,
+        min_sim: float = 0.10,
+        seed: int = 42,
+        decay: float = 0.7,
+        author: str = "anon",
+        path: str | None = None,
+        tau: float | None = None,
+        readonly: bool = False,
+        store: Store | None = None,
+        lexicon: bool = True,
+        load: bool = True,
+    ):
+        """readonly: open the file read-only. Reads work as ever; every write raises ReadOnlyError before the
+        file is touched; nothing is created (no schema, no folder, no journal or WAL files); a store from an older
+        encoding is re-encoded in memory only. A path with no file yet reads as an empty store.
+        store: where the precedents live (a Store: SqliteStore, glyphh_postgres.PostgresStore); path= is
+        store=SqliteStore(path). lexicon: read text roles' words through the lexicon (this Space's own setting).
+        load=False leaves the precedents where they lie until a read needs them: writes go straight to the store,
+        and query, probabilities and facts read a shortlist when the store offers one and holds at least
+        exact_below precedents (Space.candidates); every other read loads the store first."""
+        if path and store is not None:
+            raise ValueError("a Space takes a path or a store, not both")
+        self.readonly = bool(readonly)
+        self.path = str(Path(path).expanduser()) if path else getattr(store, "path", None)
+        self.lexicon = _reach(lexicon)  # 0: words are symbols; 1..3: read through the lexicon, that many steps out
+        self.shortlist, self.exact_below = SHORTLIST, EXACT_BELOW
+        self.dim, self.k, self.min_sim, self.seed = dim, k, min_sim, seed
+        # temperature for probabilities: given, else the file's
+        # calibrated one (calibrate()), else TAU
+        self.tau = TAU if tau is None else float(tau)
+        self._tau_given = tau is not None
+        self._taus: dict[str, float] = {}  # a named output's own calibrated temperature
+        self._half_lives: dict[str, float] = {}  # an output's fitted recency half-life in seconds (none: off)
+        self.decay = decay
+        self.author = author
+        self._ids: list[str] = []
+        self._outcomes: list[str | None] = []  # the default output
+        self._named: list[dict[str, str]] = []  # each precedent's named outputs
+        self._authors: list[str] = []
+        self._ts: list[float] = []
+        self._situations: list[Any] = []
+        self._meta: dict[str, Any] = {}
+        self._trajs: list[np.ndarray | None] = []
+        self._glyphs: list[np.ndarray] = []
+        self._matrix = np.empty((0, dim), dtype=np.float32)  # grown 2x
+        self._n = 0
+        self._at: dict[str, int] = {}  # a held precedent's row, by id
+        self._store: Store | None = None
+        self._loaded = True  # every precedent of the store is held in memory
+        # the exact weighted score, fast: per leaf path, every distinct value's glyph once (a table and a
+        # matrix), and per precedent the index of its value there (-1: the precedent has no such leaf)
+        self._leaf_index: dict[str, dict[str, int]] = {}
+        self._leaf_vectors: dict[str, list[np.ndarray]] = {}
+        self._leaf_matrix: dict[str, np.ndarray | None] = {}
+        self._leaf_of: dict[str, list[int]] = {}
+        self._epoch = 0  # moves when a held precedent changes or goes (not when one is added): a view rebuilds
+        self._source: tuple[int, int] | None = None  # a view's: (id of the store it was made from, its epoch then)
+        if path:
+            store = _store_for(self.path, self.readonly, dim)
+        if store is not None:
+            self._attach(store, load)
+
+    @property
+    def loaded(self) -> bool:
+        """Every precedent of the store is held in memory (always, but for a Space opened with load=False)."""
+        return self._loaded
+
+    @property
+    def store(self) -> Store | None:
+        return self._store
+
+    # leaves: the fast path's tables
+
+    @staticmethod
+    def _leaves(situation: Any, at: str = "") -> list[tuple[str, Any]]:
+        """Every leaf of a situation as (path, value): an object's keys nest, anything else is a leaf."""
+        if isinstance(situation, dict):
+            out: list[tuple[str, Any]] = []
+            for key in sorted(situation):
+                out += Space._leaves(situation[key], f"{at}/{key}")
+            return out
+        return [(at, situation)]
+
+    def _leaf_add(self, situation: Any) -> None:
+        """One more precedent's leaves, in every table (a leaf it lacks: -1)."""
+        n = self._n  # its row, once appended
+        present: dict[str, Any] = dict(self._leaves(situation))
+        for path in set(self._leaf_of) | set(present):
+            rows = self._leaf_of.setdefault(path, [])
+            rows += [-1] * (n - len(rows))
+            if path in present:
+                key = json.dumps(present[path], sort_keys=True, ensure_ascii=False)
+                index = self._leaf_index.setdefault(path, {})
+                if key not in index:
+                    index[key] = len(index)
+                    self._leaf_vectors.setdefault(path, []).append(
+                        _leaf_glyph(key, present[path], self.seed, self.dim, self.lexicon).astype(np.float32)
+                    )
+                    self._leaf_matrix[path] = None  # rebuilt on the next read
+                rows.append(index[key])
+            else:
+                rows.append(-1)
+
+    def _leaf_drop(self, i: int) -> None:
+        for rows in self._leaf_of.values():
+            if i < len(rows):
+                del rows[i]
+
+    def _leaf_sims(self, path: str, query_vector: np.ndarray) -> np.ndarray | None:
+        """Every precedent's leaf sim with the query's leaf at this path; None when no precedent has the leaf."""
+        vectors = self._leaf_vectors.get(path)
+        if not vectors:
+            return None
+        matrix = self._leaf_matrix.get(path)
+        if matrix is None or len(matrix) != len(vectors):
+            matrix = np.stack(vectors)
+            self._leaf_matrix[path] = matrix
+        by_value = (matrix @ query_vector.astype(np.float32)) / self.dim
+        rows = self._leaf_of[path]
+        rows = rows + [-1] * (self._n - len(rows))
+        index = np.array(rows[: self._n], dtype=np.int64)
+        sims = np.where(index >= 0, by_value[np.maximum(index, 0)], 0.0)
+        return sims.astype(np.float64)
+
+    def _has(self, path: str) -> np.ndarray:
+        rows = self._leaf_of.get(path)
+        if rows is None:
+            return np.zeros(self._n, dtype=bool)
+        return np.array((rows + [-1] * (self._n - len(rows)))[: self._n], dtype=np.int64) >= 0
+
+    def _present(self, prefix: str, weights: dict[str, Any] | None) -> np.ndarray:
+        """Which precedents weigh something at this path: a leaf there, or a leaf with weight under it."""
+        found = self._has(prefix)
+        for k in self._keys_under(prefix):
+            own, inner = _weight(weights.get(k) if weights else None)
+            if own > 0:
+                found |= self._present(f"{prefix}/{k}", inner)
+        return found
+
+    def _has_any(self, prefix: str) -> np.ndarray:
+        """Which precedents carry anything at this path or under it, weighed or not."""
+        found = self._has(prefix)
+        for path in self._leaf_of:
+            if path.startswith(prefix + "/"):
+                found |= self._has(path)
+        return found
+
+    def _keys_under(self, prefix: str) -> set[str]:
+        """The keys the precedents have directly under this path."""
+        cut = len(prefix) + 1
+        return {path[cut:].split("/", 1)[0] for path in self._leaf_of if path.startswith(prefix + "/")}
+
+    def _fast_scores(self, situation: dict[str, Any], weights: dict[str, Any] | None) -> np.ndarray:
+        """The exact weighted sim of the situation against every precedent, as _exact scores it, by leaf and in
+        one pass: a node's score is the weighted mean of its children's (a key on one side only scores 0 at its
+        weight), a leaf's the glyph sim of the two values. The query's side fixes the weights; the only thing that
+        varies by precedent is which keys it has, so each node is a numerator and a denominator over n precedents,
+        and each leaf one matrix product."""
+        n = self._n
+
+        def node(q: Any, w: dict[str, Any] | None, at: str) -> np.ndarray:
+            if not isinstance(q, dict):
+                sims = self._leaf_sims(at, _encode(q, None, self.seed, self.dim, self.lexicon))
+                return np.zeros(n) if sims is None else sims
+            owns = {k: _weight(w.get(k) if w else None) for k in q}
+            numerator = np.zeros(n)
+            denominator = np.zeros(n)
+            for k, (own, inner) in owns.items():
+                if own > 0 and not _weighs_nothing(q[k], inner):
+                    # the key counts for a precedent that weighs something there (present, or missing something
+                    # weighed); for one that weighs nothing there it is out of the mean, as _explain has it
+                    there = self._present(f"{at}/{k}", inner)
+                    denominator += own * (there | ~self._has_any(f"{at}/{k}"))
+                    numerator += own * node(q[k], inner, f"{at}/{k}")
+            for k in self._keys_under(at) - set(q):
+                own, inner = _weight(w.get(k) if w else None)
+                if own > 0:
+                    denominator += own * self._present(f"{at}/{k}", inner)
+            with np.errstate(divide="ignore", invalid="ignore"):
+                return np.where(denominator > 0, numerator / denominator, 0.0)
+
+        return node(situation, weights, "")
+
+    # encoding: a situation is an object (values may nest — see
+    # encode()); optional events fold in as a strand so order-carrying
+    # situations keep their order; weights weigh the situation's keys
+    def encode(
+        self, situation: dict[str, Any], events: list[np.ndarray] | None = None, weights: dict[str, Any] | None = None
+    ) -> np.ndarray:
+        if not isinstance(situation, dict):
+            raise TypeError("a situation is an object of attributes")
+        parts, ws = _keyed(situation, weights, self.seed, self.dim, self.lexicon)
+        if events:
+            parts.append(bind(symbol("trajectory", self.seed, self.dim), Strand(list(events)).state(self.decay)))
+            ws.append(1.0)
+        if not parts:
+            raise ValueError("cannot encode an empty situation")
+        return bundle(parts, ws)
+
+    def _traj(self, events: list[np.ndarray] | None) -> np.ndarray | None:
+        return Strand(list(events)).state(self.decay) if events else None
+
+    def _append(
+        self,
+        rid: str,
+        outcome: str | None,
+        glyph: np.ndarray,
+        author: str,
+        ts: float,
+        situation: Any,
+        traj: np.ndarray | None,
+        named: dict[str, str] | None = None,
+    ) -> None:
+        self._at[rid] = self._n
+        self._ids.append(rid)
+        self._situations.append(situation)
+        self._trajs.append(traj)
+        self._outcomes.append(outcome or None)  # stored as "" in the file
+        self._named.append(dict(named or {}))
+        self._authors.append(author)
+        self._ts.append(float(ts))
+        self._glyphs.append(glyph)
+        if self._n == len(self._matrix):  # amortized O(1) growth
+            grown = np.empty((max(64, 2 * len(self._matrix)), self.dim), dtype=np.float32)
+            grown[: self._n] = self._matrix[: self._n]
+            self._matrix = grown
+        self._matrix[self._n] = glyph.astype(np.float32)
+        self._leaf_add(situation)
+        self._n += 1
+
+    def _writes(self, operation: str) -> None:
+        if self.readonly:
+            raise ReadOnlyError(operation, self.path)
+
+    def _outs(self, output: str | None) -> list[str | None]:
+        """Every precedent's outcome for this output (None: ungraded for it), row by row."""
+        name = _output_name(output)
+        if name == DEFAULT:
+            return self._outcomes
+        return [named.get(name) for named in self._named]
+
+    def _tau_for(self, output: str | None) -> float:
+        """The temperature an output's probabilities use: a tau given to the Space, else that output's
+        calibrated one, else TAU (the default output keeps its own, as it always has)."""
+        name = _output_name(output)
+        if name == DEFAULT or self._tau_given:
+            return self.tau
+        return self._taus.get(name, TAU)
+
+    def outputs(self) -> list[str]:
+        """The outputs this store holds outcomes for: the default output first when any precedent has one."""
+        self._ensure_loaded()
+        named = sorted({name for row in self._named for name in row})
+        return ([DEFAULT] if any(o is not None for o in self._outcomes) else []) + named
+
+    def set_tau(self, output: str | None, tau: float) -> None:
+        """Keep a temperature for one output, as calibrate() would (a view fits it; its store keeps it). An
+        output's name with AHEAD or BACK after it keeps its thread temperature (calibrate_thread())."""
+        self._writes("calibrate")
+        along = output[-1] if output and output[-1] in (AHEAD, BACK) else ""
+        name, tau = _output_name(output[:-1] if along and output else output) + along, float(tau)
+        if not tau > 0:
+            raise ValueError("tau is a positive number")
+        if name == DEFAULT:
+            self.tau, self._tau_given = tau, False
+        else:
+            self._taus[name] = tau
+        if self._store is not None:
+            self._store.set_tau(name, tau)
+
+    def half_life(self, output: str | None = None) -> float | None:
+        """The output's recency half-life in seconds (calibrate(recency=True) fits it), None when time weighs
+        nothing."""
+        return self._half_lives.get(_output_name(output))
+
+    def set_half_life(self, output: str | None, seconds: float | None) -> None:
+        """Keep an output's recency half-life (None: off), as calibrate() would; kept in the store's meta."""
+        self._writes("calibrate")
+        name = _output_name(output)
+        if seconds is not None and not float(seconds) > 0:
+            raise ValueError("a half-life is a positive number of seconds")
+        if seconds is None:
+            self._half_lives.pop(name, None)
+        else:
+            self._half_lives[name] = float(seconds)
+        if self._store is not None:
+            self._store.set_meta(HALF_LIVES_KEY, dict(self._half_lives))
+
+    def _recency(self, now: float | None, output: str | None) -> np.ndarray | None:
+        """Each precedent's voice by its age at `now`: 0.5 ** (age / half-life), a precedent from after `now`
+        aged 0. None (every voice whole) without a `now` or a half-life."""
+        half = self._half_lives.get(_output_name(output))
+        if now is None or half is None or self._n == 0:
+            return None
+        age = np.maximum(float(now) - np.asarray(self._ts[: self._n], dtype=np.float64), 0.0)
+        return np.maximum(np.power(0.5, age / half), 1e-9)  # the oldest still speak, if faintly
+
+    def view(self, fn: Callable[[Any], Any], into: Space | None = None) -> Space:
+        """This store's precedents with every situation passed through fn, in memory only: the same ids, outcomes
+        (every output's), authors, times and events, each glyph made again from its new situation. How one output
+        reads the store through its own learned word weights and interactions while the file holds each case once.
+        Given `into` (a view this store made before with the same fn), it is brought up to date instead: the
+        precedents added since are appended, every outcome and temperature copied; when a held precedent changed
+        or went since, it is made again. A view is for reads (and calibrate, whose tau its store keeps by
+        set_tau); recording into it changes nothing in the store."""
+        self._ensure_loaded()
+        fresh = (
+            into is None
+            or into._source != (id(self), self._epoch)
+            or into._n > self._n
+            or into._ids != self._ids[: into._n]
+        )
+        out = Space(self.dim, self.k, self.min_sim, self.seed, self.decay, self.author, lexicon=self.lexicon) if fresh else into
+        assert out is not None
+        for i in range(out._n, self._n):
+            situation = fn(self._situations[i])
+            parts, ws = _keyed(situation, None, self.seed, self.dim, self.lexicon)
+            traj = self._trajs[i]
+            if traj is not None:
+                parts.append(bind(symbol("trajectory", self.seed, self.dim), traj))
+                ws.append(1.0)
+            out._append(
+                self._ids[i], None, bundle(parts, ws), self._authors[i], self._ts[i], situation, traj
+            )
+        out._outcomes = list(self._outcomes)
+        out._named = [dict(row) for row in self._named]
+        out.k, out.min_sim = self.k, self.min_sim
+        out.tau, out._tau_given, out._taus = self.tau, self._tau_given, dict(self._taus)
+        out._half_lives = dict(self._half_lives)
+        out._source = (id(self), self._epoch)
+        return out
+
+    def _drop(self, i: int) -> None:
+        del self._at[self._ids[i]]
+        for column in (
+            self._ids,
+            self._situations,
+            self._trajs,
+            self._outcomes,
+            self._named,
+            self._authors,
+            self._ts,
+            self._glyphs,
+        ):
+            del column[i]
+        self._epoch += 1
+        self._leaf_drop(i)
+        self._matrix[i : self._n - 1] = self._matrix[i + 1 : self._n]
+        self._n -= 1
+        for j in range(i, self._n):
+            self._at[self._ids[j]] = j
+
+    def record(
+        self,
+        situation: dict[str, Any],
+        outcome: str | None = None,
+        events: list[np.ndarray] | None = None,
+        rid: str | None = None,
+        ts: float | None = None,
+        outcomes: dict[str, str] | None = None,
+    ) -> str:
+        """One precedent: its situation, and its outcome (the default output's) and/or its named outcomes
+        (`outcomes`, {output: value}; "default" there is the same as `outcome`). The same id again replaces the
+        precedent, every outcome with it."""
+        self._writes("record")
+        case = self._case(situation, outcome, events, rid, ts, outcomes)
+        self._put([case])
+        return case[0].id
+
+    def record_many(self, cases: Iterable[Mapping[str, Any]]) -> list[str]:
+        """Many precedents in one write (one transaction in the store): each case an object of record()'s
+        arguments ({"situation", "outcome"?, "outcomes"?, "events"?, "rid"?, "ts"?}). Every case is checked and
+        encoded before anything is written, so one bad case refuses them all. Within the batch, as across
+        batches, a later case with an id already held replaces it. Returns the ids, in order."""
+        self._writes("record")
+        prepared = []
+        for n, case in enumerate(cases):
+            if not isinstance(case, Mapping) or "situation" not in case:
+                raise ValueError(f"cases[{n}] is an object with a situation")
+            unknown = set(case) - {"situation", "outcome", "outcomes", "events", "rid", "ts"}
+            if unknown:
+                raise ValueError(f"cases[{n}]: unknown field(s) {', '.join(sorted(unknown))}")
+            prepared.append(
+                self._case(
+                    case["situation"],
+                    case.get("outcome"),
+                    case.get("events"),
+                    case.get("rid"),
+                    case.get("ts"),
+                    case.get("outcomes"),
+                )
+            )
+        self._put(prepared)
+        return [row.id for row, _, _ in prepared]
+
+    def _case(
+        self,
+        situation: dict[str, Any],
+        outcome: str | None,
+        events: list[np.ndarray] | None,
+        rid: str | None,
+        ts: float | None,
+        outcomes: dict[str, str] | None,
+    ) -> tuple[Row, dict[str, str], Any]:
+        """One case checked and encoded, nothing written: (the row a store keeps, its named outcomes, the
+        situation and trajectory held in memory)."""
+        named = _named_outcomes(outcomes)
+        if DEFAULT in named:
+            if outcome not in (None, named[DEFAULT]):
+                raise ValueError("outcome and outcomes['default'] are the same output: give one")
+            outcome = named.pop(DEFAULT)
+        rid = rid or str(uuid.uuid4())[:12]
+        ts = time.time() if ts is None else float(ts)
+        glyph = self.encode(situation, events)
+        blob = np.stack(events).astype(np.int8).tobytes() if events else None
+        row = Row(rid, json.dumps(situation, ensure_ascii=False), outcome or "", self.dim, glyph, self.author, ts, blob)
+        return row, named, (situation, self._traj(events))
+
+    def _put(self, cases: list[tuple[Row, dict[str, str], Any]]) -> None:
+        for row, named, (situation, traj) in cases:
+            if self._loaded:
+                if row.id in self._at:  # the same id again replaces the row
+                    self._drop(self._at[row.id])
+                self._append(row.id, row.outcome or None, row.glyph, row.author, row.ts, situation, traj, named)
+        if self._store is not None:
+            self._store.put_many([(row, [(name, value, row.ts) for name, value in named.items()]) for row, named, _ in cases])
+
+    def forget(self, rid: str) -> None:
+        """Delete one precedent, every outcome with it, from memory and from the store. An id not held raises
+        KeyError. What was learned from it stays until the next learn()."""
+        self._writes("forget")
+        if self._loaded:
+            if rid not in self._at:
+                raise KeyError(f"no precedent {rid!r} here")
+            self._drop(self._at[rid])
+        elif self._store is None or not self._store.has(rid):
+            raise KeyError(f"no precedent {rid!r} here")
+        if self._store is not None:
+            self._store.forget(rid)
+
+    def grade(self, rid: str, output: str | None, value: str | None) -> None:
+        """One output's outcome on a precedent already held, added, replaced, or (None) taken away: a case
+        recorded once, its answers given as they become known. The situation and its glyph are untouched."""
+        self._writes("grade")
+        name = _output_name(output)
+        if value is not None and (not isinstance(value, str) or not value):
+            raise ValueError("an outcome is a non-empty string, or None to take it away")
+        if self._loaded:
+            if rid not in self._at:
+                raise KeyError(f"no precedent {rid!r} here")
+            i = self._at[rid]
+            if name == DEFAULT:
+                self._outcomes[i] = value
+            elif value is None:
+                self._named[i].pop(name, None)
+            else:
+                self._named[i][name] = value
+        elif self._store is None or not self._store.has(rid):
+            raise KeyError(f"no precedent {rid!r} here")
+        if self._store is not None:
+            self._store.grade(rid, name, value, time.time())
+
+    def _sims(
+        self, situation: dict[str, Any], events: list[np.ndarray] | None, weights: dict[str, Any] | None = None
+    ) -> np.ndarray:
+        q = self.encode(situation, events, weights).astype(np.float32)
+        return (self._matrix[: self._n] @ q) / self.dim
+
+    def _exact(
+        self,
+        i: int,
+        situation: dict[str, Any],
+        traj: np.ndarray | None,
+        weights: dict[str, Any] | None,
+        glyphs: bool = False,
+    ) -> Fact:
+        """Precedent i explained against the situation; events, when
+        either side has them, are one more key: "~events"."""
+        root = _explain("", 1.0, situation, self._situations[i], weights, self.seed, self.dim, glyphs, self.lexicon)
+        theirs = self._trajs[i]
+        if (traj is not None or theirs is not None) and root.children:
+            own, _ = _weight(weights.get("~events") if weights else None)
+            if traj is not None and theirs is not None:
+                s = sim(traj, theirs)
+                fact = Fact("~events", own, s, 0.0, s, "both", "…", "…", [])
+            else:
+                fact = Fact(
+                    "~events",
+                    own,
+                    0.0,
+                    0.0,
+                    0.0,
+                    "query_only" if theirs is None else "record_only",
+                    "…" if traj is not None else _ABSENT,
+                    "…" if theirs is not None else _ABSENT,
+                    [],
+                )
+            root.children.append(fact)
+            root.score = _tally(root.children)
+        root.share = root.score
+        return root
+
+    def _scores(
+        self, situation: dict[str, Any], events: list[np.ndarray] | None, weights: dict[str, Any] | None
+    ) -> np.ndarray:
+        """The similarity every read ranks and gates on: the glyph sim,
+        or — when the caller weighs the keys — the exact weighted sim,
+        so a weight can raise a match as well as lower one."""
+        if weights is None:
+            return self._sims(situation, events)
+        self.encode(situation, events, weights)  # same errors either way
+        traj = self._traj(events)
+        if traj is None and not any(t is not None for t in self._trajs[: self._n]):
+            return self._fast_scores(situation, weights)
+        return np.array([self._exact(i, situation, traj, weights).score for i in range(self._n)], dtype=np.float64)
+
+    def _top(
+        self,
+        situation: dict[str, Any],
+        events: list[np.ndarray] | None,
+        weights: dict[str, Any] | None = None,
+        k: int | None = None,
+    ) -> list[tuple[int, float]]:
+        sims = self._scores(situation, events, weights)
+        # highest first; equal scores, the later row first (stable, so
+        # the order holds at any size and in every language)
+        order = np.argsort(sims, kind="stable")[::-1][: self.k if k is None else k]
+        return [(int(i), float(sims[i])) for i in order]
+
+    def _hash(self, i: int) -> str:
+        return hashlib.sha256(self._glyphs[i].tobytes()).hexdigest()[:16]
+
+    def query(
+        self,
+        situation: dict[str, Any],
+        events: list[np.ndarray] | None = None,
+        weights: dict[str, Any] | None = None,
+        bias: Callable[[str], float] | None = None,
+        output: str | None = None,
+        now: float | None = None,
+    ) -> Answer:
+        """weights: the query's weights tree (see encode()). Weighted,
+        every similarity here is the exact weighted sim (a fact tree's
+        score), so min_sim reads as 'the weighted share of attributes
+        that must agree'. Unweighted, it is the glyph sim, as always.
+        bias(outcome): a factor on each voter's weight by its outcome
+        (what the query's own words say about that outcome, for one);
+        the similarity bar, support and receipts are unbiased.
+        output: which output votes (default: the default output); a
+        precedent without an outcome for it ranks but does not vote.
+        now: the query's time (epoch seconds); given, and the output
+        has a recency half-life, each voter weighs by its age too."""
+        if not self._loaded:
+            return self.candidates(situation, events, weights).query(situation, events, weights, bias, output, now)
+        if self._n == 0:
+            return Answer(False, 0.0, 0.0, 0, None, {}, [])
+        outs = self._outs(output)
+        top = self._top(situation, events, weights)
+        receipts = [(self._ids[i], s, outs[i], self._hash(i), self._authors[i]) for i, s in top]
+        # only precedents that clear the similarity bar get a vote
+        voters = [(i, s) for i, s in top if s >= self.min_sim and outs[i] is not None]
+        if not voters:
+            return Answer(False, 0.0, max(top[0][1], 0.0), 0, None, {}, receipts)
+        sims = np.array([s for _, s in voters])
+        weights = sims if bias is None else np.array([s * bias(outs[i]) for i, s in voters])
+        recency = self._recency(now, output)
+        if recency is not None:
+            weights = weights * recency[[i for i, _ in voters]]
+        wsum = float(weights.sum()) or 1.0
+        outcomes: dict[str, float] = {}
+        for (i, _), w in zip(voters, weights):
+            outcomes[outs[i]] = outcomes.get(outs[i], 0.0) + float(w)
+        outcomes = {o: w / wsum for o, w in outcomes.items()}
+        top_outcome = max(outcomes, key=outcomes.get)
+        return Answer(True, outcomes[top_outcome], float(sims.mean()), len(voters), top_outcome, outcomes, receipts)
+
+    def _evidence(self, sims: np.ndarray, outcome: str, bar: float, outs: list[str | None] | None = None) -> Evidence:
+        outs = self._outcomes if outs is None else outs
+        idx = [i for i in range(self._n) if outs[i] == outcome and sims[i] >= bar]
+        if not idx:
+            return Evidence(outcome, 0, 0.0, 0.0, 0.0, [])
+        close = sims[idx]
+        return Evidence(
+            outcome,
+            len(idx),
+            float(close.mean()),
+            float(close.max()),
+            max(self._ts[i] for i in idx),
+            sorted({self._authors[i] for i in idx}),
+        )
+
+    def evidence(
+        self,
+        situation: dict[str, Any],
+        outcome: str,
+        events: list[np.ndarray] | None = None,
+        min_sim: float | None = None,
+        weights: dict[str, Any] | None = None,
+        output: str | None = None,
+    ) -> Evidence:
+        """Support for ONE candidate outcome, over every precedent (not
+        just the top k), judged on its own: how many precedents with
+        this outcome clear the bar, how close, how recent, by whom."""
+        self._ensure_loaded()
+        if self._n == 0:
+            return Evidence(outcome, 0, 0.0, 0.0, 0.0, [])
+        bar = self.min_sim if min_sim is None else min_sim
+        return self._evidence(self._scores(situation, events, weights), outcome, bar, self._outs(output))
+
+    def answers(
+        self,
+        situation: dict[str, Any],
+        events: list[np.ndarray] | None = None,
+        min_count: int = 1,
+        weights: dict[str, Any] | None = None,
+        output: str | None = None,
+    ) -> list[Evidence]:
+        """Every outcome with qualifying precedent in this situation,
+        strongest first. The read for situations that genuinely have
+        several true outcomes: gate each on its own count, not on its
+        share of a vote (see SPEC rule 4)."""
+        self._ensure_loaded()
+        if self._n == 0:
+            return []
+        outs = self._outs(output)
+        sims = self._scores(situation, events, weights)
+        found = {outs[i] for i in range(self._n) if sims[i] >= self.min_sim and outs[i] is not None}
+        out = [self._evidence(sims, o, self.min_sim, outs) for o in found]
+        out = [e for e in out if e.count >= min_count]
+        return sorted(out, key=lambda e: (-e.count, -e.support, e.outcome))
+
+    def matches(
+        self,
+        situation: dict[str, Any],
+        outcome: str,
+        events: list[np.ndarray] | None = None,
+        weights: dict[str, Any] | None = None,
+        output: str | None = None,
+    ) -> float:
+        """Max similarity among precedents with THIS outcome (0.0 if
+        none). The veto primitive: 'how close is the nearest recorded
+        failure of this exact action?' — a direct check that no
+        consensus vote can dilute."""
+        self._ensure_loaded()
+        if self._n == 0:
+            return 0.0
+        mask = np.array([o == outcome for o in self._outs(output)[: self._n]])
+        if not mask.any():
+            return 0.0
+        sims = self._scores(situation, events, weights)[mask]
+        return float(sims.max())
+
+    def facts(
+        self,
+        situation: dict[str, Any],
+        events: list[np.ndarray] | None = None,
+        weights: dict[str, Any] | None = None,
+        top: int | None = None,
+        min_score: float | None = None,
+        output: str | None = None,
+    ) -> list[FactTree]:
+        """The exact read: every precedent scored by weighted sim
+        (unweighted keys weigh 1), the `top` (default k) best each
+        explained as a fact tree — per key its score, weight and share,
+        events as "~events" — with the glyph sim beside it and a
+        citation. Ranked by score, then glyph sim, newest, id; rows under
+        min_score (if given) are left out."""
+        if not self._loaded:
+            return self.candidates(situation, events, weights).facts(situation, events, weights, top, min_score, output)
+        if self._n == 0:
+            return []
+        sims = self._sims(situation, events)
+        scores = self._scores(situation, events, weights or {})
+        order = sorted(
+            (i for i in range(self._n) if min_score is None or scores[i] >= min_score),
+            key=lambda i: (-scores[i], -sims[i], -self._ts[i], self._ids[i]),
+        )
+        traj = self._traj(events)
+        outs = self._outs(output)
+        probs = self._probabilities(scores, self._tau_for(output), outs=outs)
+        return [
+            FactTree(
+                self._ids[i],
+                outs[i],
+                self._authors[i],
+                self._ts[i],
+                self._hash(i),
+                float(sims[i]),
+                self._exact(i, situation, traj, weights, glyphs=True),
+                probs.get(outs[i], 0.0) if outs[i] is not None else 0.0,
+            )
+            for i in order[: self.k if top is None else top]
+        ]
+
+    def probabilities(
+        self,
+        situation: dict[str, Any],
+        events: list[np.ndarray] | None = None,
+        weights: dict[str, Any] | None = None,
+        bias: Callable[[str], float] | None = None,
+        output: str | None = None,
+        now: float | None = None,
+    ) -> dict[str, float]:
+        """P(outcome | situation) for every outcome among the POOL
+        nearest precedents by exact weighted sim: a softmax of their
+        scores at temperature tau, summed per outcome. Calibrated once
+        calibrate() has fit tau to this store's own graded record.
+        output: which output's outcomes, at that output's own tau.
+        now: the query's time; with the output's recency half-life,
+        each precedent's share is weighed by its age as well."""
+        if not self._loaded:
+            return self.candidates(situation, events, weights).probabilities(situation, events, weights, bias, output, now)
+        if self._n == 0:
+            return {}
+        scores = self._scores(situation, events, weights or {})
+        recency = self._recency(now, output)
+        return self._probabilities(scores, self._tau_for(output), bias=bias, outs=self._outs(output), recency=recency)
+
+    def _probabilities(
+        self,
+        scores: np.ndarray,
+        tau: float,
+        skip: int = -1,
+        bias: Callable[[str], float] | None = None,
+        outs: list[str | None] | None = None,
+        recency: np.ndarray | None = None,
+    ) -> dict[str, float]:
+        outs = self._outcomes if outs is None else outs
+        order = [int(i) for i in np.argsort(scores, kind="stable")[::-1] if i != skip and outs[i] is not None][:POOL]
+        if not order:
+            return {}
+        top = float(scores[order[0]])
+        mass: dict[str, float] = {}
+        for i in order:
+            o = outs[i]
+            share = math.exp((float(scores[i]) - top) / tau) * (1.0 if bias is None else bias(o))
+            mass[o] = mass.get(o, 0.0) + share * (1.0 if recency is None else float(recency[i]))
+        z = sum(mass.values()) or 1.0
+        return {o: m / z for o, m in mass.items()}
+
+    # the thread: the precedents in the order they happened. A precedent's outcome says how things stood at its
+    # own time; what followed it is the precedent after it. predict() reads ahead along it, lookback() back.
+
+    def _links(self, thread: Callable[[Any], Any] | None, back: bool = False) -> np.ndarray:
+        """Each precedent's next one in time on its own thread (`back`: the one before it), as a row; -1 where
+        the thread ends. `thread` names a situation's thread (None from it: on no thread); without one the whole
+        Space is one thread. Equal times keep the order they were recorded in."""
+        order = np.argsort(np.asarray(self._ts[: self._n], dtype=np.float64), kind="stable")
+        link = np.full(self._n, -1, dtype=np.int64)
+        if thread is None:
+            runs = [order]
+        else:
+            by_key: dict[Any, list[int]] = {}
+            for i in order:
+                key = thread(self._situations[i])
+                if key is not None:
+                    by_key.setdefault(_text(key), []).append(int(i))
+            runs = [np.asarray(rows, dtype=np.int64) for rows in by_key.values()]
+        for run in runs:
+            if back:
+                link[run[1:]] = run[:-1]
+            else:
+                link[run[:-1]] = run[1:]
+        return link
+
+    def _shares(self, scores: np.ndarray, tau: float, among: np.ndarray) -> dict[int, float]:
+        """One unit of mass over the POOL nearest precedents `among` those allowed, and every one that scores the
+        same as the last of them (the newest TIES at most: where many precedents are the same situation, all of
+        them speak, not the newest 25): a softmax of their scores at tau, as _probabilities weighs a vote.
+        {row: share}; empty when none is allowed."""
+        order = np.argsort(scores, kind="stable")[::-1]
+        order = order[among[order]]
+        if not len(order):
+            return {}
+        if len(order) > POOL:
+            order = order[: max(POOL, min(int(np.searchsorted(-scores[order], -scores[order[POOL - 1]] + 1e-9)), TIES))]
+        share = np.exp((scores[order] - scores[order[0]]) / tau)
+        share /= share.sum()
+        return {int(i): float(s) for i, s in zip(order, share)}
+
+    def _thread_tau(self, output: str | None, back: bool) -> float:
+        """The temperature a thread read uses: its own once calibrate_thread() has fit it, else the output's."""
+        if self._tau_given:
+            return self.tau
+        return self._taus.get(_output_name(output) + (BACK if back else AHEAD), self._tau_for(output))
+
+    def _walk(
+        self,
+        situation: dict[str, Any],
+        steps: int | Sequence[int],
+        events: list[np.ndarray] | None,
+        weights: dict[str, Any] | None,
+        output: str | None,
+        thread: Callable[[Any], Any] | None,
+        chain: bool,
+        width: int,
+        halt: float | None,
+        before: float | None,
+        weights_for: Callable[[dict[str, Any]], dict[str, Any] | None] | None,
+        back: bool,
+        tau: float | None = None,
+    ) -> dict[str, Any]:
+        wanted = list(range(1, steps + 1)) if isinstance(steps, int) else sorted({int(s) for s in steps})
+        if not wanted or wanted[0] < 1:
+            raise ValueError("steps is a whole number of steps, 1 or more, or a list of them")
+        if width < 1:
+            raise ValueError("a beam is at least 1 wide")
+        self._ensure_loaded()
+        n = self._n
+        outs = self._outs(output)
+        ts = np.asarray(self._ts[:n], dtype=np.float64)
+        there = np.ones(n, dtype=bool) if before is None else ts < float(before)
+        prior = Counter(outs[i] for i in np.flatnonzero(there) if outs[i] is not None)
+        answer: dict[str, Any] = {"steps": [], "halted": None, "lost": 0.0}
+        if not prior:
+            answer["halted"] = wanted[0]
+            return answer
+        total = sum(prior.values())
+        tau = self._thread_tau(output, back) if tau is None else float(tau)
+        link = self._links(thread, back)
+        scores = np.asarray(self._scores(situation, events, weights or {}), dtype=np.float64)
+
+        def onward(at: np.ndarray) -> np.ndarray:
+            """Which precedents have a step from here that is there to be read."""
+            return there & (at >= 0) & there[np.maximum(at, 0)]
+
+        def said(mass: Mapping[int, float], step: int) -> dict[str, Any] | None:
+            votes: dict[str, float] = {}
+            for row, m in mass.items():
+                if outs[row] is not None:
+                    votes[outs[row]] = votes.get(outs[row], 0.0) + m  # type: ignore[index]
+            arrived = sum(votes.values())
+            if arrived <= 0:
+                return None
+            probabilities = {o: v / arrived for o, v in sorted(votes.items(), key=lambda kv: (-kv[1], kv[0]))}
+            gain = sum(p * math.log2(p * total / prior[o]) for o, p in probabilities.items() if p > 0)
+            top = next(iter(probabilities))
+            return {
+                "step": step,
+                "outcome": top,
+                "p": probabilities[top],
+                "probabilities": probabilities,
+                "gain": max(gain, 0.0),
+                "arrived": arrived,
+            }
+
+        def keep(read: dict[str, Any] | None, step: int) -> bool:
+            if read is None or (halt is not None and read["gain"] < halt):
+                answer["halted"] = step
+                return False
+            if step in wanted:
+                answer["steps"].append(read)
+            return True
+
+        if not chain:
+            # each step on its own: the nearest precedents that have that many steps after them, and what stood
+            # at the end of each one's own
+            at = np.arange(n, dtype=np.int64)
+            for step in range(1, wanted[-1] + 1):
+                at = np.where(at >= 0, link[np.maximum(at, 0)], -1)
+                if step not in wanted:
+                    continue
+                mass: dict[int, float] = {}
+                for row, share in self._shares(scores, tau, onward(at)).items():
+                    mass[int(at[row])] = mass.get(int(at[row]), 0.0) + share
+                if not keep(said(mass, step), step):
+                    break
+            return answer
+        # the beam: one step at a time, the mass spreading again from wherever it stands over the precedents like
+        # that one, and only the `width` heaviest going on
+        step_on = onward(link)
+        held: dict[int, float] = {}
+        for row, share in self._shares(scores, tau, step_on).items():
+            held[int(link[row])] = held.get(int(link[row]), 0.0) + share
+        for step in range(1, wanted[-1] + 1):
+            if step in wanted and not keep(said(held, step), step):
+                break
+            if step == wanted[-1]:
+                break
+            # precedents in the same situation go on as one (the heaviest of them): what is like one is like all
+            same: dict[bytes, list[Any]] = {}
+            for row, m in sorted(held.items(), key=lambda kv: (-kv[1], kv[0])):
+                same.setdefault(self._glyphs[row].tobytes(), [row, 0.0])[1] += m
+            heaviest = sorted(((row, m) for row, m in same.values()), key=lambda kv: (-kv[1], kv[0]))
+            answer["lost"] += sum(m for _, m in heaviest[width:])
+            reached: dict[int, float] = {}
+            for row, m in heaviest[:width]:
+                w = weights_for(self._situations[row]) if weights_for is not None else weights
+                near = self._shares(np.asarray(self._scores(self._situations[row], None, w or {}), dtype=np.float64), tau, step_on)
+                if not near:
+                    answer["lost"] += m
+                for other, share in near.items():
+                    reached[int(link[other])] = reached.get(int(link[other]), 0.0) + m * share
+            held = reached
+        return answer
+
+    def predict(
+        self,
+        situation: dict[str, Any],
+        steps: int | Sequence[int] = 1,
+        events: list[np.ndarray] | None = None,
+        weights: dict[str, Any] | None = None,
+        output: str | None = None,
+        thread: Callable[[Any], Any] | None = None,
+        chain: bool = False,
+        width: int = POOL,
+        halt: float | None = None,
+        before: float | None = None,
+        weights_for: Callable[[dict[str, Any]], dict[str, Any] | None] | None = None,
+        tau: float | None = None,
+    ) -> dict[str, Any]:
+        """What the output will be `steps` precedents on from a situation like this one, read from what followed
+        the precedents like it. The precedents are a thread in the order of their times (`thread` names each
+        situation's own, when the Space holds several); a precedent's outcome is how things stood at its time.
+
+        steps: how far (every step up to it is answered), or the list of steps to answer.
+        chain False: each step is read from the nearest precedents that have that many after them, at what stood
+        at the end of each one's own. chain True, the beam: one step at a time, the mass spreading again from
+        wherever it stands over the precedents like that one (`weights_for` weighs each as a query's weights weigh
+        the first), the `width` heaviest going on and the rest counted in `lost`.
+        halt: stop at the first step asked for that says less than this many bits more than the output's base
+        rates do; that step is `halted`, and nothing from it on is answered. The loop is the caller's: act on the
+        steps answered, record what happened, ask again.
+        before: read nothing from this time on, neither a precedent nor a step after one (the past asked as it
+        stood then).
+
+        Answers {"steps": [{"step", "outcome", "p", "probabilities", "gain", "arrived"}], "halted", "lost"}:
+        gain is the bits a step says over the base rates, arrived the share of its mass that landed on a
+        precedent with an outcome."""
+        return self._walk(situation, steps, events, weights, output, thread, chain, width, halt, before, weights_for, False, tau)
+
+    def lookback(
+        self,
+        situation: dict[str, Any],
+        steps: int | Sequence[int] = 1,
+        events: list[np.ndarray] | None = None,
+        weights: dict[str, Any] | None = None,
+        output: str | None = None,
+        thread: Callable[[Any], Any] | None = None,
+        chain: bool = False,
+        width: int = POOL,
+        halt: float | None = None,
+        before: float | None = None,
+        weights_for: Callable[[dict[str, Any]], dict[str, Any] | None] | None = None,
+        tau: float | None = None,
+    ) -> dict[str, Any]:
+        """What the output was `steps` precedents before a situation like this one, read from what came before
+        the precedents like it: predict(), walked the other way along the thread."""
+        return self._walk(situation, steps, events, weights, output, thread, chain, width, halt, before, weights_for, True, tau)
+
+    def followed(
+        self,
+        output: str | None = None,
+        steps: int = 1,
+        thread: Callable[[Any], Any] | None = None,
+        back: bool = False,
+    ) -> list[tuple[dict[str, Any], str]]:
+        """Every precedent with the output's outcome `steps` on along its thread (`back`: before it): (its
+        situation, that outcome), oldest first. What a thread read learns its weights from."""
+        self._ensure_loaded()
+        outs = self._outs(output)
+        link = self._links(thread, back)
+        at = np.arange(self._n, dtype=np.int64)
+        for _ in range(steps):
+            at = np.where(at >= 0, link[np.maximum(at, 0)], -1)
+        order = np.argsort(np.asarray(self._ts[: self._n], dtype=np.float64), kind="stable")
+        return [(self._situations[i], outs[at[i]]) for i in order if at[i] >= 0 and outs[at[i]] is not None]  # type: ignore[misc]
+
+    def calibrate_thread(
+        self,
+        sample: int = 100,
+        weights_for: Callable[[dict[str, Any]], dict[str, Any] | None] | None = None,
+        output: str | None = None,
+        steps: int = 1,
+        thread: Callable[[Any], Any] | None = None,
+        back: bool = False,
+    ) -> float:
+        """Fit the temperature predict() reads this output at (`back`: lookback()): each of the `sample` newest
+        precedents whose outcome `steps` on is known is asked as of its own time (nothing from then on is read),
+        and the tau from TAUS with the least log-loss on what did follow is kept, as the output's own thread
+        temperature ('tau:<output>>' ahead, 'tau:<output><' back). Returns tau."""
+        self._writes("calibrate")
+        self._ensure_loaded()
+        name = _output_name(output)
+        outs = self._outs(name)
+        link = self._links(thread, back)
+        at = np.arange(self._n, dtype=np.int64)
+        for _ in range(steps):
+            at = np.where(at >= 0, link[np.maximum(at, 0)], -1)
+        ts = np.asarray(self._ts[: self._n], dtype=np.float64)
+        order = np.argsort(ts, kind="stable")
+        known = [int(i) for i in order if at[i] >= 0 and outs[at[i]] is not None]
+        if len(known) < 10:
+            raise ValueError("calibrate_thread needs at least 10 precedents with an outcome that many steps on")
+        held = []
+        for h in known[-sample:]:
+            w = weights_for(self._situations[h]) if weights_for is not None else None
+            scores = np.asarray(self._scores(self._situations[h], None, w or {}), dtype=np.float64)
+            there = ts < ts[h]
+            held.append((outs[at[h]], scores, there & (at >= 0) & there[np.maximum(at, 0)]))
+        best = (float("inf"), TAU)
+        for tau in TAUS:
+            loss = 0.0
+            for true, scores, among in held:
+                right = voted = 0.0
+                for row, share in self._shares(scores, tau, among).items():
+                    if outs[at[row]] is not None:
+                        voted += share
+                        right += share if outs[at[row]] == true else 0.0
+                loss -= math.log(max(right / voted if voted else 0.0, 1e-6))
+            if loss < best[0]:
+                best = (loss, tau)
+        key = name + (BACK if back else AHEAD)
+        self._taus[key] = best[1]
+        if self._store is not None:
+            self._store.set_tau(key, best[1])
+        return best[1]
+
+    def calibrate(
+        self,
+        sample: int = 100,
+        weights: dict[str, Any] | None = None,
+        weights_for: Callable[[dict[str, Any]], dict[str, Any] | None] | None = None,
+        cost: Callable[[dict[str, float], str], float] | None = None,
+        bias_for: Callable[[dict[str, Any]], Callable[[str], float] | None] | None = None,
+        output: str | None = None,
+        recency: bool = False,
+    ) -> float:
+        """Fit tau so probabilities mean what they say: hold out each of
+        the `sample` newest precedents in turn, score it against the
+        rest, and keep the temperature (from TAUS) with the least
+        log-loss on the held-out outcomes. Saved in the file, so every
+        later open uses it. Events are left out. Returns tau.
+        `weights_for` gives each held-out situation its own weights
+        (a spec's, which depend on what the situation carries).
+        `cost(probabilities, true)` is what deciding from those
+        probabilities would cost when `true` is the outcome: given, the
+        temperature with the least total cost wins, log-loss breaking
+        ties, so the fit serves the decision rather than the curve.
+        output: fit that output's own tau (saved as 'tau:<output>').
+        recency: fit a half-life with it, each held-out precedent asked
+        at its own time: none, or a share of the time the graded
+        precedents span (HALF_LIVES), kept only when it beats none
+        (RECENCY_GAIN). Without it the output's half-life is left as
+        it is. The half-life is in seconds (half_life())."""
+        self._writes("calibrate")
+        self._ensure_loaded()
+        name = _output_name(output)
+        outs = self._outs(name)
+        graded = [i for i in range(self._n) if outs[i] is not None]
+        if len(graded) < 10:
+            raise ValueError("calibrate needs at least 10 precedents with an outcome")
+        held = graded[-sample:]
+        scored = [
+            (
+                h,
+                self._scores(self._situations[h], None, weights_for(self._situations[h]) if weights_for else (weights or {})),
+                bias_for(self._situations[h]) if bias_for else None,
+            )
+            for h in held
+        ]
+        span = (max(self._ts[i] for i in graded) - min(self._ts[i] for i in graded)) if recency else 0.0
+        halves: list[float | None] = [None] + ([span * f for f in HALF_LIVES] if span >= RECENCY_SPAN else [])
+        ts = np.asarray(self._ts[: self._n], dtype=np.float64)
+        fits: dict[float | None, tuple[float, float, float]] = {}
+        for half in halves:
+            ages = [None if half is None else np.maximum(np.power(0.5, np.maximum(ts[h] - ts, 0.0) / half), 1e-9) for h in held]
+            best: tuple[float, float, float] = (float("inf"), float("inf"), TAU)
+            for tau in TAUS:
+                loss = paid = 0.0
+                for (h, scores, bias), aged in zip(scored, ages):
+                    p = self._probabilities(scores, tau, skip=h, bias=bias, outs=outs, recency=aged)
+                    loss -= math.log(max(p.get(outs[h], 0.0), 1e-6))  # type: ignore[arg-type]
+                    if cost is not None:
+                        paid += cost(p, outs[h])  # type: ignore[arg-type]
+                key = (round(paid, 9), loss) if cost is not None else (loss, 0.0)
+                if key < best[:2]:
+                    best = (*key, tau)
+            fits[half] = best
+        none = fits[None]
+        bar = (none[0], none[1] * (1 - RECENCY_GAIN)) if cost is not None else (none[0] * (1 - RECENCY_GAIN), 0.0)
+        passing = {half: fit for half, fit in fits.items() if half is not None and fit[:2] < bar}
+        chosen = min(passing, key=lambda half: passing[half][:2]) if passing else None
+        best = fits[chosen]
+        if recency:
+            self.set_half_life(name, chosen)
+        if name == DEFAULT:
+            self.tau, self._tau_given = best[2], False
+            key_name = "tau"
+        else:
+            self._taus[name] = best[2]
+            key_name = f"tau:{name}"
+        if self._store is not None:
+            self._store.set_tau(name, best[2])
+        return best[2]
+
+    def __len__(self) -> int:
+        return self._n if self._loaded else (self._store.count() if self._store is not None else 0)
+
+    def holds(self, ids: Iterable[str]) -> set[str]:
+        """Which of these ids the Space holds (asked of the store when not loaded)."""
+        ids = set(ids)
+        if self._loaded or self._store is None:
+            return {rid for rid in ids if rid in self._at}
+        many = getattr(self._store, "has_many", None)
+        return set(many(ids)) if many is not None else {rid for rid in ids if self._store.has(rid)}
+
+    def relexicon(self, lexicon: bool, persist: bool = True) -> int:
+        """Read words through the lexicon, or not, from now on: every held glyph and leaf made again from its
+        situation and events, and (persist) the store's glyphs with them. Returns how many were made again.
+        lexicon: off (False, 0), on (True, 1), or a reach of 2 or 3 (Settings.word_reach)."""
+        lexicon = _reach(lexicon)
+        if lexicon == self.lexicon:
+            return 0
+        if persist:
+            self._writes("rewrite")
+        self.lexicon = lexicon
+        if not self._loaded:  # nothing held; the store's glyphs are the job's to rewrite (load it, then this)
+            return 0
+        blobs: dict[str, bytes | None] = self._store.events() if self._store is not None else {}
+        updates: list[tuple[str, str, np.ndarray]] = []
+        for i in range(self._n):
+            glyph = self.encode(self._situations[i], _events_from_blob(blobs.get(self._ids[i]), self.dim))
+            self._glyphs[i] = glyph
+            self._matrix[i] = glyph.astype(np.float32)
+            updates.append((self._ids[i], json.dumps(self._situations[i], ensure_ascii=False), glyph))
+        self._epoch += 1
+        self._leaf_index, self._leaf_vectors, self._leaf_matrix, self._leaf_of = {}, {}, {}, {}
+        n, self._n = self._n, 0
+        for i in range(n):
+            self._leaf_add(self._situations[i])
+            self._n += 1
+        if self._store is not None and persist and updates:
+            self._store.rewrite(updates)
+        return n
+
+    def graded_count(self, output: str | None = None) -> int:
+        """How many precedents have an outcome for this output (counted by the store when not loaded)."""
+        if self._loaded or self._store is None:
+            return sum(o is not None for o in self._outs(output))
+        return self._store.count_graded(_output_name(output))
+
+    def candidates(
+        self, situation: dict[str, Any], events: list[np.ndarray] | None = None, weights: dict[str, Any] | None = None
+    ) -> Space:
+        """The Space a read of this situation runs on. Loaded, or over a store that cannot shortlist, or under
+        exact_below precedents, or with shortlist 0: this Space itself, every precedent loaded (exact, the answer
+        it has always given). Else a small in-memory Space of the store's `shortlist` nearest precedents to the
+        situation's weighted glyph (by Hamming distance, the store's index), which the read re-ranks by its own
+        exact weighted score: the answer is the exact one whenever the shortlist holds the exact top precedents."""
+        store = self._store
+        if self._loaded or store is None or not hasattr(store, "shortlist") or self.shortlist <= 0:
+            self._ensure_loaded()
+            return self
+        if store.count() < self.exact_below:
+            self._ensure_loaded()
+            return self
+        rows, named = store.shortlist(self.encode(situation, events, weights), self.shortlist)
+        out = Space(self.dim, self.k, self.min_sim, self.seed, self.decay, self.author, lexicon=self.lexicon)
+        out.tau, out._tau_given, out._taus = self.tau, self._tau_given, dict(self._taus)
+        out._half_lives = dict(self._half_lives)
+        for rid, text, outcome, dim, blob, author, ts, ev in rows:
+            glyph = np.frombuffer(blob, dtype=np.int8).copy()
+            out._append(rid, outcome, glyph, author, ts, _situation_of(text), out._traj(_events_from_blob(ev, dim)))
+        held: list[dict[str, str]] = [{} for _ in out._ids]
+        for rid, output, value, _ in named:
+            if rid in out._at:
+                held[out._at[rid]][output] = value
+        out._named = held
+        return out
+
+    def rewrite(self, fn: Callable[[dict[str, Any]], dict[str, Any]], persist: bool = True) -> int:
+        """Every precedent's situation passed through fn and stored again, glyph and leaf tables rebuilt (its
+        events kept). For a spec that has changed what a situation carries. Returns how many were rewritten.
+        persist=False changes the copy in memory only, the file untouched (the one rewrite a read-only store
+        allows)."""
+        if persist:
+            self._writes("rewrite")
+        self._ensure_loaded()
+        blobs: dict[str, bytes | None] = self._store.events() if self._store is not None else {}
+        updates: list[tuple[str, str, np.ndarray]] = []
+        changed = 0
+        for i in range(self._n):
+            new = fn(self._situations[i])
+            if new == self._situations[i]:
+                continue
+            events = _events_from_blob(blobs.get(self._ids[i]), self.dim) if self._store is not None else None
+            parts, ws = _keyed(new, None, self.seed, self.dim, self.lexicon)
+            traj = self._trajs[i]
+            if traj is not None:
+                parts.append(bind(symbol("trajectory", self.seed, self.dim), traj if events is None else Strand(events).state(self.decay)))
+                ws.append(1.0)
+            glyph = bundle(parts, ws)
+            self._situations[i], self._glyphs[i] = new, glyph
+            self._matrix[i] = glyph.astype(np.float32)
+            if self._store is not None and persist:
+                updates.append((self._ids[i], json.dumps(new, ensure_ascii=False), glyph))
+            changed += 1
+        if changed:
+            self._epoch += 1
+            self._leaf_index, self._leaf_vectors, self._leaf_matrix, self._leaf_of = {}, {}, {}, {}
+            n, self._n = self._n, 0
+            for i in range(n):
+                self._leaf_add(self._situations[i])
+                self._n += 1
+            if self._store is not None and persist:
+                self._store.rewrite(updates)
+        return changed
+
+    def graded(self, output: str | None = None) -> list[tuple[dict[str, Any], str]]:
+        """Every precedent with an outcome for this output: (situation, outcome), oldest first."""
+        self._ensure_loaded()
+        outs = self._outs(output)
+        return [(self._situations[i], outs[i]) for i in range(self._n) if outs[i] is not None]  # type: ignore[misc]
+
+    def meta(self, key: str) -> Any:
+        """A value kept with the store (JSON), or None: what a model learned from it, for one."""
+        if self._store is None:
+            return self._meta.get(key)
+        return self._store.meta(key)
+
+    def set_meta(self, key: str, value: Any) -> None:
+        self._writes("set_meta")
+        if self._store is None:
+            self._meta[key] = value
+            return
+        self._store.set_meta(key, value)
+
+    # persistence: a Store (SqliteStore: one portable file, WAL so several agents can share it)
+    def _attach(self, store: Store, load: bool) -> None:
+        self._store = store
+        self.readonly = self.readonly or bool(getattr(store, "readonly", False))
+        if not self.readonly and store.encoding() < ENCODING:
+            store.reencode(self)
+        self._load_taus()
+        if load:
+            self.refresh()
+        else:
+            self._loaded = False
+
+    def load(self) -> Space:
+        """Hold every precedent of the store in memory, if the Space was opened with load=False (a job that
+        learns or calibrates, say); every read is then exact. Returns the Space."""
+        self._ensure_loaded()
+        return self
+
+    def _ensure_loaded(self) -> None:
+        """Hold every precedent of the store in memory (a Space opened with load=False, before a read that needs
+        them all)."""
+        if not self._loaded:
+            self._loaded = True
+            self.refresh()
+
+    def _load_taus(self) -> None:
+        """The calibrated temperatures saved in the store: the default output's ('tau') and each named one's
+        ('tau:<output>'). A tau given to the Space wins over all of them."""
+        assert self._store is not None
+        for key, value in self._store.taus():
+            if key == "tau":
+                if not self._tau_given:
+                    self.tau = float(value)
+            else:
+                self._taus[key[4:]] = float(value)
+        kept = self._store.meta(HALF_LIVES_KEY)
+        self._half_lives = {k: float(v) for k, v in kept.items() if v} if isinstance(kept, dict) else {}
+
+    def refresh(self) -> int:
+        """Pull in rows other agents wrote to this file since open.
+        Returns how many new precedents arrived. A read-only store
+        written under an older encoding is re-encoded on the way in, in
+        memory only. A Space opened with load=False holds nothing to bring
+        up to date (its reads go to the store): 0."""
+        if self._store is None or not self._loaded:
+            return 0
+        rows = self._store.rows()
+        stale = self.readonly and self._store.encoding() < ENCODING
+        known = self._at
+        added = 0
+        for rid, situation, outcome, dim, blob, author, ts, ev in rows:
+            if rid in known:
+                continue
+            if dim != self.dim and not stale:
+                raise ValueError(f"precedent {rid} has dim {dim}, space is {self.dim}")
+            glyph = None
+            if stale:
+                try:
+                    glyph = self.encode(json.loads(situation), _events_from_blob(ev, self.dim))
+                except (ValueError, TypeError, json.JSONDecodeError):
+                    glyph = None  # no usable situation stored: keep the old glyph
+            if glyph is None:
+                if dim != self.dim:
+                    raise ValueError(f"precedent {rid} has dim {dim}, space is {self.dim}")
+                glyph = np.frombuffer(blob, dtype=np.int8).copy()
+            self._append(
+                rid,
+                outcome,
+                glyph,
+                author,
+                ts,
+                _situation_of(situation),
+                self._traj(_events_from_blob(ev, dim)),
+            )
+            added += 1
+        self._load_named()
+        return added
+
+    def _load_named(self) -> None:
+        """Every held precedent's named outcomes, as the store has them now (grades other agents gave
+        included). A file from before named outputs has none."""
+        assert self._store is not None
+        rows = self._store.named()
+        if rows is None:
+            return
+        at = self._at
+        named: list[dict[str, str]] = [{} for _ in self._ids]
+        for rid, output, value, _ in rows:
+            if rid in at:
+                named[at[rid]][output] = value
+        self._named = named
+
+    def merge(self, other: str | Store) -> int:
+        """Union another Space's store into this one (by precedent id): a file's path, or any Store (an
+        rrotor precedents.sqlite into a Postgres model, say). The exchange primitive between agents: ship the
+        file, verify its receipts against your own world, then merge. Rows from a store written under an older
+        encoding are re-encoded from their situations on the way in. Returns how many precedents were new."""
+        self._writes("merge")
+        self._ensure_loaded()
+        given = not isinstance(other, (str, os.PathLike))
+        source: Store = other if given else _store_for(str(Path(other).expanduser()), True, self.dim)  # type: ignore[arg-type]
+        stale = source.encoding() < ENCODING
+        named_of: dict[str, list[tuple[str, str, float]]] = {}
+        for rid, output, value, ots in source.named() or []:
+            named_of.setdefault(rid, []).append((output, value, ots))
+        known = self._at
+        added = 0
+        writes: list[tuple[Row, list[tuple[str, str, float]]]] = []
+        for rid, situation, outcome, dim, blob, author, ts, ev in source.rows(by_time=False):
+            if rid in known:
+                continue
+            if dim != self.dim:
+                raise ValueError(f"precedent {rid} has dim {dim}, space is {self.dim}")
+            if stale:
+                glyph = self.encode(json.loads(situation), _events_from_blob(ev, dim))
+            else:
+                glyph = np.frombuffer(blob, dtype=np.int8).copy()
+            rows = named_of.get(rid, [])
+            self._append(
+                rid,
+                outcome,
+                glyph,
+                author,
+                ts,
+                _situation_of(situation),
+                self._traj(_events_from_blob(ev, dim)),
+                {output: value for output, value, _ in rows},
+            )
+            writes.append((Row(rid, situation, outcome, dim, glyph, author, ts, ev), rows))
+            added += 1
+        if self._store is not None:
+            self._store.put_many(writes)
+        if not given:
+            source.close()
+        return added
+
+    def close(self) -> None:
+        if self._store is not None:
+            self._store.close()
+            self._store = None
+
+    def __enter__(self) -> Space:
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self.close()
+
+
+# ── the contract as a function ──────────────────────────────────────
+
+
+@dataclass
+class Decision:
+    """What decide() concluded. Act on `outcome` only when `act`.
+
+    reason: 'reflex' (act), 'insufficient' (nothing clears min_sim),
+    'uncalibrated' (fewer than min_count precedents), 'low_confidence'
+    (no consensus), or 'vetoed' (a recorded failure is as close as the
+    wins and newer than them). `lifted` is True when a close veto
+    exists but a newer win outranks it."""
+
+    act: bool
+    outcome: str | None
+    reason: str
+    answer: Answer
+    veto: Evidence | None
+    lifted: bool
+
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "act": self.act,
+            "outcome": self.outcome,
+            "reason": self.reason,
+            "lifted": self.lifted,
+            "veto": self.veto.to_json() if self.veto else None,
+            "answer": self.answer.to_json(),
+        }
+
+
+def decide(
+    wins: Space,
+    vetoes: Space,
+    situation: dict[str, Any],
+    events: list[np.ndarray] | None = None,
+    *,
+    min_confidence: float = 0.5,
+    min_count: int = 3,
+    min_veto_count: int = 1,
+    weights: dict[str, Any] | None = None,
+) -> Decision:
+    """THE CONTRACT (see SPEC): the three trust gates on the wins, then
+    the veto check, with the newest evidence winning.
+
+    A veto of the top outcome counts when a recorded failure is at
+    least as close as the wins recommending it (sim >= answer.support).
+    It blocks while at least `min_veto_count` such failures exist AND
+    the newest of them is newer than the newest qualifying win; a later
+    reproduction lifts it. min_veto_count=1 is fail-closed (one failure
+    stops the reflex); 2+ demands corroboration (harder to sabotage).
+    weights weigh the situation's keys in every read (see encode())."""
+    answer = wins.query(situation, events, weights)
+    if not answer.sufficient:
+        return Decision(False, None, "insufficient", answer, None, False)
+    top = answer.top
+    veto = vetoes.evidence(situation, top, events, min_sim=max(answer.support, 1e-9), weights=weights)
+    win = wins.evidence(situation, top, events, weights=weights)
+    close = veto.count >= min_veto_count
+    lifted = close and win.latest > veto.latest
+    if close and not lifted:
+        return Decision(False, top, "vetoed", answer, veto, False)
+    if answer.count < min_count:
+        return Decision(False, top, "uncalibrated", answer, veto if veto.count else None, lifted)
+    if answer.confidence < min_confidence:
+        return Decision(False, top, "low_confidence", answer, veto if veto.count else None, lifted)
+    return Decision(True, top, "reflex", answer, veto if veto.count else None, lifted)
+
+
+# ── stores: where a Space's precedents live ─────────────────────────
+
+
+class Row(NamedTuple):
+    """One precedent as a store keeps it. situation is its JSON text; outcome the default output's ("" for
+    none); glyph the bipolar int8 vector; events the trajectory's codons as int8 bytes, or None."""
+
+    id: str
+    situation: str
+    outcome: str
+    dim: int
+    glyph: np.ndarray
+    author: str
+    ts: float
+    events: bytes | None
+
+
+# a stored row as a store reads it back: (id, situation JSON, outcome, dim, glyph int8 bytes, author, ts, events)
+StoredRow = tuple[str, str, str, int, bytes, str, float, "bytes | None"]
+
+
+@runtime_checkable
+class Store(Protocol):
+    """Every read and write a Space makes of where its precedents live. SqliteStore is the file every Space has
+    always written; glyphh_postgres.PostgresStore keeps a model's precedents in Postgres (a schema per org, the
+    glyphs as pgvector bits) and adds shortlist(glyph, size): the nearest rows by Hamming distance, which a Space
+    opened with load=False reads and re-ranks exactly (Space.candidates).
+
+    A store's writes are its own transactions: put_many is one, whatever its size."""
+
+    path: str | None
+    readonly: bool
+
+    def encoding(self) -> int:
+        """The encoding the store's glyphs were written under (ENCODING for a new store)."""
+        ...
+
+    def reencode(self, space: Space) -> int:
+        """Every glyph made again from its situation and events by space.encode, the store stamped ENCODING."""
+        ...
+
+    def taus(self) -> Iterable[tuple[str, Any]]:
+        """The calibrated temperatures kept: ('tau', value) and ('tau:<output>', value)."""
+        ...
+
+    def rows(self, by_time: bool = True) -> Iterable[StoredRow]:
+        """Every precedent; by_time: oldest first (ts, then the order written)."""
+        ...
+
+    def named(self) -> list[tuple[str, str, str, float]] | None:
+        """Every named outcome as (id, output, value, ts), oldest first; None for a store from before them."""
+        ...
+
+    def put_many(self, rows: Sequence[tuple[Row, Sequence[tuple[str, str, float]]]]) -> None:
+        """Precedents written in one transaction, each with its named outcomes [(output, value, ts)]: an id
+        held already is replaced, outcomes and all, and moves to the end of the written order."""
+        ...
+
+    def grade(self, rid: str, output: str, value: str | None, ts: float) -> None:
+        """One output's outcome on a held precedent: set, or (None) taken away."""
+        ...
+
+    def forget(self, rid: str) -> None:
+        """Delete a precedent and its outcomes."""
+        ...
+
+    def has(self, rid: str) -> bool: ...
+
+    def count(self) -> int: ...
+
+    def count_graded(self, output: str) -> int:
+        """Precedents with an outcome for this output."""
+        ...
+
+    def set_tau(self, output: str, tau: float) -> None: ...
+
+    def meta(self, key: str) -> Any:
+        """A JSON value kept with the store, or None."""
+        ...
+
+    def set_meta(self, key: str, value: Any) -> None: ...
+
+    def events(self) -> dict[str, bytes | None]:
+        """Every precedent's events, by id."""
+        ...
+
+    def rewrite(self, rows: Sequence[tuple[str, str, np.ndarray]]) -> None:
+        """New situations (JSON text) and glyphs for held precedents, by id, in one transaction."""
+        ...
+
+    def close(self) -> None: ...
+
+
+class SqliteStore:
+    """A Space's precedents in one SQLite file: the store every Space has always written (Space(path=...)).
+    WAL, so several agents share a file live; readonly opens it without touching it (see Space)."""
+
+    def __init__(self, path: str, readonly: bool = False):
+        self.path = str(Path(path).expanduser())
+        self.readonly = bool(readonly)
+        self._db: sqlite3.Connection | None = None
+        if self.readonly:
+            self._ro_connect()
+            return
+        p = Path(self.path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        self._db = sqlite3.connect(str(p), timeout=10.0)
+        self._db.execute("PRAGMA journal_mode=WAL")
+        self._db.execute("PRAGMA busy_timeout=10000")
+        _ensure_schema(self._db)
+        self._db.commit()
+
+    def _ro_connect(self) -> None:
+        """(Re)connect a read-only store: mode=ro, no journal_mode pragma, no schema. A WAL store whose -wal and
+        -shm are not beside it (no writer has it open) is read immutable, since SQLite would otherwise make them,
+        or fail on a read-only folder; reconnecting on every read of the rows keeps that read current."""
+        if self._db is not None:
+            self._db.close()
+            self._db = None
+        p = Path(self.path)
+        if not p.is_file():
+            return  # no store yet: an empty one, made nowhere
+        with open(p, "rb") as f:
+            header = f.read(20)
+        wal = len(header) == 20 and header[18] == 2
+        live = Path(f"{p}-wal").exists() and Path(f"{p}-shm").exists()
+        flags = "mode=ro&immutable=1" if wal and not live else "mode=ro"
+        self._db = sqlite3.connect(f"{p.resolve().as_uri()}?{flags}", uri=True, timeout=10.0)
+        self._db.execute("PRAGMA busy_timeout=10000")
+
+    def _writable(self) -> sqlite3.Connection:
+        if self.readonly or self._db is None:
+            raise ReadOnlyError("write", self.path)
+        return self._db
+
+    def encoding(self) -> int:
+        return ENCODING if self._db is None else _file_encoding(self._db)
+
+    def reencode(self, space: Space) -> int:
+        db = self._writable()
+        n = _reencode_rows(db, space)
+        db.commit()
+        return n
+
+    def taus(self) -> list[tuple[str, Any]]:
+        if self._db is None or not _has_meta(self._db):
+            return []
+        return self._db.execute("SELECT key, value FROM meta WHERE key = 'tau' OR key LIKE 'tau:%'").fetchall()
+
+    def rows(self, by_time: bool = True) -> Iterable[StoredRow]:
+        if self.readonly:
+            self._ro_connect()
+        if self._db is None:
+            return []
+        cols = [r[1] for r in self._db.execute("PRAGMA table_info(precedents)")]
+        if not cols:
+            return []
+        select = "SELECT id, situation, outcome, dim, glyph, {a}, {t}, {e} FROM precedents".format(
+            a="author" if "author" in cols else "'anon'",
+            t="ts" if "ts" in cols else "0.0",
+            e="events" if "events" in cols else "NULL",
+        )
+        if by_time:  # the file as it is: no schema made, no migration written
+            select += " ORDER BY " + ("ts, " if "ts" in cols else "") + "rowid"
+        return self._db.execute(select)
+
+    def named(self) -> list[tuple[str, str, str, float]] | None:
+        if self._db is None or not _has_table(self._db, "outcomes"):
+            return None
+        return self._db.execute("SELECT id, output, value, ts FROM outcomes ORDER BY ts, rowid").fetchall()
+
+    def put_many(self, rows: Sequence[tuple[Row, Sequence[tuple[str, str, float]]]]) -> None:
+        db = self._writable()
+        for row, named in rows:
+            db.execute("DELETE FROM outcomes WHERE id = ?", (row.id,))
+            db.executemany(
+                "INSERT INTO outcomes (id, output, value, ts) VALUES (?, ?, ?, ?)",
+                [(row.id, output, value, ts) for output, value, ts in named],
+            )
+            db.execute(
+                "INSERT OR REPLACE INTO precedents (id, situation, outcome,"
+                " dim, glyph, author, ts, events)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (row.id, row.situation, row.outcome, row.dim, row.glyph.tobytes(), row.author, row.ts, row.events),
+            )
+        db.commit()
+
+    def grade(self, rid: str, output: str, value: str | None, ts: float) -> None:
+        db = self._writable()
+        if output == DEFAULT:
+            db.execute("UPDATE precedents SET outcome = ? WHERE id = ?", (value or "", rid))
+        elif value is None:
+            db.execute("DELETE FROM outcomes WHERE id = ? AND output = ?", (rid, output))
+        else:
+            db.execute("INSERT OR REPLACE INTO outcomes (id, output, value, ts) VALUES (?, ?, ?, ?)", (rid, output, value, ts))
+        db.commit()
+
+    def forget(self, rid: str) -> None:
+        db = self._writable()
+        db.execute("DELETE FROM precedents WHERE id = ?", (rid,))
+        db.execute("DELETE FROM outcomes WHERE id = ?", (rid,))
+        db.commit()
+
+    def has(self, rid: str) -> bool:
+        if self._db is None:
+            return False
+        return self._db.execute("SELECT 1 FROM precedents WHERE id = ?", (rid,)).fetchone() is not None
+
+    def count(self) -> int:
+        if self._db is None or not _has_table(self._db, "precedents"):
+            return 0
+        return int(self._db.execute("SELECT COUNT(*) FROM precedents").fetchone()[0])
+
+    def count_graded(self, output: str) -> int:
+        if self._db is None:
+            return 0
+        if output == DEFAULT:
+            return int(self._db.execute("SELECT COUNT(*) FROM precedents WHERE outcome != ''").fetchone()[0])
+        if not _has_table(self._db, "outcomes"):
+            return 0
+        return int(self._db.execute("SELECT COUNT(*) FROM outcomes WHERE output = ?", (output,)).fetchone()[0])
+
+    def set_tau(self, output: str, tau: float) -> None:
+        db = self._writable()
+        db.execute("INSERT OR REPLACE INTO meta VALUES (?, ?)", ("tau" if output == DEFAULT else f"tau:{output}", repr(tau)))
+        db.commit()
+
+    def meta(self, key: str) -> Any:
+        if self._db is None or (self.readonly and not _has_meta(self._db)):
+            return None
+        row = self._db.execute("SELECT value FROM meta WHERE key = ?", (key,)).fetchone()
+        return json.loads(row[0]) if row else None
+
+    def set_meta(self, key: str, value: Any) -> None:
+        db = self._writable()
+        db.execute("INSERT OR REPLACE INTO meta VALUES (?, ?)", (key, json.dumps(value, sort_keys=True)))
+        db.commit()
+
+    def events(self) -> dict[str, bytes | None]:
+        if self._db is None:
+            return {}
+        try:
+            return dict(self._db.execute("SELECT id, events FROM precedents").fetchall())
+        except sqlite3.OperationalError:  # a read-only store from before events were kept
+            return {}
+
+    def rewrite(self, rows: Sequence[tuple[str, str, np.ndarray]]) -> None:
+        db = self._writable()
+        for rid, situation, glyph in rows:
+            db.execute("UPDATE precedents SET situation = ?, glyph = ? WHERE id = ?", (situation, glyph.tobytes(), rid))
+        db.commit()
+
+    def close(self) -> None:
+        if self._db is not None:
+            self._db.close()
+            self._db = None
+
+
+def _store_for(path: str, readonly: bool, dim: int) -> Store:
+    """The store a path names: its SQLite file."""
+    return SqliteStore(path, readonly)
+
+
+# ── store schema and migration ──────────────────────────────────────
+
+
+def _ensure_schema(db: sqlite3.Connection) -> None:
+    db.execute(
+        "CREATE TABLE IF NOT EXISTS precedents ("
+        " id TEXT PRIMARY KEY, situation TEXT NOT NULL,"
+        " outcome TEXT NOT NULL, dim INTEGER NOT NULL,"
+        " glyph BLOB NOT NULL, author TEXT NOT NULL DEFAULT 'anon',"
+        " ts REAL NOT NULL DEFAULT 0, events BLOB)"
+    )
+    db.execute("CREATE TABLE IF NOT EXISTS meta ( key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+    # a precedent's named outcomes (multi-output models): the default output stays in precedents.outcome
+    db.execute(
+        "CREATE TABLE IF NOT EXISTS outcomes ("
+        " id TEXT NOT NULL, output TEXT NOT NULL, value TEXT NOT NULL,"
+        " ts REAL NOT NULL DEFAULT 0, PRIMARY KEY (id, output))"
+    )
+    cols = [r[1] for r in db.execute("PRAGMA table_info(precedents)")]
+    # migrate older files in place
+    if "author" not in cols:
+        db.execute("ALTER TABLE precedents ADD COLUMN author TEXT NOT NULL DEFAULT 'anon'")
+    if "ts" not in cols:
+        db.execute("ALTER TABLE precedents ADD COLUMN ts REAL NOT NULL DEFAULT 0")
+    if "events" not in cols:
+        db.execute("ALTER TABLE precedents ADD COLUMN events BLOB")
+    rows = db.execute("SELECT COUNT(*) FROM precedents").fetchone()[0]
+    stamped = db.execute("SELECT value FROM meta WHERE key = 'encoding'").fetchone()
+    if stamped is None:
+        # an empty file starts on the current encoding; a populated
+        # file without a stamp predates stamping (encoding 1)
+        db.execute("INSERT INTO meta VALUES ('encoding', ?)", (str(ENCODING if rows == 0 else 1),))
+
+
+def _file_encoding(db: sqlite3.Connection) -> int:
+    try:
+        row = db.execute("SELECT value FROM meta WHERE key = 'encoding'").fetchone()
+    except sqlite3.Error:
+        row = None
+    if row is not None:
+        return int(row[0])
+    try:
+        rows = db.execute("SELECT COUNT(*) FROM precedents").fetchone()[0]
+    except sqlite3.Error:
+        rows = 0
+    return ENCODING if rows == 0 else 1
+
+
+def _has_meta(db: sqlite3.Connection) -> bool:
+    return _has_table(db, "meta")
+
+
+def _has_table(db: sqlite3.Connection, name: str) -> bool:
+    return db.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (name,)).fetchone() is not None
+
+
+def _situation_of(text: str | None) -> Any:
+    try:
+        return json.loads(text) if text else None
+    except (TypeError, json.JSONDecodeError):
+        return None
+
+
+def _events_from_blob(blob: bytes | None, dim: int) -> list[np.ndarray] | None:
+    if not blob:
+        return None
+    flat = np.frombuffer(blob, dtype=np.int8)
+    return [row.copy() for row in flat.reshape(-1, dim)]
+
+
+def _reencode_rows(db: sqlite3.Connection, space: Space) -> int:
+    rows = db.execute("SELECT id, situation, dim, events FROM precedents").fetchall()
+    done = 0
+    for rid, situation_json, dim, ev in rows:
+        try:
+            glyph = space.encode(json.loads(situation_json), _events_from_blob(ev, space.dim))
+        except (ValueError, TypeError, json.JSONDecodeError):
+            continue  # no usable situation stored: keep the old glyph
+        db.execute("UPDATE precedents SET glyph = ?, dim = ? WHERE id = ?", (glyph.tobytes(), space.dim, rid))
+        done += 1
+    db.execute("INSERT OR REPLACE INTO meta VALUES ('encoding', ?)", (str(ENCODING),))
+    return done
