@@ -1,0 +1,12 @@
+{
+  "name": "resume-screener",
+  "version": "0.1.0",
+  "description": "Screens a job application with your own Ada models: first whether it comes from a real person (the email's timestamps, the files themselves, the application against the others seen, Greenhouse signals), then how well it fits the role.",
+  "author": {
+    "name": "Glyphh AI",
+    "url": "https://glyphh.ai"
+  },
+  "homepage": "https://github.com/glyphh-ai/plugins/tree/main/plugins/resume-screener",
+  "repository": "https://github.com/glyphh-ai/plugins",
+  "license": "MIT"
+}
