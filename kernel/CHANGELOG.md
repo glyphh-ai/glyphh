@@ -26,6 +26,33 @@ release is tagged `v<version>` on `main`.
 Ada Cloud shows these releases to customers under names of its own (`ada-1-0`, `ada-1-1-beta`, ...); each name maps
 to one release here. The server's `src/glyphh_ada/ada_versions.json` holds that map and these notes in prose.
 
+## 3.18.0 — 2026-11-10 — compatible
+
+**The thread: `predict` and `lookback`.** A model's cases are a thread in the order of their times, and a case's
+outcome says how things stood at its own time. `Model.predict(data, steps, output)` answers what the output will be
+that many cases on, read from what followed the cases like this one; `Model.lookback` answers what it was that many
+cases back. `thread` names a role when the model holds several threads (one per account, ticker, machine). Each step
+answers its outcome, `p`, probabilities, and `gain`: the bits it says over the output's base rates. `halt` stops at
+the first step that says less than that many bits, so a loop acts on what was answered, records what happened and
+asks again. `chain=True` is the beam: one step at a time, the mass spreading again from wherever it stands, the
+`width` heaviest going on and the rest counted in `lost`. `before` reads nothing from a time on, for asking the past
+as it stood. `Model.learn_thread(output, steps, back)` learns the weights from what stood that many cases on (as
+`learn` does from a case's own outcome) and fits the temperature those reads use, kept apart from the output's own
+(`learned:<output>>`, `tau:<output>>`; `<` for back). The kernel's `Space` has the same reads without a spec
+(`predict`, `lookback`, `followed`, `calibrate_thread`). A thread read's pool is the 25 nearest precedents and every
+one tied with the last of them (to 1,000), so where many cases are the same situation all of them speak.
+
+- Compatible: nothing a model answers today changes and the store's layout is the same. The new reads are asked
+  for by name.
+- Measured (benchmarks/horizon), the last 40% of each series held out and each case asked as of its own time. A
+  12-state chain with a known table: Ada reads at the best possible accuracy at every lead, ahead and back (three
+  steps on 51.9% against 53.0% possible, five 38.4% against 38.6%), and its gain reaches zero at twelve steps, where
+  the chain's own does. Daily and hourly AAPL: direction ahead is not predictable at any lead (50.5% against 53.3%
+  for always-up, one day on); whether the next move is big is, a little, out to 60 days (0.11 bits over the base
+  rates at one day, 0.05 at 60); the direction of past days is readable for about three (80.7% two days back, 69.9%
+  three, nothing at ten). The beam matches each step read alone where situations repeat and adds nothing where every
+  case is its own situation (it cuts 99% of its mass).
+
 ## 3.17.0 — 2026-11-04 — compatible
 
 **Beam search across models: `glyphh_spec.beam`.** One model's answer can be the next model's question. `beam(start,

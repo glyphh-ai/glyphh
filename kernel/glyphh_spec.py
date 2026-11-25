@@ -1420,6 +1420,12 @@ class Model:
             if isinstance(own, dict):
                 self._specs[name] = spec.with_settings(self.settings).with_weights(own)
                 self._evidences[name] = own.get("~evidence", {})
+        # each output's thread readings (learn_thread): ahead, as predict() reads it, and back, as lookback() does
+        for name in [kernel.DEFAULT, *(n for n, _ in spec.outputs)]:
+            for along in (kernel.AHEAD, kernel.BACK):
+                own = self.space.meta(f"learned:{name}{along}")
+                if isinstance(own, dict):
+                    self._specs[name + along] = spec.with_settings(self.settings).with_weights(own)
         self._apply()
         if self.space.loaded and len(self.space):
             # a store recorded under other settings: its bags brought to these (in memory only, read-only)
@@ -1820,6 +1826,131 @@ class Model:
             return done[name]
 
         return {name: one(name) for name in names}
+
+    # -- the thread: the cases in the order they happened, read ahead (predict) and back (lookback) --
+
+    def _thread(self, thread: str | None) -> Callable[[Any], Any] | None:
+        """A role's path ("layer.segment.role") as the kernel's thread: a case's value there names the thread it
+        is on. None: the whole model is one thread."""
+        if thread is None:
+            return None
+        parts = thread.split(".") if isinstance(thread, str) else []
+        if len(parts) != 3:
+            raise SpecError("thread", 'a role\'s path: "layer.segment.role"')
+        lname, sname, rname = parts
+        self.spec._role(self.spec._segment(self.spec._layer(lname), sname, lname), rname, f"{lname}.{sname}")
+        return lambda situation: ((situation.get(lname) or {}).get(sname) or {}).get(rname)
+
+    def learn_thread(
+        self,
+        output: str | None = None,
+        steps: int = 1,
+        thread: str | None = None,
+        back: bool = False,
+        sample: int | None = None,
+        clearance: float = 1.0,
+    ) -> dict[str, Any]:
+        """Learn how an output is read along the thread: the weights from what stood `steps` cases on from each
+        case (`back`: before it), as learn() learns them from each case's own outcome, and the temperature those
+        reads use (kernel.Space.calibrate_thread). Kept with the store, apart from the output's own reading;
+        predict() (lookback(), `back`) reads by them from then on. Returns {"learned", "tau"}."""
+        self._writes("learn")
+        name = self._name(output)
+        if steps < 1:
+            raise SpecError("steps", "a whole number of steps, 1 or more")
+        key = name + (kernel.BACK if back else kernel.AHEAD)
+        by = self._thread(thread)
+        self.space._ensure_loaded()
+        followed = self.space.followed(name, steps, by, back)
+        if len(followed) < 10:
+            raise SpecError("" if name == kernel.DEFAULT else f"outputs.{name}", "learn_thread needs at least 10 cases with an outcome that many steps on")
+        learned = self.given.with_settings(self.settings).learn(followed)
+        self._specs[key] = self.given.with_settings(self.settings).with_weights(learned)
+        self._views.pop(key, None)
+        self.space.set_meta(f"learned:{key}", learned)
+        spec, space = self._spec_for(key), self._space_for(key)
+        tau = space.calibrate_thread(
+            sample or self.settings.calibrate_sample,
+            weights_for=lambda s: spec.weights(clearance, s),
+            output=name,
+            steps=steps,
+            thread=by,
+            back=back,
+        )
+        if space is not self.space:
+            self.space.set_tau(key, tau)  # fitted on the view; kept by the store
+        return {"learned": learned, "tau": tau}
+
+    def _along(
+        self,
+        back: bool,
+        data: Any,
+        steps: int | Sequence[int],
+        output: str | None,
+        thread: str | None,
+        chain: bool,
+        width: int | None,
+        halt: float | None,
+        before: float | None,
+        clearance: float,
+    ) -> dict[str, Any]:
+        name = self._name(output)
+        if name != kernel.DEFAULT and self.spec.output_of(name).kind == "many":
+            raise SpecError(f"outputs.{name}", "a many output is read along the thread one member at a time")
+        key = name + (kernel.BACK if back else kernel.AHEAD)
+        reading = key if key in self._specs else name  # as learn_thread() left it, else the output's own reading
+        self.space._ensure_loaded()  # a thread is the whole store, in order: no shortlist holds it
+        spec = self._spec_for(reading)
+        space, situation, weights = self._reader(reading, data, clearance)
+        walk = space.lookback if back else space.predict
+        return walk(
+            situation,
+            steps,
+            weights=weights,
+            output=name,
+            thread=self._thread(thread),
+            chain=chain,
+            width=kernel.POOL if width is None else width,
+            halt=halt,
+            before=before,
+            weights_for=lambda s: spec.weights(clearance, s),
+        )
+
+    def predict(
+        self,
+        data: Any,
+        steps: int | Sequence[int] = 1,
+        output: str | None = None,
+        thread: str | None = None,
+        chain: bool = False,
+        width: int | None = None,
+        halt: float | None = None,
+        before: float | None = None,
+        clearance: float = 1.0,
+    ) -> dict[str, Any]:
+        """What an output will be `steps` cases on from this one (a number: every step up to it; a list: those
+        steps), read from what followed the cases like it (kernel.Space.predict). The model's cases are a thread
+        in the order of their times; `thread` is a role's path when the model holds several (one per account,
+        ticker, machine). chain: the beam, one step at a time, `width` wide. halt: stop at the first step that
+        says under this many bits more than the output's base rates. before: read nothing from this time on.
+        Answers {"steps": [{"step", "outcome", "p", "probabilities", "gain", "arrived"}], "halted", "lost"}."""
+        return self._along(False, data, steps, output, thread, chain, width, halt, before, clearance)
+
+    def lookback(
+        self,
+        data: Any,
+        steps: int | Sequence[int] = 1,
+        output: str | None = None,
+        thread: str | None = None,
+        chain: bool = False,
+        width: int | None = None,
+        halt: float | None = None,
+        before: float | None = None,
+        clearance: float = 1.0,
+    ) -> dict[str, Any]:
+        """What an output was `steps` cases before this one, read from what came before the cases like it:
+        predict(), walked the other way along the thread."""
+        return self._along(True, data, steps, output, thread, chain, width, halt, before, clearance)
 
     def __len__(self) -> int:
         return len(self.space)

@@ -17,7 +17,7 @@ import re
 import sqlite3
 import time
 import uuid
-from collections import OrderedDict
+from collections import Counter, OrderedDict
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,7 +26,7 @@ from typing import Any, NamedTuple, Protocol, runtime_checkable
 import numpy as np
 from collections.abc import Callable
 
-__version__ = "3.17.0"  # this release: pyproject.toml and CHANGELOG.md say the same (test_versions.py)
+__version__ = "3.18.0"  # this release: pyproject.toml and CHANGELOG.md say the same (test_versions.py)
 DIM = 4096  # default dimensionality; ~1e-3 cross-talk between random symbols
 TAU = 0.12  # default softmax temperature (fit on Kubernetes issues; calibrate())
 POOL = 25  # nearest precedents a probability is spread over
@@ -41,6 +41,8 @@ RECENCY_GAIN = 0.01
 HALF_LIVES_KEY = "half_lives"  # the store's meta: {output: seconds}
 ENCODING = 3  # bump when encode() changes; stores re-encode on open
 DEFAULT = "default"  # the output a precedent's own `outcome` is: every read without output= reads it
+AHEAD, BACK = ">", "<"  # after an output's name: the temperature its thread reads use (predict, lookback)
+TIES = 1000  # a thread read's pool is the POOL nearest and the precedents tied with the last of them, to this many
 SHORTLIST = 1000  # candidates a store that can shortlist hands a read, re-ranked exactly (Space.candidates)
 EXACT_BELOW = 1000  # a store holding fewer precedents than this is read whole, exactly, never shortlisted (read
 # whole per request, 800 precedents take 50 ms, 5,000 take 280 ms and 20,000 3 s: bench/shortlist.py)
@@ -1114,9 +1116,11 @@ class Space:
         return ([DEFAULT] if any(o is not None for o in self._outcomes) else []) + named
 
     def set_tau(self, output: str | None, tau: float) -> None:
-        """Keep a temperature for one output, as calibrate() would (a view fits it; its store keeps it)."""
+        """Keep a temperature for one output, as calibrate() would (a view fits it; its store keeps it). An
+        output's name with AHEAD or BACK after it keeps its thread temperature (calibrate_thread())."""
         self._writes("calibrate")
-        name, tau = _output_name(output), float(tau)
+        along = output[-1] if output and output[-1] in (AHEAD, BACK) else ""
+        name, tau = _output_name(output[:-1] if along and output else output) + along, float(tau)
         if not tau > 0:
             raise ValueError("tau is a positive number")
         if name == DEFAULT:
@@ -1595,6 +1599,284 @@ class Space:
             mass[o] = mass.get(o, 0.0) + share * (1.0 if recency is None else float(recency[i]))
         z = sum(mass.values()) or 1.0
         return {o: m / z for o, m in mass.items()}
+
+    # the thread: the precedents in the order they happened. A precedent's outcome says how things stood at its
+    # own time; what followed it is the precedent after it. predict() reads ahead along it, lookback() back.
+
+    def _links(self, thread: Callable[[Any], Any] | None, back: bool = False) -> np.ndarray:
+        """Each precedent's next one in time on its own thread (`back`: the one before it), as a row; -1 where
+        the thread ends. `thread` names a situation's thread (None from it: on no thread); without one the whole
+        Space is one thread. Equal times keep the order they were recorded in."""
+        order = np.argsort(np.asarray(self._ts[: self._n], dtype=np.float64), kind="stable")
+        link = np.full(self._n, -1, dtype=np.int64)
+        if thread is None:
+            runs = [order]
+        else:
+            by_key: dict[Any, list[int]] = {}
+            for i in order:
+                key = thread(self._situations[i])
+                if key is not None:
+                    by_key.setdefault(_text(key), []).append(int(i))
+            runs = [np.asarray(rows, dtype=np.int64) for rows in by_key.values()]
+        for run in runs:
+            if back:
+                link[run[1:]] = run[:-1]
+            else:
+                link[run[:-1]] = run[1:]
+        return link
+
+    def _shares(self, scores: np.ndarray, tau: float, among: np.ndarray) -> dict[int, float]:
+        """One unit of mass over the POOL nearest precedents `among` those allowed, and every one that scores the
+        same as the last of them (the newest TIES at most: where many precedents are the same situation, all of
+        them speak, not the newest 25): a softmax of their scores at tau, as _probabilities weighs a vote.
+        {row: share}; empty when none is allowed."""
+        order = np.argsort(scores, kind="stable")[::-1]
+        order = order[among[order]]
+        if not len(order):
+            return {}
+        if len(order) > POOL:
+            order = order[: max(POOL, min(int(np.searchsorted(-scores[order], -scores[order[POOL - 1]] + 1e-9)), TIES))]
+        share = np.exp((scores[order] - scores[order[0]]) / tau)
+        share /= share.sum()
+        return {int(i): float(s) for i, s in zip(order, share)}
+
+    def _thread_tau(self, output: str | None, back: bool) -> float:
+        """The temperature a thread read uses: its own once calibrate_thread() has fit it, else the output's."""
+        if self._tau_given:
+            return self.tau
+        return self._taus.get(_output_name(output) + (BACK if back else AHEAD), self._tau_for(output))
+
+    def _walk(
+        self,
+        situation: dict[str, Any],
+        steps: int | Sequence[int],
+        events: list[np.ndarray] | None,
+        weights: dict[str, Any] | None,
+        output: str | None,
+        thread: Callable[[Any], Any] | None,
+        chain: bool,
+        width: int,
+        halt: float | None,
+        before: float | None,
+        weights_for: Callable[[dict[str, Any]], dict[str, Any] | None] | None,
+        back: bool,
+        tau: float | None = None,
+    ) -> dict[str, Any]:
+        wanted = list(range(1, steps + 1)) if isinstance(steps, int) else sorted({int(s) for s in steps})
+        if not wanted or wanted[0] < 1:
+            raise ValueError("steps is a whole number of steps, 1 or more, or a list of them")
+        if width < 1:
+            raise ValueError("a beam is at least 1 wide")
+        self._ensure_loaded()
+        n = self._n
+        outs = self._outs(output)
+        ts = np.asarray(self._ts[:n], dtype=np.float64)
+        there = np.ones(n, dtype=bool) if before is None else ts < float(before)
+        prior = Counter(outs[i] for i in np.flatnonzero(there) if outs[i] is not None)
+        answer: dict[str, Any] = {"steps": [], "halted": None, "lost": 0.0}
+        if not prior:
+            answer["halted"] = wanted[0]
+            return answer
+        total = sum(prior.values())
+        tau = self._thread_tau(output, back) if tau is None else float(tau)
+        link = self._links(thread, back)
+        scores = np.asarray(self._scores(situation, events, weights or {}), dtype=np.float64)
+
+        def onward(at: np.ndarray) -> np.ndarray:
+            """Which precedents have a step from here that is there to be read."""
+            return there & (at >= 0) & there[np.maximum(at, 0)]
+
+        def said(mass: Mapping[int, float], step: int) -> dict[str, Any] | None:
+            votes: dict[str, float] = {}
+            for row, m in mass.items():
+                if outs[row] is not None:
+                    votes[outs[row]] = votes.get(outs[row], 0.0) + m  # type: ignore[index]
+            arrived = sum(votes.values())
+            if arrived <= 0:
+                return None
+            probabilities = {o: v / arrived for o, v in sorted(votes.items(), key=lambda kv: (-kv[1], kv[0]))}
+            gain = sum(p * math.log2(p * total / prior[o]) for o, p in probabilities.items() if p > 0)
+            top = next(iter(probabilities))
+            return {
+                "step": step,
+                "outcome": top,
+                "p": probabilities[top],
+                "probabilities": probabilities,
+                "gain": max(gain, 0.0),
+                "arrived": arrived,
+            }
+
+        def keep(read: dict[str, Any] | None, step: int) -> bool:
+            if read is None or (halt is not None and read["gain"] < halt):
+                answer["halted"] = step
+                return False
+            if step in wanted:
+                answer["steps"].append(read)
+            return True
+
+        if not chain:
+            # each step on its own: the nearest precedents that have that many steps after them, and what stood
+            # at the end of each one's own
+            at = np.arange(n, dtype=np.int64)
+            for step in range(1, wanted[-1] + 1):
+                at = np.where(at >= 0, link[np.maximum(at, 0)], -1)
+                if step not in wanted:
+                    continue
+                mass: dict[int, float] = {}
+                for row, share in self._shares(scores, tau, onward(at)).items():
+                    mass[int(at[row])] = mass.get(int(at[row]), 0.0) + share
+                if not keep(said(mass, step), step):
+                    break
+            return answer
+        # the beam: one step at a time, the mass spreading again from wherever it stands over the precedents like
+        # that one, and only the `width` heaviest going on
+        step_on = onward(link)
+        held: dict[int, float] = {}
+        for row, share in self._shares(scores, tau, step_on).items():
+            held[int(link[row])] = held.get(int(link[row]), 0.0) + share
+        for step in range(1, wanted[-1] + 1):
+            if step in wanted and not keep(said(held, step), step):
+                break
+            if step == wanted[-1]:
+                break
+            # precedents in the same situation go on as one (the heaviest of them): what is like one is like all
+            same: dict[bytes, list[Any]] = {}
+            for row, m in sorted(held.items(), key=lambda kv: (-kv[1], kv[0])):
+                same.setdefault(self._glyphs[row].tobytes(), [row, 0.0])[1] += m
+            heaviest = sorted(((row, m) for row, m in same.values()), key=lambda kv: (-kv[1], kv[0]))
+            answer["lost"] += sum(m for _, m in heaviest[width:])
+            reached: dict[int, float] = {}
+            for row, m in heaviest[:width]:
+                w = weights_for(self._situations[row]) if weights_for is not None else weights
+                near = self._shares(np.asarray(self._scores(self._situations[row], None, w or {}), dtype=np.float64), tau, step_on)
+                if not near:
+                    answer["lost"] += m
+                for other, share in near.items():
+                    reached[int(link[other])] = reached.get(int(link[other]), 0.0) + m * share
+            held = reached
+        return answer
+
+    def predict(
+        self,
+        situation: dict[str, Any],
+        steps: int | Sequence[int] = 1,
+        events: list[np.ndarray] | None = None,
+        weights: dict[str, Any] | None = None,
+        output: str | None = None,
+        thread: Callable[[Any], Any] | None = None,
+        chain: bool = False,
+        width: int = POOL,
+        halt: float | None = None,
+        before: float | None = None,
+        weights_for: Callable[[dict[str, Any]], dict[str, Any] | None] | None = None,
+        tau: float | None = None,
+    ) -> dict[str, Any]:
+        """What the output will be `steps` precedents on from a situation like this one, read from what followed
+        the precedents like it. The precedents are a thread in the order of their times (`thread` names each
+        situation's own, when the Space holds several); a precedent's outcome is how things stood at its time.
+
+        steps: how far (every step up to it is answered), or the list of steps to answer.
+        chain False: each step is read from the nearest precedents that have that many after them, at what stood
+        at the end of each one's own. chain True, the beam: one step at a time, the mass spreading again from
+        wherever it stands over the precedents like that one (`weights_for` weighs each as a query's weights weigh
+        the first), the `width` heaviest going on and the rest counted in `lost`.
+        halt: stop at the first step asked for that says less than this many bits more than the output's base
+        rates do; that step is `halted`, and nothing from it on is answered. The loop is the caller's: act on the
+        steps answered, record what happened, ask again.
+        before: read nothing from this time on, neither a precedent nor a step after one (the past asked as it
+        stood then).
+
+        Answers {"steps": [{"step", "outcome", "p", "probabilities", "gain", "arrived"}], "halted", "lost"}:
+        gain is the bits a step says over the base rates, arrived the share of its mass that landed on a
+        precedent with an outcome."""
+        return self._walk(situation, steps, events, weights, output, thread, chain, width, halt, before, weights_for, False, tau)
+
+    def lookback(
+        self,
+        situation: dict[str, Any],
+        steps: int | Sequence[int] = 1,
+        events: list[np.ndarray] | None = None,
+        weights: dict[str, Any] | None = None,
+        output: str | None = None,
+        thread: Callable[[Any], Any] | None = None,
+        chain: bool = False,
+        width: int = POOL,
+        halt: float | None = None,
+        before: float | None = None,
+        weights_for: Callable[[dict[str, Any]], dict[str, Any] | None] | None = None,
+        tau: float | None = None,
+    ) -> dict[str, Any]:
+        """What the output was `steps` precedents before a situation like this one, read from what came before
+        the precedents like it: predict(), walked the other way along the thread."""
+        return self._walk(situation, steps, events, weights, output, thread, chain, width, halt, before, weights_for, True, tau)
+
+    def followed(
+        self,
+        output: str | None = None,
+        steps: int = 1,
+        thread: Callable[[Any], Any] | None = None,
+        back: bool = False,
+    ) -> list[tuple[dict[str, Any], str]]:
+        """Every precedent with the output's outcome `steps` on along its thread (`back`: before it): (its
+        situation, that outcome), oldest first. What a thread read learns its weights from."""
+        self._ensure_loaded()
+        outs = self._outs(output)
+        link = self._links(thread, back)
+        at = np.arange(self._n, dtype=np.int64)
+        for _ in range(steps):
+            at = np.where(at >= 0, link[np.maximum(at, 0)], -1)
+        order = np.argsort(np.asarray(self._ts[: self._n], dtype=np.float64), kind="stable")
+        return [(self._situations[i], outs[at[i]]) for i in order if at[i] >= 0 and outs[at[i]] is not None]  # type: ignore[misc]
+
+    def calibrate_thread(
+        self,
+        sample: int = 100,
+        weights_for: Callable[[dict[str, Any]], dict[str, Any] | None] | None = None,
+        output: str | None = None,
+        steps: int = 1,
+        thread: Callable[[Any], Any] | None = None,
+        back: bool = False,
+    ) -> float:
+        """Fit the temperature predict() reads this output at (`back`: lookback()): each of the `sample` newest
+        precedents whose outcome `steps` on is known is asked as of its own time (nothing from then on is read),
+        and the tau from TAUS with the least log-loss on what did follow is kept, as the output's own thread
+        temperature ('tau:<output>>' ahead, 'tau:<output><' back). Returns tau."""
+        self._writes("calibrate")
+        self._ensure_loaded()
+        name = _output_name(output)
+        outs = self._outs(name)
+        link = self._links(thread, back)
+        at = np.arange(self._n, dtype=np.int64)
+        for _ in range(steps):
+            at = np.where(at >= 0, link[np.maximum(at, 0)], -1)
+        ts = np.asarray(self._ts[: self._n], dtype=np.float64)
+        order = np.argsort(ts, kind="stable")
+        known = [int(i) for i in order if at[i] >= 0 and outs[at[i]] is not None]
+        if len(known) < 10:
+            raise ValueError("calibrate_thread needs at least 10 precedents with an outcome that many steps on")
+        held = []
+        for h in known[-sample:]:
+            w = weights_for(self._situations[h]) if weights_for is not None else None
+            scores = np.asarray(self._scores(self._situations[h], None, w or {}), dtype=np.float64)
+            there = ts < ts[h]
+            held.append((outs[at[h]], scores, there & (at >= 0) & there[np.maximum(at, 0)]))
+        best = (float("inf"), TAU)
+        for tau in TAUS:
+            loss = 0.0
+            for true, scores, among in held:
+                right = voted = 0.0
+                for row, share in self._shares(scores, tau, among).items():
+                    if outs[at[row]] is not None:
+                        voted += share
+                        right += share if outs[at[row]] == true else 0.0
+                loss -= math.log(max(right / voted if voted else 0.0, 1e-6))
+            if loss < best[0]:
+                best = (loss, tau)
+        key = name + (BACK if back else AHEAD)
+        self._taus[key] = best[1]
+        if self._store is not None:
+            self._store.set_tau(key, best[1])
+        return best[1]
 
     def calibrate(
         self,

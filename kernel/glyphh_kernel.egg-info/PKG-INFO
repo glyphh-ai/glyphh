@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: glyphh-kernel
-Version: 3.12.2
+Version: 3.18.0
 Summary: An algebra of thought for AI: compose, compare and abstract meanings, and build graded judgment on top.
 Project-URL: Homepage, https://glyphh.ai
 Project-URL: Repository, https://github.com/glyphh-ai/ada
@@ -394,8 +394,7 @@ Numbers from the replays this design was validated on:
   predicting SIG labels: precedent answers at confidence ≥ 0.5 were
   86% accurate (91% at ≥ 0.6); ungated answers were 50%.
 - On the same replay, the decision loop with a live LLM fallback
-  reached 0.862 accuracy versus 0.599 for a continuously retrained
-  TF-IDF + logistic regression baseline.
+  reached 0.862 accuracy.
 - Ordered strand state predicted next steps at 0.710 versus 0.595 for
   an unordered bundle; sequence-anomaly detection reached AUC 0.748.
 - A separate agent, given only this file and the spec, built a
@@ -511,6 +510,26 @@ reads it through an in-memory view (`Space.view`) built from those, kept
 current as cases arrive. A spec without `outputs` has the one `default`
 output, and every call reads as before; `outcome=` is the default output's.
 
+### Typed outputs and unions
+
+An output's `kind` says what its answer is (kernel 3.15.0; docs/multi-output.md, Typed outputs):
+
+```python
+spec = Spec.from_json({..., "outputs": {
+    "kind":     {"values": ["bug", "billing"]},                                  # choice (the default)
+    "severity": {"kind": "score", "values": ["low", "medium", "high"],          # ordered levels
+                 "when": {"output": "kind", "in": ["bug"]}},                    # a union's branch
+    "refund":   {"kind": "number", "number": {"min": 0, "max": 100, "step": 10},
+                 "when": {"output": "kind", "in": ["billing"]}},
+    "urgent":   {"kind": "noul"},                                               # yes or no
+    "tags":     {"kind": "many", "values": ["mobile", "web", "gold"]}}})        # any of them
+model.record(data, outcomes={"kind": "billing", "refund": 80, "urgent": True, "tags": ["web", "gold"]})
+model.decide_all(data)   # test_typed_outputs.py's model, on a gold billing case
+# {"kind": {"outcome": "billing", ...}, "severity": {"outcome": None, "applies": False, ...},
+#  "refund": {"outcome": "85", "value": 85.0, "applies": True, ...}, "urgent": {"outcome": "true", "p": 1.0, ...},
+#  "tags": {"outcome": ["web", "gold"], "probabilities": {"mobile": 0.0, "web": 1.0, "gold": 1.0}, ...}}
+```
+
 `Model(spec, path=..., readonly=True)` opens the store read-only (see
 `Space`). `query`, `facts`, `probabilities`, `decide` and the settings
 (`model.settings`, `configure()` with no changes) read as ever. `record`,
@@ -527,7 +546,7 @@ different one) is the matrix `decide` minimises over the calibrated
 probabilities. Every lever is a **setting**: `settings` in the spec (`k`, `min_sim`,
 `word_weights`, `word_floor`, `interactions`, `max_interactions`, `rare`,
 `calibrate_by`, `calibrate_sample`, `refresh_every`, `lexicon`, `word_pairs`, `max_word_pairs`, `word_evidence`,
-`shortlist`, `exact_below`), each checked by name
+`shortlist`, `exact_below`, `level_weights`, `recency`, `word_reach`), each checked by name
 and range, and `model.configure(k=20, word_floor=0.5)` changes them live,
 kept with the store over the spec's; a learning lever moved relearns there
 and then. `model.settings.to_json(all=True)` reads them. The settings are not
@@ -560,7 +579,13 @@ parts of speech, and the Moby list's 192,960 word forms with their classes.
 A word's glyph is its own symbol tilted toward its neighbourhood (itself at
 1, its synonyms sharing 0.9, its near words 0.6, its classes 0.3), so
 "arrive" and "come" correlate and a word no seed knows is its symbol alone.
-The `lexicon` setting turns it off. `word_pairs` (off by default) makes
+The `lexicon` setting turns it off. `word_reach` (3.16.0; 1 by default, the
+reading above) reads further at 2 or 3: a word with its plain form ("charged"
+with "charge", "cards" with "card", never "news" with "new") and that many
+steps of neighbours' neighbours (mutual neighbours first, the strongest six
+of each word each step), the neighbourhood as loud as the word itself, so a
+common word's forty neighbours are no longer lost in the majority vote
+("angry" and "furious" 0.07 at reach 1, 0.30 at 2). `word_pairs` (off by default) makes
 `learn` also keep pairs of common words that tell more together than apart
 ("top" + "up"), at most `max_word_pairs`, carried in the bag as "a+b".
 
@@ -570,8 +595,19 @@ weigh on the vote by `word_evidence` (2 by default): each voter's weight is
 scaled by exp(word_evidence × the mean pointwise mutual information of the
 query's words with the voter's outcome), in `query`, `probabilities`,
 `decide` and the calibration alike; the similarity bar, support and receipts
-stay unbiased. This is the weight per word per outcome a classic text model
-has and a similarity lacks.
+stay unbiased. This is a weight per word per outcome, which a plain similarity
+lacks.
+
+**Recency** (`recency`, on by default; 3.14.0): `calibrate` also fits a
+half-life, tried at 1/16 to 2 times the span of the graded precedents with
+each held-out precedent asked at its own time, and keeps it only when it beats
+none by 1% of the log-loss (or on cost). A read is asked at the case's own time
+(`temporal_source`) or now, and each precedent's voice in `query`,
+`probabilities` and `decide` halves per half-life of its age. A store spanning
+under a day, or one whose answers do not drift, gets none and reads as before.
+`level_weights: "roles"` (off: `"spec"` by default) makes a segment weigh its
+roles' weights summed and a layer its segments', so learned weights can quiet
+a whole segment; on German Credit it decided worse, so backtest it first.
 
 `learn` also finds **interactions**: pairs of roles that tell more about the
 outcome together than the better of them alone (a bad checking account with a
